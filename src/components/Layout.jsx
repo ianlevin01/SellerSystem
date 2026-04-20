@@ -2,8 +2,8 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
-  LayoutDashboard, Package, Settings, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Store, Zap, User, MessageSquare
+  LayoutDashboard, Package, ShoppingBag,
+  Calculator, LogOut, ExternalLink, Store, Zap, User, MessageSquare, Percent
 } from "lucide-react";
 
 const nav = [
@@ -11,10 +11,24 @@ const nav = [
   { to: "/products",     label: "Mis productos",  icon: Package },
   { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
   { to: "/store-config", label: "Mi tienda",      icon: Store },
+  { to: "/discounts",    label: "Descuentos",     icon: Percent },
   { to: "/chat",         label: "Chat",           icon: MessageSquare },
   { to: "/calculator",   label: "Calculadora",    icon: Calculator },
   { to: "/profile",      label: "Mi perfil",      icon: User },
 ];
+
+/**
+ * En desarrollo apunta a SellerPage en localhost:5174 con ?shop=slug.
+ * En producción genera la URL del subdominio real.
+ */
+function storeUrl(slug) {
+  if (import.meta.env.DEV) {
+    const base = import.meta.env.VITE_STORE_DEV_URL || "http://localhost:5174";
+    return `${base}?shop=${slug}`;
+  }
+  const domain = import.meta.env.VITE_STORE_DOMAIN || "ventaz.com.ar";
+  return `https://${slug}.${domain}`;
+}
 
 export default function Layout() {
   const { seller, logout } = useAuth();
@@ -58,7 +72,7 @@ export default function Layout() {
         <div className="sidebar__footer">
           {seller?.slug && (
             <a
-              href={`/store/${seller.slug}`}
+              href={storeUrl(seller.slug)}
               target="_blank"
               rel="noreferrer"
               className="sidebar__footer-btn"

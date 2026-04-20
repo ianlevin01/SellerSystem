@@ -11,6 +11,7 @@ import Dashboard    from "./pages/Dashboard";
 import Products     from "./pages/Products";
 import ProductEditor from "./pages/ProductEditor";
 import StoreConfig  from "./pages/StoreConfig";
+import Discounts    from "./pages/Discounts";
 import Orders       from "./pages/Orders";
 import Calculator   from "./pages/Calculator";
 import PublicStore  from "./pages/PublicStore";
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="/products"    element={<Products />} />
               <Route path="/products/:productId/edit" element={<ProductEditor />} />
               <Route path="/store-config" element={<StoreConfig />} />
+              <Route path="/discounts"   element={<Discounts />} />
               <Route path="/orders"      element={<Orders />} />
               <Route path="/calculator"  element={<Calculator />} />
               <Route path="/profile"     element={<Profile />} />

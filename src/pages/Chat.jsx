@@ -1,7 +1,7 @@
 // src/pages/Chat.jsx
 import { useEffect, useState, useRef, useCallback } from "react";
 import client from "../api/client";
-import { Send, MessageSquare } from "lucide-react";
+import { Send, MessageSquare, ShoppingCart, Check, Loader2 } from "lucide-react";
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -9,6 +9,157 @@ function formatDate(dateStr) {
     d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 }
 
+function fmt(n) {
+  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+// ── Message renderers ────────────────────────────────────────
+function QuoteMessage({ msg, conversationId, onAccepted }) {
+  const [accepting, setAccepting] = useState(false);
+  const [accepted, setAccepted]   = useState(false);
+
+  async function handleAccept() {
+    setAccepting(true);
+    try {
+      const res = await client.post(
+        `/seller/chat/conversations/${conversationId}/quote/${msg.id}/accept`
+      );
+      setAccepted(true);
+      onAccepted(res.data);
+    } catch {
+      /* show nothing; could add error state */
+    } finally {
+      setAccepting(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 16 }}>
+      <div style={{
+        maxWidth: "76%",
+        background: "var(--color-background-primary)",
+        border: "1.5px solid #e0e7ff",
+        borderRadius: "16px 16px 16px 4px",
+        overflow: "hidden",
+      }}>
+        {/* Header */}
+        <div style={{
+          background: "#eef2ff", padding: "10px 14px",
+          display: "flex", alignItems: "center", gap: 8,
+          fontSize: ".8rem", fontWeight: 600, color: "#4f46e5",
+        }}>
+          <ShoppingCart size={13} /> Solicitud de cotización
+        </div>
+
+        {/* Items */}
+        <div style={{ padding: "10px 14px" }}>
+          {(msg.quote_data?.items || []).map((item, i) => (
+            <div key={i} style={{
+              display: "flex", justifyContent: "space-between",
+              fontSize: ".83rem", marginBottom: 4, color: "var(--color-text-primary)",
+            }}>
+              <span>{item.name} × {item.quantity}</span>
+              <span style={{ fontWeight: 500 }}>${fmt(item.unit_price * item.quantity)}</span>
+            </div>
+          ))}
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            fontWeight: 700, fontSize: ".9rem",
+            paddingTop: 8, borderTop: "1px solid var(--color-border-tertiary)", marginTop: 4,
+          }}>
+            <span>Total</span>
+            <span>${fmt(msg.quote_data?.total)}</span>
+          </div>
+        </div>
+
+        {/* Accept button */}
+        <div style={{ padding: "0 14px 14px" }}>
+          {accepted ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#16a34a", fontSize: ".83rem", fontWeight: 600 }}>
+              <Check size={14} /> Cotización aceptada
+            </div>
+          ) : (
+            <button
+              onClick={handleAccept}
+              disabled={accepting}
+              style={{
+                background: "#4f46e5", color: "#fff", border: "none",
+                borderRadius: 8, padding: "8px 16px", fontSize: ".83rem",
+                fontWeight: 600, cursor: "pointer", display: "flex",
+                alignItems: "center", gap: 6,
+                opacity: accepting ? 0.7 : 1,
+              }}
+            >
+              {accepting
+                ? <><Loader2 size={13} className="spin" /> Procesando…</>
+                : <><Check size={13} /> Aceptar cotización</>
+              }
+            </button>
+          )}
+        </div>
+
+        <div style={{ padding: "0 14px 10px", fontSize: ".72rem", color: "var(--color-text-tertiary)" }}>
+          {formatDate(msg.created_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuoteAcceptedMessage({ msg }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+      <div style={{
+        maxWidth: "70%", padding: "10px 14px",
+        borderRadius: "16px 16px 4px 16px",
+        background: "#dcfce7", border: "1px solid #bbf7d0",
+        fontSize: ".87rem",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 600, color: "#15803d", marginBottom: 4 }}>
+          <Check size={13} /> Cotización aceptada
+        </div>
+        <div style={{ color: "var(--color-text-primary)" }}>{msg.body}</div>
+        <div style={{ fontSize: ".72rem", color: "var(--color-text-tertiary)", marginTop: 4, textAlign: "right" }}>
+          {formatDate(msg.created_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MessageBubble({ msg, conversationId, onQuoteAccepted }) {
+  if (msg.msg_type === "quote_request") {
+    return <QuoteMessage msg={msg} conversationId={conversationId} onAccepted={onQuoteAccepted} />;
+  }
+  if (msg.msg_type === "quote_accepted") {
+    return <QuoteAcceptedMessage msg={msg} />;
+  }
+
+  const isSeller = msg.sender === "seller";
+  return (
+    <div style={{
+      display: "flex",
+      justifyContent: isSeller ? "flex-end" : "flex-start",
+      marginBottom: 12,
+    }}>
+      <div style={{
+        maxWidth: "70%", padding: "10px 14px",
+        borderRadius: isSeller ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+        background: isSeller ? "#6366f1" : "var(--color-background-primary)",
+        color: isSeller ? "#fff" : "inherit",
+        border: !isSeller ? "1px solid var(--color-border-tertiary)" : "none",
+        fontSize: ".9rem",
+      }}>
+        <div>{msg.body}</div>
+        <div style={{ fontSize: ".72rem", opacity: 0.7, marginTop: 4, textAlign: "right" }}>
+          {formatDate(msg.created_at)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Chat page ────────────────────────────────────────────
 export default function Chat() {
   const [conversations, setConversations]       = useState([]);
   const [selected, setSelected]                 = useState(null);
@@ -47,7 +198,7 @@ export default function Chat() {
     fetchMessages(selected.id).finally(() => setLoadingMsgs(false));
 
     clearInterval(pollRef.current);
-    pollRef.current = setInterval(() => fetchMessages(selected.id), 15000);
+    pollRef.current = setInterval(() => fetchMessages(selected.id), 10000);
     return () => clearInterval(pollRef.current);
   }, [selected, fetchMessages]);
 
@@ -74,6 +225,11 @@ export default function Chat() {
   function handleSelectConversation(conv) {
     setSelected(conv);
     setMessages([]);
+  }
+
+  function handleQuoteAccepted(data) {
+    // Re-fetch messages to show the "quote_accepted" message from server
+    if (selected) fetchMessages(selected.id);
   }
 
   return (
@@ -156,25 +312,12 @@ export default function Chat() {
                 <p style={{ textAlign: "center", color: "var(--color-text-secondary)", fontSize: ".9rem" }}>Sin mensajes aún.</p>
               ) : (
                 messages.map(msg => (
-                  <div key={msg.id} style={{
-                    display: "flex",
-                    justifyContent: msg.sender === "seller" ? "flex-end" : "flex-start",
-                    marginBottom: 12,
-                  }}>
-                    <div style={{
-                      maxWidth: "70%", padding: "10px 14px",
-                      borderRadius: msg.sender === "seller" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                      background: msg.sender === "seller" ? "#6366f1" : "var(--color-background-primary)",
-                      color: msg.sender === "seller" ? "#fff" : "inherit",
-                      border: msg.sender === "customer" ? "1px solid var(--color-border-tertiary)" : "none",
-                      fontSize: ".9rem",
-                    }}>
-                      <div>{msg.body}</div>
-                      <div style={{ fontSize: ".72rem", opacity: 0.7, marginTop: 4, textAlign: "right" }}>
-                        {formatDate(msg.created_at)}
-                      </div>
-                    </div>
-                  </div>
+                  <MessageBubble
+                    key={msg.id}
+                    msg={msg}
+                    conversationId={selected.id}
+                    onQuoteAccepted={handleQuoteAccepted}
+                  />
                 ))
               )}
               <div ref={messagesEndRef} />

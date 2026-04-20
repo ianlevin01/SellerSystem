@@ -7,6 +7,7 @@ export default function StoreConfig() {
   const { seller, refreshSeller } = useAuth();
   const [form, setForm] = useState({
     store_name: "", store_description: "", banner_color: "#5b52f0", pct_markup: 0,
+    tagline: "", whatsapp: "", instagram: "", facebook: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
@@ -21,6 +22,10 @@ export default function StoreConfig() {
         store_description: d.store_description || "",
         banner_color:      d.banner_color      || "#5b52f0",
         pct_markup:        d.pct_markup        || 0,
+        tagline:           d.tagline           || "",
+        whatsapp:          d.whatsapp          || "",
+        instagram:         d.instagram         || "",
+        facebook:          d.facebook          || "",
       });
     }).finally(() => setLoading(false));
   }, []);
@@ -80,12 +85,48 @@ export default function StoreConfig() {
               </div>
 
               <div className="form-group">
+                <label className="form-label">Tagline <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(subtítulo corto)</span></label>
+                <input className="form-input" value={form.tagline}
+                  onChange={e => setForm(p => ({ ...p, tagline: e.target.value }))}
+                  placeholder="La mejor selección al mejor precio" maxLength={160} />
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Color principal</label>
                 <div className="color-picker-row">
                   <input type="color" value={form.banner_color}
                     onChange={e => setForm(p => ({ ...p, banner_color: e.target.value }))} />
                   <span className="color-picker-hex">{form.banner_color}</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Contacto y redes */}
+            <div className="card">
+              <h2 style={{ marginBottom: 18 }}>Contacto y redes sociales</h2>
+              <p style={{ fontSize: ".875rem", color: "var(--text-secondary)", marginBottom: 16 }}>
+                Estos datos aparecen en el footer de tu tienda y habilitan el botón de WhatsApp.
+              </p>
+
+              <div className="form-group">
+                <label className="form-label">WhatsApp <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(sólo números, con código de país)</span></label>
+                <input className="form-input" value={form.whatsapp}
+                  onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))}
+                  placeholder="5491112345678" maxLength={30} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Instagram <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(usuario sin @)</span></label>
+                <input className="form-input" value={form.instagram}
+                  onChange={e => setForm(p => ({ ...p, instagram: e.target.value }))}
+                  placeholder="mitienda" maxLength={60} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Facebook <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(URL de la página)</span></label>
+                <input className="form-input" value={form.facebook}
+                  onChange={e => setForm(p => ({ ...p, facebook: e.target.value }))}
+                  placeholder="https://facebook.com/mitienda" maxLength={120} />
               </div>
             </div>
 
