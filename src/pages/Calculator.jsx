@@ -1,4 +1,3 @@
-// src/pages/Calculator.jsx
 import { useState } from "react";
 
 const COMISIONES = [
@@ -12,19 +11,20 @@ function calcPct(total) {
   return COMISIONES.find(c => total >= c.min && total < c.max)?.pct || 40;
 }
 
-export default function Calculator() {
-  const [costo, setCosto]         = useState("");
-  const [pctSistema, setPctSistema]   = useState(30);
-  const [pctVendedor, setPctVendedor] = useState(20);
-  const [cantidad, setCantidad]   = useState(1);
+function fmt(n) { return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 }); }
 
-  const precio1            = costo ? Number(costo) * (1 + Number(pctSistema) / 100) : 0;
-  const precioVenta        = precio1 * (1 + Number(pctVendedor) / 100);
-  const difPorUnidad       = precioVenta - precio1;
-  const totalVenta         = precioVenta * Number(cantidad);
-  const difTotal           = difPorUnidad * Number(cantidad);
-  const pctComision        = calcPct(totalVenta);
-  const gananciaVendedor   = difTotal * (pctComision / 100);
+export default function Calculator() {
+  const [costo,      setCosto]      = useState("");
+  const [pctVendedor, setPctVendedor] = useState(20);
+  const [cantidad,   setCantidad]   = useState(1);
+
+  const precio1          = costo ? Number(costo) * 1.44 : 0;
+  const precioVenta      = precio1 * (1 + Number(pctVendedor) / 100);
+  const difPorUnidad     = precioVenta - precio1;
+  const totalVenta       = precioVenta * Number(cantidad);
+  const difTotal         = difPorUnidad * Number(cantidad);
+  const pctComision      = calcPct(totalVenta);
+  const gananciaVendedor = difTotal * (pctComision / 100);
 
   const niveles = COMISIONES.map(c => ({
     ...c,
@@ -47,7 +47,7 @@ export default function Calculator() {
           <h2 style={{ marginBottom: 20 }}>Parámetros</h2>
 
           <div className="form-group">
-            <label className="form-label">Costo del producto ($)</label>
+            <label className="form-label">Costo del producto (en pesos)</label>
             <input type="number" min={0} className="form-input"
               placeholder="ej: 5000"
               value={costo} onChange={e => setCosto(e.target.value)} />
@@ -55,18 +55,7 @@ export default function Calculator() {
 
           <div className="form-group">
             <label className="form-label">
-              % del sistema sobre costo (precio_1)
-              <span style={{ float: "right", fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
-                {pctSistema}%
-              </span>
-            </label>
-            <input type="range" min={0} max={300} step={1}
-              value={pctSistema} onChange={e => setPctSistema(e.target.value)} />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Tu % de aumento sobre precio_1
+              Tu % de aumento sobre precio base
               <span style={{ float: "right", fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
                 {pctVendedor}%
               </span>
@@ -86,16 +75,15 @@ export default function Calculator() {
         {/* Resultados */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* Desglose */}
           <div className="card">
             <h2 style={{ marginBottom: 16 }}>Desglose de precio</h2>
             <div className="calc-breakdown">
               {[
-                ["Costo",            costo ? `$${fmt(Number(costo))}` : "—",  "var(--text-secondary)"],
-                ["Precio base (×1)", precio1 ? `$${fmt(precio1)}` : "—",      "var(--text-primary)"],
+                ["Costo",            costo ? `$${fmt(Number(costo))}` : "—",     "var(--text-secondary)"],
+                ["Precio base (×1)", precio1 ? `$${fmt(precio1)}` : "—",         "var(--text-primary)"],
                 ["Tu precio venta",  precioVenta ? `$${fmt(precioVenta)}` : "—", "var(--brand)"],
                 ["Diferencia x u.",  difPorUnidad > 0 ? `$${fmt(difPorUnidad)}` : "—", "var(--warning)"],
-                ["Total venta",      totalVenta ? `$${fmt(totalVenta)}` : "—", "var(--text-primary)"],
+                ["Total venta",      totalVenta ? `$${fmt(totalVenta)}` : "—",   "var(--text-primary)"],
               ].map(([label, value, color]) => (
                 <div key={label} className="calc-breakdown__row">
                   <span className="calc-breakdown__label">{label}</span>
@@ -105,7 +93,6 @@ export default function Calculator() {
             </div>
           </div>
 
-          {/* Ganancia */}
           <div className="calc-result-main">
             <div className="calc-result-main__label">Tu ganancia estimada</div>
             <div className="calc-result-main__value">${fmt(gananciaVendedor)}</div>
@@ -114,7 +101,6 @@ export default function Calculator() {
             </div>
           </div>
 
-          {/* Escala */}
           <div className="card">
             <h2 style={{ marginBottom: 14, fontSize: ".8125rem", textTransform: "uppercase", letterSpacing: ".06em", color: "var(--text-tertiary)" }}>
               Escala activa
@@ -139,5 +125,3 @@ export default function Calculator() {
     </div>
   );
 }
-
-function fmt(n) { return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 }); }

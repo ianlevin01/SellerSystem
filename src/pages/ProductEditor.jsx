@@ -91,7 +91,7 @@ export default function ProductEditor() {
   return (
     <div>
       <div className="page-header" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button className="btn btn--ghost btn--sm" onClick={() => navigate("/products")} style={{ padding: "6px 8px" }}>
+        <button className="btn btn--ghost btn--sm" onClick={() => navigate(-1)} style={{ padding: "6px 8px" }}>
           <ArrowLeft size={16} />
         </button>
         <div>

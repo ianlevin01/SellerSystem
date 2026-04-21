@@ -1,4 +1,3 @@
-// src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -8,10 +7,9 @@ import Login        from "./pages/Login";
 import Register     from "./pages/Register";
 import VerifyEmail  from "./pages/VerifyEmail";
 import Dashboard    from "./pages/Dashboard";
-import Products     from "./pages/Products";
 import ProductEditor from "./pages/ProductEditor";
-import StoreConfig  from "./pages/StoreConfig";
-import Discounts    from "./pages/Discounts";
+import Pages        from "./pages/Pages";
+import PageEditor   from "./pages/PageEditor";
 import Orders       from "./pages/Orders";
 import Calculator   from "./pages/Calculator";
 import PublicStore  from "./pages/PublicStore";
@@ -32,16 +30,21 @@ export default function App() {
           {/* Panel del vendedor (requiere auth) */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route path="/"            element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard"   element={<Dashboard />} />
-              <Route path="/products"    element={<Products />} />
-              <Route path="/products/:productId/edit" element={<ProductEditor />} />
-              <Route path="/store-config" element={<StoreConfig />} />
-              <Route path="/discounts"   element={<Discounts />} />
-              <Route path="/orders"      element={<Orders />} />
-              <Route path="/calculator"  element={<Calculator />} />
-              <Route path="/profile"     element={<Profile />} />
-              <Route path="/chat"        element={<Chat />} />
+              <Route path="/"                              element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard"                     element={<Dashboard />} />
+              <Route path="/products"                      element={<Navigate to="/pages" replace />} />
+              <Route path="/products/:productId/edit"      element={<ProductEditor />} />
+              <Route path="/pages"                         element={<Pages />} />
+              <Route path="/pages/:pageId"                 element={<PageEditor tab="config" />} />
+              <Route path="/pages/:pageId/products"        element={<PageEditor tab="products" />} />
+              <Route path="/pages/:pageId/discounts"       element={<PageEditor tab="discounts" />} />
+              <Route path="/orders"                        element={<Orders />} />
+              <Route path="/calculator"                    element={<Calculator />} />
+              <Route path="/profile"                       element={<Profile />} />
+              <Route path="/chat"                          element={<Chat />} />
+              {/* Redirecciones de rutas antiguas */}
+              <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
+              <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
             </Route>
           </Route>
 

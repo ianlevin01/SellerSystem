@@ -2,19 +2,17 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
-  LayoutDashboard, Package, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Store, Zap, User, MessageSquare, Percent
+  LayoutDashboard, ShoppingBag,
+  Calculator, LogOut, ExternalLink, Layers, Zap, User, MessageSquare
 } from "lucide-react";
 
 const nav = [
-  { to: "/dashboard",    label: "Dashboard",     icon: LayoutDashboard },
-  { to: "/products",     label: "Mis productos",  icon: Package },
-  { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
-  { to: "/store-config", label: "Mi tienda",      icon: Store },
-  { to: "/discounts",    label: "Descuentos",     icon: Percent },
-  { to: "/chat",         label: "Chat",           icon: MessageSquare },
-  { to: "/calculator",   label: "Calculadora",    icon: Calculator },
-  { to: "/profile",      label: "Mi perfil",      icon: User },
+  { to: "/dashboard",  label: "Dashboard",   icon: LayoutDashboard },
+  { to: "/pages",      label: "Mis tiendas", icon: Layers },
+  { to: "/orders",     label: "Mis pedidos", icon: ShoppingBag },
+  { to: "/chat",       label: "Chat",        icon: MessageSquare },
+  { to: "/calculator", label: "Calculadora", icon: Calculator },
+  { to: "/profile",    label: "Mi perfil",   icon: User },
 ];
 
 /**
