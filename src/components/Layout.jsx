@@ -1,9 +1,11 @@
 // src/components/Layout.jsx
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
+import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Layers, Zap, User, MessageSquare
+  Calculator, LogOut, ExternalLink, Layers, Zap, User, MessageSquare, ChevronUp, Store
 } from "lucide-react";
 
 const nav = [
@@ -31,6 +33,22 @@ function storeUrl(slug) {
 export default function Layout() {
   const { seller, logout } = useAuth();
   const navigate = useNavigate();
+  const [pages, setPages]         = useState([]);
+  const [storeOpen, setStoreOpen] = useState(false);
+  const storeRef                  = useRef(null);
+
+  useEffect(() => {
+    client.get("/seller/store/pages").then(r => setPages(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!storeOpen) return;
+    function onOutside(e) {
+      if (storeRef.current && !storeRef.current.contains(e.target)) setStoreOpen(false);
+    }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [storeOpen]);
 
   function handleLogout() {
     logout();
@@ -52,6 +70,19 @@ export default function Layout() {
           </div>
         </div>
 
+        <div className="sidebar__avatar">
+          <div className="sidebar__avatar-img">
+            {(seller?.name?.[0] || "V").toUpperCase()}
+          </div>
+          <div className="sidebar__avatar-info">
+            <div className="sidebar__avatar-name">{seller?.name || "Vendedor"}</div>
+            <div className="sidebar__avatar-status">
+              <span className="sidebar__avatar-dot" />
+              En línea
+            </div>
+          </div>
+        </div>
+
         <nav className="sidebar__nav">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -68,16 +99,37 @@ export default function Layout() {
         </nav>
 
         <div className="sidebar__footer">
-          {seller?.slug && (
-            <a
-              href={storeUrl(seller.slug)}
-              target="_blank"
-              rel="noreferrer"
-              className="sidebar__footer-btn"
-            >
-              <ExternalLink size={15} />
-              Ver mi tienda
-            </a>
+          {pages.length > 0 && (
+            <div className="sidebar__store-picker" ref={storeRef}>
+              {storeOpen && (
+                <div className="sidebar__store-menu">
+                  {pages.map(page => (
+                    <a
+                      key={page.id}
+                      href={storeUrl(page.slug)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="sidebar__store-item"
+                      onClick={() => setStoreOpen(false)}
+                    >
+                      <ExternalLink size={12} />
+                      <span>{page.store_name || page.page_name}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+              <button
+                className={`sidebar__footer-btn${storeOpen ? " sidebar__footer-btn--active" : ""}`}
+                onClick={() => setStoreOpen(p => !p)}
+              >
+                <Store size={15} />
+                Ver mis tiendas
+                <ChevronUp
+                  size={12}
+                  style={{ marginLeft: "auto", transition: "transform .2s", transform: storeOpen ? "rotate(0deg)" : "rotate(180deg)" }}
+                />
+              </button>
+            </div>
           )}
           <button className="sidebar__footer-btn" onClick={handleLogout}>
             <LogOut size={15} />

@@ -18,9 +18,10 @@ export default function Calculator() {
   const [pctVendedor, setPctVendedor] = useState(20);
   const [cantidad,   setCantidad]   = useState(1);
 
-  const precio1          = costo ? Number(costo) * 1.44 : 0;
-  const precioVenta      = precio1 * (1 + Number(pctVendedor) / 100);
-  const difPorUnidad     = precioVenta - precio1;
+  const costoVendedor    = costo ? Number(costo) : 0;
+  const precioMinimo     = costoVendedor * 1.2;
+  const precioVenta      = precioMinimo * (1 + Number(pctVendedor) / 100);
+  const difPorUnidad     = precioVenta - costoVendedor;
   const totalVenta       = precioVenta * Number(cantidad);
   const difTotal         = difPorUnidad * Number(cantidad);
   const pctComision      = calcPct(totalVenta);
@@ -55,7 +56,7 @@ export default function Calculator() {
 
           <div className="form-group">
             <label className="form-label">
-              Tu % de aumento sobre precio base
+              Tu % de aumento sobre precio mínimo
               <span style={{ float: "right", fontWeight: 600, fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
                 {pctVendedor}%
               </span>
@@ -79,11 +80,11 @@ export default function Calculator() {
             <h2 style={{ marginBottom: 16 }}>Desglose de precio</h2>
             <div className="calc-breakdown">
               {[
-                ["Costo",            costo ? `$${fmt(Number(costo))}` : "—",     "var(--text-secondary)"],
-                ["Precio base (×1)", precio1 ? `$${fmt(precio1)}` : "—",         "var(--text-primary)"],
-                ["Tu precio venta",  precioVenta ? `$${fmt(precioVenta)}` : "—", "var(--brand)"],
-                ["Diferencia x u.",  difPorUnidad > 0 ? `$${fmt(difPorUnidad)}` : "—", "var(--warning)"],
-                ["Total venta",      totalVenta ? `$${fmt(totalVenta)}` : "—",   "var(--text-primary)"],
+                ["Costo",             costoVendedor ? `$${fmt(costoVendedor)}` : "—",   "var(--text-secondary)"],
+                ["Precio mínimo",     precioMinimo  ? `$${fmt(precioMinimo)}`  : "—",   "var(--text-primary)"],
+                ["Tu precio de venta",precioVenta   ? `$${fmt(precioVenta)}`   : "—",   "var(--brand)"],
+                ["Margen x unidad",   difPorUnidad > 0 ? `$${fmt(difPorUnidad)}` : "—","var(--warning)"],
+                ["Total venta",       totalVenta    ? `$${fmt(totalVenta)}`    : "—",   "var(--text-primary)"],
               ].map(([label, value, color]) => (
                 <div key={label} className="calc-breakdown__row">
                   <span className="calc-breakdown__label">{label}</span>
@@ -97,7 +98,7 @@ export default function Calculator() {
             <div className="calc-result-main__label">Tu ganancia estimada</div>
             <div className="calc-result-main__value">${fmt(gananciaVendedor)}</div>
             <div style={{ marginTop: 8, fontSize: ".8rem", color: "#166534" }}>
-              Comisión del {pctComision}% sobre ${fmt(difTotal)} de diferencia
+              {pctComision}% sobre ${fmt(difTotal)} de margen total
             </div>
           </div>
 

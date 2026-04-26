@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import client from "../api/client";
-import { Plus, Minus, Search, Image, PlusCircle } from "lucide-react";
+import { Plus, Minus, Search, Image, PlusCircle, X } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -19,8 +19,14 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [search,      setSearch]      = useState("");
   const [filter,      setFilter]      = useState("all");
+  const [categoryId,  setCategoryId]  = useState(null);
+  const [categories,  setCategories]  = useState([]);
   const [saving,      setSaving]      = useState({});
   const searchTimeout = useRef(null);
+
+  useEffect(() => {
+    client.get("/seller/store/categories").then(r => setCategories(r.data || [])).catch(() => {});
+  }, []);
 
   const fetchProducts = useCallback(async (newOffset = 0, append = false) => {
     if (newOffset === 0) setLoading(true);
@@ -28,10 +34,11 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
     try {
       const res = await client.get(`/seller/store/pages/${pageId}/products`, {
         params: {
-          search:    search || undefined,
-          only_mine: filter === "mine" ? "true" : undefined,
-          limit:     PAGE_SIZE,
-          offset:    newOffset,
+          search:      search || undefined,
+          only_mine:   filter === "mine" ? "true" : undefined,
+          category_id: categoryId || undefined,
+          limit:       PAGE_SIZE,
+          offset:      newOffset,
         },
       });
       const { products: incoming, total: t, hasMore: more } = res.data;
@@ -43,7 +50,7 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [pageId, search, filter]);
+  }, [pageId, search, filter, categoryId]);
 
   useEffect(() => {
     clearTimeout(searchTimeout.current);
@@ -53,13 +60,17 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
 
   async function toggle(product) {
     setSaving(p => ({ ...p, [product.id]: true }));
+    // Optimistic update
+    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, in_my_store: !p.in_my_store } : p));
     try {
       if (product.in_my_store) {
         await client.delete(`/seller/store/pages/${pageId}/products/${product.id}`);
       } else {
         await client.post(`/seller/store/pages/${pageId}/products/${product.id}`);
       }
-      await fetchProducts(0, false);
+    } catch {
+      // Revert on error
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, in_my_store: product.in_my_store } : p));
     } finally {
       setSaving(p => ({ ...p, [product.id]: false }));
     }
@@ -84,7 +95,7 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
         </button>
       </div>
 
-      <div className="toolbar" style={{ marginBottom: 16 }}>
+      <div className="toolbar" style={{ marginBottom: 10 }}>
         <div className="search-wrapper" style={{ flex: 1, minWidth: 200 }}>
           <Search className="search-wrapper__icon" size={15} />
           <input
@@ -100,6 +111,27 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
           <button className={`pill-tab${filter === "mine" ? " active" : ""}`} onClick={() => setFilter("mine")}>En esta tienda</button>
         </div>
       </div>
+
+      {/* Category filter */}
+      {categories.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+          <button
+            className={`pill-tab${!categoryId ? " active" : ""}`}
+            onClick={() => setCategoryId(null)}
+          >
+            Todas las categorías
+          </button>
+          {categories.map(c => (
+            <button
+              key={c.id}
+              className={`pill-tab${categoryId === c.id ? " active" : ""}`}
+              onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!loading && (
         <p style={{ fontSize: ".82rem", color: "var(--text-muted)", marginBottom: 12 }}>

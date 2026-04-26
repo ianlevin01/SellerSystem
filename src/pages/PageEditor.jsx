@@ -39,38 +39,42 @@ function ConfigTab({ pageId }) {
   const [saved,   setSaved]   = useState(false);
   const [error,   setError]   = useState("");
 
+  function formFromData(d) {
+    setForm({
+      page_name:           d.page_name           || "",
+      store_name:          d.store_name          || "",
+      store_description:   d.store_description   || "",
+      banner_color:        d.banner_color         || "#5b52f0",
+      pct_markup:          Number(d.pct_markup)   || 0,
+      tagline:             d.tagline              || "",
+      whatsapp:            d.whatsapp             || "",
+      instagram:           d.instagram            || "",
+      facebook:            d.facebook             || "",
+      logo_url:            d.logo_url             || "",
+      font_family:         d.font_family          || "",
+      color_secondary:     d.color_secondary      || "",
+      color_bg:            d.color_bg             || "",
+      color_text:          d.color_text           || "",
+      featured_categories: Array.isArray(d.featured_categories) ? d.featured_categories : [],
+    });
+  }
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
       client.get(`/seller/store/pages/${pageId}`),
       client.get(`/seller/store/categories`),
     ]).then(([pageRes, catRes]) => {
-      const d = pageRes.data;
-      setForm({
-        page_name:           d.page_name           || "",
-        store_name:          d.store_name          || "",
-        store_description:   d.store_description   || "",
-        banner_color:        d.banner_color         || "#5b52f0",
-        pct_markup:          d.pct_markup           || 0,
-        tagline:             d.tagline              || "",
-        whatsapp:            d.whatsapp             || "",
-        instagram:           d.instagram            || "",
-        facebook:            d.facebook             || "",
-        logo_url:            d.logo_url             || "",
-        font_family:         d.font_family          || "",
-        color_secondary:     d.color_secondary      || "",
-        color_bg:            d.color_bg             || "",
-        color_text:          d.color_text           || "",
-        featured_categories: d.featured_categories  || [],
-      });
+      formFromData(pageRes.data);
       setCategories(catRes.data || []);
     }).finally(() => setLoading(false));
   }, [pageId]);
 
   function toggleCategory(id) {
     setForm(p => {
-      const has = p.featured_categories.includes(id);
-      return { ...p, featured_categories: has ? p.featured_categories.filter(c => c !== id) : [...p.featured_categories, id] };
+      const cats = Array.isArray(p.featured_categories) ? p.featured_categories : [];
+      const has  = cats.includes(id);
+      return { ...p, featured_categories: has ? cats.filter(c => c !== id) : [...cats, id] };
     });
   }
 
@@ -78,7 +82,8 @@ function ConfigTab({ pageId }) {
     e.preventDefault();
     setError(""); setSaving(true); setSaved(false);
     try {
-      await client.put(`/seller/store/pages/${pageId}`, { ...form, pct_markup: Number(form.pct_markup) });
+      const res = await client.put(`/seller/store/pages/${pageId}`, { ...form, pct_markup: Number(form.pct_markup) });
+      formFromData(res.data);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -206,7 +211,8 @@ function ConfigTab({ pageId }) {
                 <label className="form-label">Categorías destacadas <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(solo mostrar estos productos)</span></label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
                   {categories.map(cat => {
-                    const active = form.featured_categories.includes(cat.id);
+                    const activeCats = Array.isArray(form.featured_categories) ? form.featured_categories : [];
+                    const active = activeCats.includes(cat.id);
                     return (
                       <button
                         key={cat.id}
@@ -229,7 +235,7 @@ function ConfigTab({ pageId }) {
                     );
                   })}
                 </div>
-                {form.featured_categories.length > 0 && (
+                {(Array.isArray(form.featured_categories) ? form.featured_categories : []).length > 0 && (
                   <p style={{ fontSize: ".78rem", color: "var(--text-tertiary)", marginTop: 6 }}>
                     Solo se mostrarán productos de las categorías seleccionadas. Deseleccioná todas para mostrar todos los productos.
                   </p>

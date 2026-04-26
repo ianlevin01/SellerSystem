@@ -52,21 +52,28 @@ export default function Dashboard() {
         </Link>
       )}
 
-      <div className="page-header">
-        <h1>Hola, {seller?.name?.split(" ")[0]} 👋</h1>
-        <p>
-          Tu tienda pública:{" "}
-          <a href={`/store/${seller?.slug}`} target="_blank" rel="noreferrer"
-             style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
-            /{seller?.slug} <ExternalLink size={12} />
-          </a>
-        </p>
+      <div className="welcome-banner">
+        <div className="welcome-banner__content">
+          <div className="welcome-banner__greeting">Bienvenido de vuelta</div>
+          <h1 className="welcome-banner__name">{seller?.name?.split(" ")[0] || "Vendedor"} 👋</h1>
+          {seller?.slug && (
+            <a href={`/store/${seller?.slug}`} target="_blank" rel="noreferrer"
+               className="welcome-banner__store-link">
+              <ExternalLink size={12} />
+              Ver tienda pública
+            </a>
+          )}
+        </div>
+        <div className="welcome-banner__shapes" aria-hidden="true">
+          <div className="welcome-banner__shape welcome-banner__shape--1" />
+          <div className="welcome-banner__shape welcome-banner__shape--2" />
+        </div>
       </div>
 
       {/* Stats */}
       <div className="stat-grid">
         {stats.map(({ label, value, icon: Icon, color, bg }, i) => (
-          <div className="stat-card" key={label} style={{ animationDelay: `${i * 60}ms` }}>
+          <div className="stat-card" key={label} style={{ animationDelay: `${i * 60}ms`, '--stat-color': color }}>
             <div className="stat-card__icon" style={{ background: bg }}>
               <Icon size={16} color={color} />
             </div>

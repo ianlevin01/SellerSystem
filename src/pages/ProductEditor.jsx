@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import { Trash2, Upload, ArrowLeft, Image } from "lucide-react";
+import RichEditor from "../components/RichEditor";
 
 export default function ProductEditor() {
   const { productId } = useParams();
@@ -37,9 +38,11 @@ export default function ProductEditor() {
   async function handleSaveCustom() {
     setSaving(true); setSaveMsg("");
     try {
+      // strip HTML tags to detect truly empty rich-text content
+      const descText = customDesc.replace(/<[^>]*>/g, "").trim();
       await client.patch(`/seller/products/${productId}/customize`, {
         custom_name: customName.trim() || null,
-        custom_desc: customDesc.trim() || null,
+        custom_desc: descText ? customDesc : null,
       });
       setSaveMsg("Guardado");
       setTimeout(() => setSaveMsg(""), 2000);
@@ -119,15 +122,10 @@ export default function ProductEditor() {
             />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: ".85rem", marginBottom: 4, color: "var(--color-text-secondary)" }}>Descripción</label>
-            <textarea
-              className="form-input"
-              rows={3}
-              value={customDesc}
-              onChange={e => setCustomDesc(e.target.value)}
-              placeholder={product.description || "Sin descripción original"}
-              style={{ resize: "vertical" }}
-            />
+            <label style={{ display: "block", fontSize: ".85rem", marginBottom: 6, color: "var(--color-text-secondary)" }}>
+              Descripción <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(soporta texto enriquecido, imágenes y GIFs)</span>
+            </label>
+            <RichEditor value={customDesc} onChange={setCustomDesc} productId={productId} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button className="btn btn--primary btn--sm" onClick={handleSaveCustom} disabled={saving}>
