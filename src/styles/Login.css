@@ -1,0 +1,524 @@
+/* src/styles/Login.css */
+/* Login limpio y premium de Ventaz */
+/* cambio hecho por Yolo */
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body:has(.vtz-login) {
+  overflow: hidden;
+}
+
+.vtz-login {
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(420px, .9fr) minmax(480px, 1.1fr);
+  background: #f4f7ef;
+  color: #0f172a;
+  font-family: var(--font, "Inter", "DM Sans", system-ui, sans-serif);
+  overflow: hidden;
+}
+
+.vtz-login * {
+  box-sizing: border-box;
+}
+
+.vtz-login a {
+  text-decoration: none;
+}
+
+.vtz-login-side {
+  position: relative;
+  height: 100vh;
+  padding: clamp(24px, 3vw, 42px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(117,236,61,.32), transparent 30rem),
+    radial-gradient(circle at 86% 74%, rgba(117,236,61,.14), transparent 26rem),
+    linear-gradient(135deg, #061006 0%, #09200d 48%, #123816 100%);
+}
+
+.vtz-login-side__grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center, black 34%, transparent 82%);
+  pointer-events: none;
+}
+
+.vtz-login-side::after {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: -230px;
+  bottom: -240px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.10);
+  pointer-events: none;
+}
+
+.vtz-login-side__orb {
+  position: absolute;
+  width: 360px;
+  height: 360px;
+  right: -150px;
+  top: 22%;
+  border-radius: 50%;
+  background: rgba(117,236,61,.16);
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.vtz-login-brand,
+.vtz-login-mobile-brand {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 950;
+  letter-spacing: -.04em;
+}
+
+.vtz-login-brand span,
+.vtz-login-mobile-brand span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #75ec3d, #34a112);
+  box-shadow: 0 16px 34px rgba(77,184,26,.32);
+}
+
+.vtz-login-side__content {
+  position: relative;
+  z-index: 2;
+  max-width: 610px;
+}
+
+.vtz-login-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 13px;
+  margin-bottom: 24px;
+  border-radius: 999px;
+  color: #b8ff9d;
+  background: rgba(255,255,255,.075);
+  border: 1px solid rgba(255,255,255,.12);
+  font-size: .9rem;
+  font-weight: 950;
+}
+
+.vtz-login-side h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(4rem, 8vw, 8.2rem);
+  line-height: .82;
+  letter-spacing: -.09em;
+}
+
+.vtz-login-side p {
+  max-width: 560px;
+  margin: 26px 0 0;
+  color: rgba(255,255,255,.74);
+  font-size: clamp(1rem, 1.3vw, 1.18rem);
+  line-height: 1.62;
+}
+
+.vtz-login-side__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.vtz-login-side__chips span {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 13px;
+  border-radius: 999px;
+  color: rgba(255,255,255,.82);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  font-weight: 850;
+}
+
+.vtz-login-side__chips svg {
+  color: #79ef45;
+}
+
+.vtz-login-side__footer {
+  position: relative;
+  z-index: 2;
+  max-width: 520px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  color: rgba(255,255,255,.76);
+  background: rgba(255,255,255,.065);
+  border: 1px solid rgba(255,255,255,.11);
+  font-weight: 850;
+}
+
+.vtz-login-side__footer svg {
+  color: #79ef45;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.vtz-login-form-section {
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 46px);
+  background:
+    radial-gradient(circle at 76% 12%, rgba(77,184,26,.13), transparent 28rem),
+    #f4f7ef;
+  overflow: hidden;
+}
+
+.vtz-login-form-wrap {
+  width: min(100%, 500px);
+  padding: clamp(28px, 4vw, 42px);
+  border-radius: 34px;
+  background: rgba(255,255,255,.90);
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 30px 100px rgba(15,23,42,.10);
+  animation: vtz-login-enter .45s ease both;
+}
+
+@keyframes vtz-login-enter {
+  from { opacity: 0; transform: translateY(16px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vtz-login-mobile-brand {
+  display: none;
+  color: #0f172a;
+  margin-bottom: 22px;
+}
+
+.vtz-login-mobile-brand span {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+}
+
+.vtz-login-head {
+  margin-bottom: 24px;
+}
+
+.vtz-login-kicker {
+  display: inline-flex;
+  color: #329f10;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: .76rem;
+  font-weight: 1000;
+  margin-bottom: 12px;
+}
+
+.vtz-login-head h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2.55rem, 5vw, 4.2rem);
+  line-height: .92;
+  letter-spacing: -.075em;
+}
+
+.vtz-login-head p {
+  margin: 13px 0 0;
+  color: #647067;
+  line-height: 1.55;
+  font-size: 1rem;
+}
+
+.vtz-login-alert,
+.vtz-login-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 17px;
+  font-weight: 850;
+}
+
+.vtz-login-alert {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.vtz-login-success {
+  color: #246c10;
+  background: #e6f9dc;
+  border: 1px solid #d4efc3;
+}
+
+.vtz-login-alert svg,
+.vtz-login-success svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.vtz-login-form {
+  display: grid;
+  gap: 14px;
+}
+
+.vtz-login-field {
+  display: grid;
+  gap: 8px;
+}
+
+.vtz-login-field label {
+  color: #4b5563;
+  font-size: .83rem;
+  font-weight: 1000;
+  letter-spacing: .02em;
+}
+
+.vtz-login-input {
+  position: relative;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid #dfe8d7;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.vtz-login-input:focus-within {
+  border-color: #57d625;
+  box-shadow: 0 0 0 4px rgba(87,214,37,.14);
+  transform: translateY(-1px);
+}
+
+.vtz-login-input svg {
+  color: #94a39a;
+  flex: 0 0 auto;
+}
+
+.vtz-login-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+}
+
+.vtz-login-input input::placeholder {
+  color: #a8b2aa;
+  font-weight: 600;
+}
+
+.vtz-login-field.has-error .vtz-login-input {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 4px rgba(239,68,68,.10);
+}
+
+.vtz-login-field small {
+  color: #dc2626;
+  font-size: .8rem;
+  font-weight: 850;
+}
+
+.vtz-login-eye {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  color: #7b867d;
+  background: #f4f7ef;
+  transition: background .16s ease, color .16s ease;
+}
+
+.vtz-login-eye:hover {
+  color: #329f10;
+  background: #e6f9dc;
+}
+
+.vtz-login-btn {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 18px;
+  padding: 0 22px;
+  font-weight: 1000;
+  text-decoration: none;
+  transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+
+.vtz-login-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, #75ec3d, #329f10);
+  box-shadow: 0 18px 44px rgba(77,184,26,.28);
+}
+
+.vtz-login-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 58px rgba(77,184,26,.36);
+}
+
+.vtz-login-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.vtz-login-spin {
+  animation: vtz-login-spin .75s linear infinite;
+}
+
+@keyframes vtz-login-spin {
+  to { transform: rotate(360deg); }
+}
+
+.vtz-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.vtz-login-divider::before,
+.vtz-login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #dfe8d7;
+}
+
+.vtz-login-divider span {
+  color: #7b867d;
+  font-size: .84rem;
+  font-weight: 850;
+}
+
+.vtz-login-google {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px solid #dfe8d7;
+  border-radius: 18px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 950;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.vtz-login-google:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #fbfdf8;
+  box-shadow: 0 14px 34px rgba(15,23,42,.07);
+}
+
+.vtz-login-google:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.vtz-login-register {
+  margin: 18px 0 0;
+  color: #647067;
+  text-align: center;
+  font-weight: 800;
+}
+
+.vtz-login-register a {
+  color: #329f10;
+  font-weight: 1000;
+}
+
+@media (max-width: 980px) {
+  body:has(.vtz-login) {
+    overflow: auto;
+  }
+
+  .vtz-login {
+    min-height: 100vh;
+    height: auto;
+    max-height: none;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .vtz-login-side {
+    display: none;
+  }
+
+  .vtz-login-mobile-brand {
+    display: inline-flex;
+  }
+
+  .vtz-login-form-section {
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+    padding: 18px;
+  }
+
+  .vtz-login-form-wrap {
+    border-radius: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .vtz-login-form-section {
+    place-items: start center;
+  }
+
+  .vtz-login-form-wrap {
+    padding: 24px 18px;
+  }
+
+  .vtz-login-head h2 {
+    font-size: 3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtz-login *,
+  .vtz-login *::before,
+  .vtz-login *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,1005 @@
+/* src/styles/Register.css */
+/* Registro premium de Ventaz */
+/* cambio hecho por Yolo */
+
+.vtz-register {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(420px, .96fr) minmax(480px, 1.04fr);
+  background: #f4f7ef;
+  color: #0f172a;
+  font-family: var(--font, "Inter", "DM Sans", system-ui, sans-serif);
+  overflow: hidden;
+}
+
+.vtz-register * {
+  box-sizing: border-box;
+}
+
+.vtz-register a {
+  text-decoration: none;
+}
+
+.vtz-register-panel {
+  position: relative;
+  min-height: 100vh;
+  padding: 34px clamp(28px, 4vw, 56px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fff;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(117,236,61,.35), transparent 30rem),
+    radial-gradient(circle at 88% 78%, rgba(117,236,61,.16), transparent 26rem),
+    linear-gradient(135deg, #061006 0%, #09200d 48%, #123816 100%);
+}
+
+.vtz-register-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black 34%, transparent 82%);
+  pointer-events: none;
+}
+
+.vtz-register-panel::after {
+  content: "";
+  position: absolute;
+  width: 660px;
+  height: 660px;
+  right: -260px;
+  bottom: -250px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.10);
+  pointer-events: none;
+}
+
+.vtz-register-panel__glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  top: 20%;
+  right: -170px;
+  border-radius: 50%;
+  background: rgba(117,236,61,.18);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.vtz-register-brand,
+.vtz-register-mobile-brand {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 950;
+  letter-spacing: -.04em;
+  font-size: 1.05rem;
+}
+
+.vtz-register-brand span,
+.vtz-register-mobile-brand span {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #75ec3d, #34a112);
+  box-shadow: 0 16px 34px rgba(77,184,26,.32);
+}
+
+.vtz-register-panel__content {
+  position: relative;
+  z-index: 2;
+  max-width: 660px;
+}
+
+.vtz-register-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  margin-bottom: 28px;
+  border-radius: 999px;
+  color: #b8ff9d;
+  background: rgba(255,255,255,.075);
+  border: 1px solid rgba(255,255,255,.12);
+  font-weight: 950;
+}
+
+.vtz-register-panel h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(3rem, 6vw, 6.8rem);
+  line-height: .86;
+  letter-spacing: -.09em;
+}
+
+.vtz-register-panel p {
+  max-width: 580px;
+  margin: 28px 0 0;
+  color: rgba(255,255,255,.72);
+  font-size: clamp(1rem, 1.45vw, 1.22rem);
+  line-height: 1.72;
+}
+
+.vtz-register-benefits {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 34px;
+}
+
+.vtz-register-benefits div {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.075);
+  border: 1px solid rgba(255,255,255,.11);
+  color: rgba(255,255,255,.82);
+  font-weight: 850;
+  backdrop-filter: blur(12px);
+}
+
+.vtz-register-benefits svg {
+  color: #79ef45;
+  flex: 0 0 auto;
+}
+
+.vtz-register-proof {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 560px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  color: rgba(255,255,255,.78);
+  background: rgba(255,255,255,.065);
+  border: 1px solid rgba(255,255,255,.11);
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.vtz-register-proof svg {
+  color: #79ef45;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.vtz-register-form-section {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(22px, 4vw, 56px);
+  background:
+    radial-gradient(circle at 85% 18%, rgba(77,184,26,.13), transparent 27rem),
+    #f4f7ef;
+}
+
+.vtz-register-form-wrap {
+  width: min(100%, 560px);
+  padding: clamp(28px, 4vw, 44px);
+  border-radius: 34px;
+  background: rgba(255,255,255,.88);
+  border: 1px solid rgba(15,23,42,.08);
+  box-shadow: 0 30px 100px rgba(15,23,42,.10);
+  animation: vtz-register-enter .5s ease both;
+}
+
+@keyframes vtz-register-enter {
+  from { opacity: 0; transform: translateY(18px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.vtz-register-mobile-brand {
+  display: none;
+  color: #0f172a;
+  margin-bottom: 24px;
+}
+
+.vtz-register-mobile-brand span {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+}
+
+.vtz-register-head {
+  margin-bottom: 22px;
+}
+
+.vtz-register-kicker {
+  display: inline-flex;
+  color: #329f10;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-size: .76rem;
+  font-weight: 1000;
+  margin-bottom: 12px;
+}
+
+.vtz-register-head h2,
+.vtz-success-card h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2.4rem, 5vw, 4.6rem);
+  line-height: .93;
+  letter-spacing: -.075em;
+}
+
+.vtz-register-head p,
+.vtz-success-card p {
+  margin: 14px 0 0;
+  color: #647067;
+  line-height: 1.68;
+  font-size: 1rem;
+}
+
+.vtz-register-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.vtz-register-progress > div {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4ecd9;
+}
+
+.vtz-register-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #75ec3d, #329f10);
+  transition: width .25s ease;
+}
+
+.vtz-register-progress strong {
+  color: #329f10;
+  font-size: .82rem;
+  font-weight: 1000;
+}
+
+.vtz-register-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  font-weight: 850;
+}
+
+.vtz-register-alert svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.vtz-register-form {
+  display: grid;
+  gap: 14px;
+}
+
+.vtz-register-field {
+  display: grid;
+  gap: 8px;
+}
+
+.vtz-register-field label {
+  color: #4b5563;
+  font-size: .83rem;
+  font-weight: 1000;
+  letter-spacing: .02em;
+}
+
+.vtz-register-input {
+  position: relative;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1.5px solid #dfe8d7;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.vtz-register-input:focus-within {
+  border-color: #57d625;
+  box-shadow: 0 0 0 4px rgba(87,214,37,.14);
+  transform: translateY(-1px);
+}
+
+.vtz-register-input svg {
+  color: #94a39a;
+  flex: 0 0 auto;
+}
+
+.vtz-register-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  background: transparent;
+  font: inherit;
+  font-weight: 750;
+}
+
+.vtz-register-input input::placeholder {
+  color: #a8b2aa;
+  font-weight: 600;
+}
+
+.vtz-register-field.has-error .vtz-register-input {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 4px rgba(239,68,68,.10);
+}
+
+.vtz-register-field small {
+  color: #dc2626;
+  font-size: .8rem;
+  font-weight: 850;
+}
+
+.vtz-register-field small.is-muted {
+  color: #7b867d;
+}
+
+.vtz-register-eye {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  color: #7b867d;
+  background: #f4f7ef;
+  transition: background .16s ease, color .16s ease;
+}
+
+.vtz-register-eye:hover {
+  color: #329f10;
+  background: #e6f9dc;
+}
+
+.vtz-password-meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.vtz-password-meter span {
+  height: 6px;
+  border-radius: 999px;
+  background: #e4ecd9;
+  transition: background .2s ease;
+}
+
+.vtz-password-meter--1 span:nth-child(1) {
+  background: #ef4444;
+}
+
+.vtz-password-meter--2 span:nth-child(-n+2) {
+  background: #f59e0b;
+}
+
+.vtz-password-meter--3 span:nth-child(-n+3) {
+  background: #84cc16;
+}
+
+.vtz-password-meter--4 span {
+  background: #329f10;
+}
+
+.vtz-register-btn {
+  min-height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 18px;
+  padding: 0 22px;
+  font-weight: 1000;
+  text-decoration: none;
+  transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+
+.vtz-register-btn--primary {
+  color: #fff;
+  background: linear-gradient(135deg, #75ec3d, #329f10);
+  box-shadow: 0 18px 44px rgba(77,184,26,.28);
+}
+
+.vtz-register-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 58px rgba(77,184,26,.36);
+}
+
+.vtz-register-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.vtz-register-spin {
+  animation: vtz-register-spin .75s linear infinite;
+}
+
+@keyframes vtz-register-spin {
+  to { transform: rotate(360deg); }
+}
+
+.vtz-register-bottom {
+  margin-top: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.vtz-register-bottom > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  color: #456044;
+  background: #eaf7df;
+  border: 1px solid #d4efc3;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.vtz-register-bottom svg {
+  color: #329f10;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.vtz-register-bottom p {
+  margin: 0;
+  text-align: center;
+  color: #647067;
+  font-weight: 800;
+}
+
+.vtz-register-bottom a {
+  color: #329f10;
+  font-weight: 1000;
+}
+
+.vtz-register-success {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(77,184,26,.18), transparent 28rem),
+    linear-gradient(135deg, #071108, #102f14);
+}
+
+.vtz-success-card {
+  width: min(100%, 560px);
+  padding: clamp(30px, 5vw, 52px);
+  border-radius: 36px;
+  text-align: center;
+  background: rgba(255,255,255,.94);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: 0 30px 100px rgba(0,0,0,.24);
+}
+
+.vtz-success-card__icon {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 24px;
+  border-radius: 26px;
+  color: #fff;
+  background: linear-gradient(135deg, #75ec3d, #329f10);
+  box-shadow: 0 20px 52px rgba(77,184,26,.30);
+}
+
+.vtz-success-card__email {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 24px 0;
+  padding: 12px 16px;
+  border-radius: 999px;
+  color: #246c10;
+  background: #e6f9dc;
+  font-weight: 1000;
+}
+
+@media (max-width: 980px) {
+  .vtz-register {
+    grid-template-columns: 1fr;
+  }
+
+  .vtz-register-panel {
+    display: none;
+  }
+
+  .vtz-register-mobile-brand {
+    display: inline-flex;
+  }
+
+  .vtz-register-form-section {
+    padding: 18px;
+  }
+
+  .vtz-register-form-wrap {
+    border-radius: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  .vtz-register-form-section {
+    place-items: start center;
+  }
+
+  .vtz-register-form-wrap {
+    padding: 24px 18px;
+  }
+
+  .vtz-register-head h2,
+  .vtz-success-card h1 {
+    font-size: 3rem;
+  }
+
+  .vtz-register-progress {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Nota de tutorial inicial - cambio hecho por Yolo */
+.vtz-register-onboarding {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: -4px 0 20px;
+  padding: 15px 16px;
+  border-radius: 20px;
+  background: #eefbe7;
+  border: 1px solid #d5f2c5;
+  color: #246c10;
+}
+
+.vtz-register-onboarding svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #329f10;
+}
+
+.vtz-register-onboarding strong {
+  display: block;
+  font-size: .92rem;
+  font-weight: 1000;
+  margin-bottom: 4px;
+}
+
+.vtz-register-onboarding span {
+  display: block;
+  color: #4b6f43;
+  font-size: .88rem;
+  line-height: 1.5;
+  font-weight: 750;
+}
+
+
+/* ── REGISTER SIN SCROLL EN DESKTOP (cambio hecho por Yolo) ── */
+/* Esto compacta la pantalla Crear mi tienda para que entre completa sin bajar/subir */
+
+body:has(.vtz-register) {
+  overflow: hidden;
+}
+
+.vtz-register {
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.vtz-register-panel {
+  height: 100vh;
+  min-height: 0;
+  padding: clamp(22px, 2.8vw, 38px);
+}
+
+.vtz-register-panel__content {
+  max-width: 620px;
+}
+
+.vtz-register-panel h1 {
+  font-size: clamp(3rem, 5.4vw, 5.8rem);
+  line-height: .86;
+}
+
+.vtz-register-panel p {
+  margin-top: 22px;
+  font-size: clamp(.96rem, 1.15vw, 1.08rem);
+  line-height: 1.58;
+}
+
+.vtz-register-pill {
+  margin-bottom: 20px;
+  padding: 8px 13px;
+  font-size: .9rem;
+}
+
+.vtz-register-benefits {
+  margin-top: 24px;
+  gap: 10px;
+}
+
+.vtz-register-benefits div {
+  min-height: 50px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  font-size: .9rem;
+}
+
+.vtz-register-proof {
+  padding: 13px 15px;
+  border-radius: 18px;
+  font-size: .9rem;
+}
+
+.vtz-register-form-section {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(16px, 3vw, 38px);
+}
+
+.vtz-register-form-wrap {
+  width: min(100%, 520px);
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 34px);
+  border-radius: 30px;
+}
+
+.vtz-register-mobile-brand {
+  margin-bottom: 18px;
+}
+
+.vtz-register-head {
+  margin-bottom: 16px;
+}
+
+.vtz-register-kicker {
+  margin-bottom: 9px;
+}
+
+.vtz-register-head h2,
+.vtz-success-card h1 {
+  font-size: clamp(2.35rem, 4.4vw, 3.9rem);
+  line-height: .92;
+}
+
+.vtz-register-head p,
+.vtz-success-card p {
+  margin-top: 10px;
+  line-height: 1.5;
+  font-size: .95rem;
+}
+
+.vtz-register-progress {
+  margin: 14px 0;
+}
+
+.vtz-register-onboarding {
+  margin: -2px 0 14px;
+  padding: 12px 14px;
+  border-radius: 17px;
+}
+
+.vtz-register-onboarding strong {
+  font-size: .86rem;
+}
+
+.vtz-register-onboarding span {
+  font-size: .8rem;
+  line-height: 1.42;
+}
+
+.vtz-register-alert {
+  margin-bottom: 12px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  font-size: .88rem;
+}
+
+.vtz-register-form {
+  gap: 10px;
+}
+
+.vtz-register-field {
+  gap: 6px;
+}
+
+.vtz-register-field label {
+  font-size: .78rem;
+}
+
+.vtz-register-input {
+  min-height: 48px;
+  border-radius: 16px;
+}
+
+.vtz-register-input input {
+  font-size: .95rem;
+}
+
+.vtz-password-meter {
+  gap: 5px;
+}
+
+.vtz-password-meter span {
+  height: 5px;
+}
+
+.vtz-register-field small {
+  font-size: .75rem;
+}
+
+.vtz-register-btn {
+  min-height: 50px;
+  border-radius: 16px;
+}
+
+.vtz-register-bottom {
+  margin-top: 14px;
+  gap: 12px;
+}
+
+.vtz-register-bottom > div {
+  padding: 12px 13px;
+  border-radius: 16px;
+  font-size: .85rem;
+}
+
+.vtz-register-bottom p {
+  font-size: .9rem;
+}
+
+/* Si alguna notebook tiene altura muy chica, compacta todavía más */
+@media (max-height: 820px) and (min-width: 981px) {
+  .vtz-register-panel h1 {
+    font-size: clamp(2.8rem, 5vw, 5rem);
+  }
+
+  .vtz-register-panel p {
+    margin-top: 18px;
+  }
+
+  .vtz-register-benefits {
+    grid-template-columns: 1fr;
+    margin-top: 20px;
+  }
+
+  .vtz-register-benefits div {
+    min-height: 44px;
+  }
+
+  .vtz-register-form-wrap {
+    padding: 22px 28px;
+  }
+
+  .vtz-register-head h2 {
+    font-size: clamp(2.3rem, 4vw, 3.4rem);
+  }
+
+  .vtz-register-onboarding span {
+    display: none;
+  }
+
+  .vtz-register-bottom > div {
+    display: none;
+  }
+}
+
+/* En mobile sí dejamos scroll, porque si no el formulario no entra cómodo */
+@media (max-width: 980px) {
+  body:has(.vtz-register) {
+    overflow: auto;
+  }
+
+  .vtz-register {
+    min-height: 100vh;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .vtz-register-form-section {
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .vtz-register-form-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+
+/* ── FIX: evita que "Ingresá" quede cortado cuando aparecen errores ── */
+/* cambio hecho por Yolo */
+
+.vtz-register-form-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* El formulario nunca debe tapar el link inferior */
+.vtz-register-bottom {
+  flex-shrink: 0;
+}
+
+/* Compacta la pantalla cuando aparecen validaciones */
+.vtz-register-form-wrap:has(.has-error) {
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-head {
+  margin-bottom: 10px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-head h2 {
+  font-size: clamp(2.15rem, 3.7vw, 3.25rem);
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-head p {
+  margin-top: 6px;
+  font-size: .88rem;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-progress {
+  display: none;
+}
+
+/* Cuando hay errores, la explicación larga ocupa demasiado y empuja el link */
+.vtz-register-form-wrap:has(.has-error) .vtz-register-onboarding {
+  display: none;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-alert {
+  margin-bottom: 8px;
+  padding: 9px 12px;
+  font-size: .82rem;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-form {
+  gap: 8px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-field {
+  gap: 4px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-input {
+  min-height: 44px;
+  border-radius: 14px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-field label {
+  font-size: .74rem;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-field small {
+  font-size: .72rem;
+  line-height: 1.15;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-password-meter span {
+  height: 4px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-btn {
+  min-height: 48px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-bottom {
+  margin-top: 10px;
+}
+
+/* La tarjeta verde explicativa se oculta cuando hay errores para que el link quede visible */
+.vtz-register-form-wrap:has(.has-error) .vtz-register-bottom > div {
+  display: none;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-bottom p {
+  display: block;
+  font-size: .88rem;
+  line-height: 1.2;
+  padding-bottom: 2px;
+}
+
+/* En pantallas muy bajas, dejamos solamente el link inferior */
+@media (max-height: 760px) and (min-width: 981px) {
+  .vtz-register-bottom > div,
+  .vtz-register-onboarding,
+  .vtz-register-progress {
+    display: none;
+  }
+
+  .vtz-register-form-wrap {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+}
+
+
+/* ── PROGRESO POR 4 LÍNEAS, SIN PORCENTAJE (cambio hecho por Yolo) ── */
+
+.vtz-register-progress {
+  display: none !important;
+}
+
+.vtz-register-completion-lines {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin: 14px 0 18px;
+}
+
+.vtz-register-completion-lines span {
+  height: 6px;
+  border-radius: 999px;
+  background: #dfe8d7;
+  transition:
+    background .22s ease,
+    box-shadow .22s ease,
+    transform .22s ease,
+    opacity .22s ease;
+  opacity: .85;
+}
+
+.vtz-register-completion-lines span.is-active {
+  background: linear-gradient(90deg, #75ec3d, #329f10);
+  box-shadow: 0 0 14px rgba(77,184,26,.24);
+  transform: translateY(-1px);
+  opacity: 1;
+}
+
+/* Como ahora las 4 líneas representan el formulario completo, no mostramos el medidor de contraseña */
+.vtz-password-meter {
+  display: none !important;
+}
+
+/* Ajuste cuando hay errores: las líneas siguen visibles, pero más compactas */
+.vtz-register-form-wrap:has(.has-error) .vtz-register-completion-lines {
+  margin: 8px 0 12px;
+}
+
+.vtz-register-form-wrap:has(.has-error) .vtz-register-completion-lines span {
+  height: 5px;
+}
