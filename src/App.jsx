@@ -1,8 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./auth/AuthContext";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
+import Landing      from "./pages/Landing";
 import Login        from "./pages/Login";
 import Register     from "./pages/Register";
 import VerifyEmail  from "./pages/VerifyEmail";
@@ -16,12 +17,18 @@ import PublicStore  from "./pages/PublicStore";
 import Profile      from "./pages/Profile";
 import Chat         from "./pages/Chat";
 
+function HomeRoute() {
+  const { isLoggedIn } = useAuth();
+  return isLoggedIn ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
           {/* Públicas */}
+          <Route path="/"             element={<HomeRoute />} />
           <Route path="/login"        element={<Login />} />
           <Route path="/register"     element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -30,7 +37,6 @@ export default function App() {
           {/* Panel del vendedor (requiere auth) */}
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route path="/"                              element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard"                     element={<Dashboard />} />
               <Route path="/products"                      element={<Navigate to="/pages" replace />} />
               <Route path="/products/:productId/edit"      element={<ProductEditor />} />
