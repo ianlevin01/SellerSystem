@@ -32,6 +32,7 @@ function ConfigTab({ pageId }) {
     pct_markup: 0, tagline: "", whatsapp: "", instagram: "", facebook: "",
     logo_url: "", font_family: "", color_secondary: "", color_bg: "", color_text: "",
     featured_categories: [],
+    card_border_radius: 12, card_show_shadow: true,
   });
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,8 @@ function ConfigTab({ pageId }) {
       color_bg:            d.color_bg             || "",
       color_text:          d.color_text           || "",
       featured_categories: Array.isArray(d.featured_categories) ? d.featured_categories : [],
+      card_border_radius:  d.card_border_radius  != null ? Number(d.card_border_radius) : 12,
+      card_show_shadow:    d.card_show_shadow     != null ? Boolean(d.card_show_shadow)  : true,
     });
   }
 
@@ -205,6 +208,43 @@ function ConfigTab({ pageId }) {
                 <option value="">Predeterminada</option>
                 {GOOGLE_FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
               </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">
+                Borde de las tarjetas de producto
+                <span style={{ float: "right", fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
+                  {form.card_border_radius}px
+                </span>
+              </label>
+              <input type="range" min={0} max={32} step={2}
+                value={form.card_border_radius}
+                onChange={e => setForm(p => ({ ...p, card_border_radius: Number(e.target.value) }))}
+              />
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                {[0, 8, 12, 20, 32].map(r => (
+                  <button key={r} type="button"
+                    onClick={() => setForm(p => ({ ...p, card_border_radius: r }))}
+                    style={{
+                      padding: "4px 10px", fontSize: ".78rem", cursor: "pointer",
+                      borderRadius: 6, border: `1.5px solid ${form.card_border_radius === r ? "var(--brand)" : "var(--border)"}`,
+                      background: form.card_border_radius === r ? "var(--brand)" : "transparent",
+                      color: form.card_border_radius === r ? "#fff" : "var(--text-secondary)",
+                      fontWeight: 500,
+                    }}>
+                    {r}px
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span>Sombra en las tarjetas</span>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={form.card_show_shadow}
+                    onChange={e => setForm(p => ({ ...p, card_show_shadow: e.target.checked }))} />
+                  <span className="toggle-track"><span className="toggle-thumb" /></span>
+                </label>
+              </label>
             </div>
             {categories.length > 0 && (
               <div className="form-group">
