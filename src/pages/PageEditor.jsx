@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
-import { ChevronLeft, Plus, Trash2, Percent, Tag, TrendingDown, ChevronDown, AlertTriangle, Loader2, ExternalLink } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Percent, Tag, TrendingDown, ChevronDown, AlertTriangle, ExternalLink } from "lucide-react";
 import PageProducts from "./PageProducts";
 
 function fmt(n) { return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 }); }
-function maxDiscount(pctMarkup) {
-  if (!pctMarkup || pctMarkup <= 0) return 0;
-  return (pctMarkup * 100) / (100 + pctMarkup);
-}
 function storeUrl(slug) {
   if (import.meta.env.DEV) {
     const base = import.meta.env.VITE_STORE_DEV_URL || "http://localhost:5174";
@@ -29,7 +25,7 @@ const GOOGLE_FONTS = [
 function ConfigTab({ pageId }) {
   const [form, setForm] = useState({
     page_name: "", store_name: "", store_description: "", banner_color: "#5b52f0",
-    pct_markup: 0, tagline: "", whatsapp: "", instagram: "", facebook: "",
+    tagline: "", whatsapp: "", instagram: "", facebook: "",
     logo_url: "", font_family: "", color_secondary: "", color_bg: "", color_text: "",
     featured_categories: [],
     card_border_radius: 12, card_show_shadow: true,
@@ -46,7 +42,6 @@ function ConfigTab({ pageId }) {
       store_name:          d.store_name          || "",
       store_description:   d.store_description   || "",
       banner_color:        d.banner_color         || "#5b52f0",
-      pct_markup:          Number(d.pct_markup)   || 0,
       tagline:             d.tagline              || "",
       whatsapp:            d.whatsapp             || "",
       instagram:           d.instagram            || "",
@@ -85,7 +80,7 @@ function ConfigTab({ pageId }) {
     e.preventDefault();
     setError(""); setSaving(true); setSaved(false);
     try {
-      const res = await client.put(`/seller/store/pages/${pageId}`, { ...form, pct_markup: Number(form.pct_markup) });
+      const res = await client.put(`/seller/store/pages/${pageId}`, form);
       formFromData(res.data);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -95,9 +90,6 @@ function ConfigTab({ pageId }) {
       setSaving(false);
     }
   }
-
-  const ejemploPrecio = 10000;
-  const precioFinal   = ejemploPrecio * (1 + Number(form.pct_markup) / 100);
 
   if (loading) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -306,38 +298,6 @@ function ConfigTab({ pageId }) {
             </div>
           </div>
 
-          <div className="card">
-            <h2 style={{ marginBottom: 6 }}>Configuración de precios</h2>
-            <p style={{ fontSize: ".875rem", marginBottom: 18 }}>
-              El precio base (precio_1) ya incluye los márgenes del sistema. Tu porcentaje se suma por encima.
-            </p>
-            <div className="form-group">
-              <label className="form-label">
-                % de aumento sobre precio_1
-                <span style={{ float: "right", fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                  {form.pct_markup}%
-                </span>
-              </label>
-              <input type="range" min={0} max={200} step={0.5}
-                value={form.pct_markup}
-                onChange={e => setForm(p => ({ ...p, pct_markup: e.target.value }))}
-                style={{ marginBottom: 8 }}
-              />
-            </div>
-            <div className="card" style={{ background: "var(--bg)", boxShadow: "none", padding: "14px 16px" }}>
-              <div style={{ fontSize: ".825rem", color: "var(--text-secondary)", marginBottom: 8 }}>Ejemplo con precio base = $10.000</div>
-              <div className="calc-breakdown">
-                <div className="calc-breakdown__row">
-                  <span className="calc-breakdown__label">Precio base</span>
-                  <span className="calc-breakdown__value">${fmt(ejemploPrecio)}</span>
-                </div>
-                <div className="calc-breakdown__row">
-                  <span className="calc-breakdown__label">Tu precio de venta</span>
-                  <span className="calc-breakdown__value" style={{ color: "var(--brand)" }}>${fmt(precioFinal)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Preview */}
@@ -358,7 +318,7 @@ function ConfigTab({ pageId }) {
                 <div className="preview-product__info">
                   <div className="preview-product__name">Nombre del producto</div>
                   <div style={{ fontSize: "1rem", fontWeight: 700, color: form.banner_color, letterSpacing: "-.02em" }}>
-                    ${fmt(precioFinal)}
+                    $10.000
                   </div>
                 </div>
               </div>
@@ -382,11 +342,10 @@ function ConfigTab({ pageId }) {
 
 const EMPTY_DISCOUNTS = { enabled_quantity: false, enabled_price: false, quantity_tiers: [], price_tiers: [] };
 
-function TiersSection({ type, tiers, onChange, pctMarkup }) {
+function TiersSection({ type, tiers, onChange }) {
   const isQty    = type === "quantity";
   const thLabel  = isQty ? "Cantidad mínima (unidades)" : "Monto mínimo del carrito ($)";
   const thHolder = isQty ? "ej: 3" : "ej: 50000";
-  const maxPct   = maxDiscount(pctMarkup);
 
   function add()              { onChange([...tiers, { threshold: "", discount_pct: "" }]); }
   function remove(idx)        { onChange(tiers.filter((_, i) => i !== idx)); }
@@ -399,7 +358,6 @@ function TiersSection({ type, tiers, onChange, pctMarkup }) {
           {isQty
             ? "Aplicá un descuento según la cantidad de unidades."
             : "Aplicá un descuento sobre el total del carrito cuando supere cierto monto."}
-          {pctMarkup > 0 && <> Descuento máximo: <strong>{maxPct.toFixed(1)}%</strong>.</>}
         </p>
         <button type="button" className="btn btn--secondary btn--sm" onClick={add} style={{ flexShrink: 0, marginLeft: 12 }}>
           <Plus size={13} /> Agregar nivel
@@ -415,35 +373,27 @@ function TiersSection({ type, tiers, onChange, pctMarkup }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", gap: 12, padding: "0 4px", fontSize: ".78rem", fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".04em" }}>
             <span>{thLabel}</span><span>% de descuento</span><span />
           </div>
-          {tiers.map((tier, idx) => {
-            const over = maxPct > 0 && Number(tier.discount_pct) > maxPct;
-            return (
-              <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", gap: 12, alignItems: "center", padding: "10px 14px", background: over ? "var(--danger-light,#fef2f2)" : "var(--bg)", borderRadius: "var(--radius-md)", border: `1px solid ${over ? "var(--danger,#ef4444)" : "var(--border)"}` }}>
-                <input type="number" min={0} step={isQty ? 1 : 100}
-                  className="form-input form-input--sm" placeholder={thHolder}
-                  value={tier.threshold} onChange={e => update(idx, "threshold", e.target.value)} />
-                <div style={{ position: "relative" }}>
-                  <input type="number" min={0.1} max={100} step={0.1}
-                    className="form-input form-input--sm" placeholder="ej: 15"
-                    value={tier.discount_pct} onChange={e => update(idx, "discount_pct", e.target.value)}
-                    style={{ paddingRight: 28 }} />
-                  <Percent size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", pointerEvents: "none" }} />
-                </div>
-                <button type="button" onClick={() => remove(idx)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4, borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--danger)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--text-tertiary)"}
-                >
-                  <Trash2 size={14} />
-                </button>
-                {over && (
-                  <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", gap: 5, fontSize: ".78rem", color: "var(--danger,#ef4444)" }}>
-                    <AlertTriangle size={12} /> Este descuento bajaría el precio por debajo del costo ({maxPct.toFixed(1)}% máximo).
-                  </div>
-                )}
+          {tiers.map((tier, idx) => (
+            <div key={idx} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 40px", gap: 12, alignItems: "center", padding: "10px 14px", background: "var(--bg)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+              <input type="number" min={0} step={isQty ? 1 : 100}
+                className="form-input form-input--sm" placeholder={thHolder}
+                value={tier.threshold} onChange={e => update(idx, "threshold", e.target.value)} />
+              <div style={{ position: "relative" }}>
+                <input type="number" min={0.1} max={100} step={0.1}
+                  className="form-input form-input--sm" placeholder="ej: 15"
+                  value={tier.discount_pct} onChange={e => update(idx, "discount_pct", e.target.value)}
+                  style={{ paddingRight: 28 }} />
+                <Percent size={12} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", pointerEvents: "none" }} />
               </div>
-            );
-          })}
+              <button type="button" onClick={() => remove(idx)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", padding: 4, borderRadius: "var(--radius-sm)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--danger)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--text-tertiary)"}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -479,35 +429,55 @@ function DiscountAccordion({ icon: Icon, title, enabled, onToggle, children }) {
 
 function DiscountsTab({ pageId }) {
   const [config,    setConfig]    = useState(EMPTY_DISCOUNTS);
-  const [pctMarkup, setPctMarkup] = useState(0);
+  const [products,  setProducts]  = useState([]);
+  const [priceAdj,  setPriceAdj]  = useState({});
+  const [draftAdj,  setDraftAdj]  = useState({});
   const [loading,   setLoading]   = useState(true);
-  const [saving,    setSaving]    = useState(false);
-  const [saved,     setSaved]     = useState(false);
-  const [error,     setError]     = useState("");
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
+  const [error,    setError]    = useState("");
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
       client.get(`/seller/store/pages/${pageId}/discounts`),
-      client.get(`/seller/store/pages/${pageId}`),
+      client.get(`/seller/store/pages/${pageId}/products`, { params: { only_mine: "true", limit: 200 } }),
     ]).then(([dRes, pRes]) => {
       setConfig({ ...EMPTY_DISCOUNTS, ...dRes.data, quantity_tiers: dRes.data.quantity_tiers || [], price_tiers: dRes.data.price_tiers || [] });
-      setPctMarkup(Number(pRes.data.pct_markup) || 0);
+      setProducts(pRes.data.products || []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [pageId]);
 
-  function hasInvalid() {
-    const max = maxDiscount(pctMarkup);
-    if (max <= 0) return false;
-    return [...config.quantity_tiers, ...config.price_tiers].some(t => t.discount_pct !== "" && Number(t.discount_pct) > max);
-  }
+  const maxDiscountPct = Math.max(0,
+    ...[...config.quantity_tiers, ...config.price_tiers]
+      .map(t => Number(t.discount_pct))
+      .filter(v => !isNaN(v) && v > 0)
+  );
+
+  const violations = maxDiscountPct > 0
+    ? products.map(p => {
+        const effectivePrice  = priceAdj[p.id] !== undefined ? Number(priceAdj[p.id]) : (p.custom_price ?? p.precio_1 ?? 0);
+        const discountedPrice = effectivePrice * (1 - maxDiscountPct / 100);
+        const floor           = p.precio_1 ?? 0;
+        const minNeeded       = floor > 0 ? floor / (1 - maxDiscountPct / 100) : 0;
+        return { ...p, effectivePrice, discountedPrice, floor, minNeeded, isViolation: floor > 0 && discountedPrice < floor - 0.01 };
+      }).filter(p => p.isViolation)
+    : [];
 
   async function handleSave(e) {
     e.preventDefault();
-    if (hasInvalid()) { setError("Hay niveles con descuentos que superan el máximo permitido."); return; }
+    if (violations.length > 0) { setError("Ajustá los precios de los productos marcados antes de guardar."); return; }
     setError(""); setSaving(true); setSaved(false);
-    const cleanTiers = ts => ts.filter(t => t.threshold !== "" && t.discount_pct !== "").map(t => ({ threshold: Number(t.threshold), discount_pct: Number(t.discount_pct) }));
     try {
+      for (const id of Object.keys(priceAdj)) {
+        await client.patch(`/seller/store/pages/${pageId}/products/${id}/price`, { custom_price: Number(priceAdj[id]) });
+      }
+      if (Object.keys(priceAdj).length > 0) {
+        setProducts(prev => prev.map(p => priceAdj[p.id] !== undefined ? { ...p, custom_price: Number(priceAdj[p.id]) } : p));
+        setPriceAdj({});
+        setDraftAdj({});
+      }
+      const cleanTiers = ts => ts.filter(t => t.threshold !== "" && t.discount_pct !== "").map(t => ({ threshold: Number(t.threshold), discount_pct: Number(t.discount_pct) }));
       const res = await client.put(`/seller/store/pages/${pageId}/discounts`, {
         enabled_quantity: config.enabled_quantity,
         enabled_price:    config.enabled_price,
@@ -534,16 +504,80 @@ function DiscountsTab({ pageId }) {
     <form onSubmit={handleSave}>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <DiscountAccordion icon={Tag} title="Descuentos por cantidad" enabled={config.enabled_quantity} onToggle={v => setConfig(c => ({ ...c, enabled_quantity: v }))}>
-          <TiersSection type="quantity" tiers={config.quantity_tiers} onChange={ts => setConfig(c => ({ ...c, quantity_tiers: ts }))} pctMarkup={pctMarkup} />
+          <TiersSection type="quantity" tiers={config.quantity_tiers} onChange={ts => setConfig(c => ({ ...c, quantity_tiers: ts }))} />
         </DiscountAccordion>
         <DiscountAccordion icon={TrendingDown} title="Descuentos por monto del carrito" enabled={config.enabled_price} onToggle={v => setConfig(c => ({ ...c, enabled_price: v }))}>
-          <TiersSection type="price" tiers={config.price_tiers} onChange={ts => setConfig(c => ({ ...c, price_tiers: ts }))} pctMarkup={pctMarkup} />
+          <TiersSection type="price" tiers={config.price_tiers} onChange={ts => setConfig(c => ({ ...c, price_tiers: ts }))} />
         </DiscountAccordion>
+
+        {violations.length > 0 && (
+          <div className="card" style={{ border: "1.5px solid var(--danger,#ef4444)", background: "var(--danger-light,#fef2f2)", padding: "20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <AlertTriangle size={16} color="var(--danger,#ef4444)" />
+              <strong style={{ color: "var(--danger,#ef4444)", fontSize: ".9375rem" }}>
+                {violations.length} producto{violations.length !== 1 ? "s" : ""} quedaría{violations.length !== 1 ? "n" : ""} por debajo del precio mínimo
+              </strong>
+            </div>
+            <p style={{ fontSize: ".82rem", color: "var(--text-secondary)", margin: "0 0 14px" }}>
+              Con un descuento del {maxDiscountPct.toFixed(1)}%, estos productos bajarían de su precio mínimo. Subí sus precios y confirmá cada uno para poder guardar.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, padding: "0 4px", fontSize: ".75rem", fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".04em" }}>
+                <span>Producto</span><span>Tu precio</span><span>Con descuento</span><span>Nuevo precio</span>
+              </div>
+              {violations.map(v => {
+                const draft    = draftAdj[v.id] ?? "";
+                const draftNum = Number(draft);
+                const canAccept = draft !== "" && !isNaN(draftNum) && draftNum >= Math.ceil(v.minNeeded);
+                return (
+                  <div key={v.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, alignItems: "center", padding: "10px 12px", background: "#fff", borderRadius: "var(--radius-md)", border: "1px solid var(--danger,#ef4444)" }}>
+                    <div style={{ fontSize: ".8375rem", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.custom_name || v.name}</div>
+                    <div style={{ fontSize: ".8125rem", color: "var(--text-secondary)" }}>{fmt(v.effectivePrice)}</div>
+                    <div style={{ fontSize: ".8125rem", color: "var(--danger,#ef4444)", fontWeight: 600 }}>{fmt(v.discountedPrice)}</div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <div style={{ position: "relative", flex: 1 }}>
+                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: ".75rem", color: "var(--text-secondary)", pointerEvents: "none" }}>$</span>
+                        <input
+                          type="number"
+                          min={Math.ceil(v.minNeeded)}
+                          step={1}
+                          className="form-input form-input--sm"
+                          style={{ paddingLeft: 18 }}
+                          value={draft}
+                          placeholder={Math.ceil(v.minNeeded).toLocaleString("es-AR")}
+                          onChange={e => setDraftAdj(p => ({ ...p, [v.id]: e.target.value }))}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && canAccept) {
+                              setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
+                              setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
+                            }
+                          }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn--sm btn--primary"
+                        disabled={!canAccept}
+                        onClick={() => {
+                          setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
+                          setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
+                        }}
+                      >
+                        Aceptar
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
         {error && <span style={{ fontSize: ".875rem", color: "var(--danger)" }}>{error}</span>}
         {saved && <span style={{ fontSize: ".875rem", color: "var(--success)", fontWeight: 500 }}>✓ Guardado</span>}
-        <button type="submit" disabled={saving || hasInvalid()} className="btn btn--primary btn--lg">
+        <button type="submit" disabled={saving || violations.length > 0} className="btn btn--primary btn--lg">
           {saving ? "Guardando..." : "Guardar descuentos"}
         </button>
       </div>
@@ -556,15 +590,13 @@ function DiscountsTab({ pageId }) {
 export default function PageEditor({ tab = "config" }) {
   const { pageId } = useParams();
   const navigate   = useNavigate();
-  const [pageName,  setPageName]  = useState("");
-  const [pageSlug,  setPageSlug]  = useState("");
-  const [pctMarkup, setPctMarkup] = useState(0);
+  const [pageName, setPageName] = useState("");
+  const [pageSlug, setPageSlug] = useState("");
 
   useEffect(() => {
     client.get(`/seller/store/pages/${pageId}`).then(res => {
       setPageName(res.data.page_name || res.data.store_name || "Tienda");
       setPageSlug(res.data.slug || "");
-      setPctMarkup(Number(res.data.pct_markup) || 0);
     }).catch(() => {});
   }, [pageId]);
 
@@ -594,7 +626,7 @@ export default function PageEditor({ tab = "config" }) {
 
       <div style={{ marginTop: 24 }}>
         {tab === "config"    && <ConfigTab    pageId={pageId} />}
-        {tab === "products"  && <PageProducts pageId={pageId} pctMarkup={pctMarkup} />}
+        {tab === "products"  && <PageProducts pageId={pageId} />}
         {tab === "discounts" && <DiscountsTab pageId={pageId} />}
       </div>
     </div>

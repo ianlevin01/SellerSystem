@@ -50,7 +50,6 @@ function NewPageModal({ onClose, onCreated }) {
     slug: "",
     store_name: "",
     banner_color: "#57d625",
-    pct_markup: 0,
   });
 
   const [saving, setSaving] = useState(false);
@@ -94,10 +93,9 @@ function NewPageModal({ onClose, onCreated }) {
     try {
       const res = await client.post("/seller/store/pages", {
         ...form,
-        page_name: form.page_name.trim(),
+        page_name:  form.page_name.trim(),
         store_name: (form.store_name || form.page_name).trim(),
-        slug: form.slug.trim(),
-        pct_markup: Number(form.pct_markup),
+        slug:       form.slug.trim(),
       });
 
       onCreated(res.data);
@@ -167,25 +165,6 @@ function NewPageModal({ onClose, onCreated }) {
                 />
               </div>
               <small>Solo minúsculas, números y guiones. Este link identifica tu tienda.</small>
-            </label>
-
-            <label className="vtz-pages-field">
-              <span>
-                <Percent size={17} />
-                Recargo general
-                <strong>{form.pct_markup}%</strong>
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="200"
-                step="0.5"
-                value={form.pct_markup}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, pct_markup: e.target.value }))
-                }
-              />
-              <small>Podés cambiarlo después por producto o desde la configuración.</small>
             </label>
 
             <label className="vtz-pages-field">
@@ -267,13 +246,6 @@ export default function Pages() {
     });
   }, [pages, search]);
 
-  const avgMarkup = useMemo(() => {
-    if (!pages.length) return 0;
-
-    const total = pages.reduce((sum, page) => sum + Number(page.pct_markup || 0), 0);
-    return total / pages.length;
-  }, [pages]);
-
   async function handleDelete(page) {
     const name = page.page_name || page.store_name || "esta tienda";
 
@@ -354,12 +326,6 @@ export default function Pages() {
           <Store size={23} />
           <span>Tiendas creadas</span>
           <strong>{pages.length}</strong>
-        </article>
-
-        <article>
-          <Percent size={23} />
-          <span>Recargo promedio</span>
-          <strong>{avgMarkup.toFixed(1)}%</strong>
         </article>
 
         <article>
@@ -478,10 +444,6 @@ export default function Pages() {
                   </button>
 
                   <div className="vtz-page-card__meta">
-                    <span>
-                      <Percent size={15} />
-                      {page.pct_markup ?? 0}% de recargo
-                    </span>
                     <span>
                       <Palette size={15} />
                       {page.banner_color || "#57d625"}

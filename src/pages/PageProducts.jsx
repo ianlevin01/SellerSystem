@@ -1,16 +1,89 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import client from "../api/client";
-import { Plus, Minus, Search, Image, PlusCircle, X } from "lucide-react";
+import { Plus, Minus, Search, Image, PlusCircle, Check, AlertCircle } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
 function fmt(n) {
-  if (!n) return "—";
+  if (!n && n !== 0) return "—";
   return Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 }
 
-export default function PageProducts({ pageId, pctMarkup = 0 }) {
+function PriceEditor({ product, pageId, onSaved }) {
+  const precio1    = product.precio_1;
+  const initial    = product.custom_price ?? precio1 ?? "";
+  const [value,    setValue]   = useState(initial !== "" ? Number(initial).toFixed(0) : "");
+  const [saving,   setSaving]  = useState(false);
+  const [error,    setError]   = useState("");
+  const [success,  setSuccess] = useState(false);
+
+  const tooLow = precio1 && value !== "" && Number(value) < precio1 - 0.01;
+
+  async function handleSave() {
+    if (tooLow || value === "") return;
+    setSaving(true); setError(""); setSuccess(false);
+    try {
+      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, {
+        custom_price: Number(value),
+      });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
+      onSaved(product.id, Number(value));
+    } catch (err) {
+      setError(err.response?.data?.message || "Error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      {precio1 && (
+        <div style={{ fontSize: ".72rem", color: "var(--text-muted)", marginBottom: 4 }}>
+          Mínimo: {fmt(precio1)}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: ".8rem", color: "var(--text-secondary)" }}>$</span>
+          <input
+            type="number"
+            min={precio1 || 0}
+            step={1}
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleSave()}
+            className="form-input form-input--sm"
+            style={{ paddingLeft: 20, borderColor: tooLow ? "var(--danger)" : undefined }}
+            placeholder="Tu precio"
+          />
+        </div>
+        <button
+          className="btn btn--primary"
+          style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "0 14px", height: 36, fontSize: ".8125rem", fontWeight: 600 }}
+          onClick={handleSave}
+          disabled={saving || tooLow || value === ""}
+        >
+          {saving ? "Guardando..." : <><Check size={14} /> Guardar</>}
+        </button>
+      </div>
+      {tooLow && (
+        <div style={{ fontSize: ".72rem", color: "var(--danger)", marginTop: 3, display: "flex", gap: 4, alignItems: "center" }}>
+          <AlertCircle size={11} /> Por debajo del mínimo
+        </div>
+      )}
+      {success && (
+        <div style={{ fontSize: ".72rem", color: "var(--success)", marginTop: 3 }}>✓ Guardado</div>
+      )}
+      {error && (
+        <div style={{ fontSize: ".72rem", color: "var(--danger)", marginTop: 3 }}>{error}</div>
+      )}
+    </div>
+  );
+}
+
+export default function PageProducts({ pageId }) {
   const [products,    setProducts]    = useState([]);
   const [total,       setTotal]       = useState(0);
   const [offset,      setOffset]      = useState(0);
@@ -60,7 +133,6 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
 
   async function toggle(product) {
     setSaving(p => ({ ...p, [product.id]: true }));
-    // Optimistic update
     setProducts(prev => prev.map(p => p.id === product.id ? { ...p, in_my_store: !p.in_my_store } : p));
     try {
       if (product.in_my_store) {
@@ -69,7 +141,6 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
         await client.post(`/seller/store/pages/${pageId}/products/${product.id}`);
       }
     } catch {
-      // Revert on error
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, in_my_store: product.in_my_store } : p));
     } finally {
       setSaving(p => ({ ...p, [product.id]: false }));
@@ -82,13 +153,15 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
     await fetchProducts(0, false);
   }
 
-  const pct = Number(pctMarkup || 0);
+  function handlePriceSaved(productId, newPrice) {
+    setProducts(prev => prev.map(p => p.id === productId ? { ...p, custom_price: newPrice } : p));
+  }
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <p style={{ margin: 0, fontSize: ".875rem", color: "var(--text-secondary)" }}>
-          Elegí qué productos aparecen en esta tienda.
+          Elegí qué productos aparecen en esta tienda y fijá el precio de cada uno.
         </p>
         <button className="btn btn--primary btn--sm" onClick={addAll}>
           <PlusCircle size={14} /> Agregar todos
@@ -112,13 +185,9 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
         </div>
       </div>
 
-      {/* Category filter */}
       {categories.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-          <button
-            className={`pill-tab${!categoryId ? " active" : ""}`}
-            onClick={() => setCategoryId(null)}
-          >
+          <button className={`pill-tab${!categoryId ? " active" : ""}`} onClick={() => setCategoryId(null)}>
             Todas las categorías
           </button>
           {categories.map(c => (
@@ -142,7 +211,7 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
       {loading ? (
         <div className="product-grid">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="skeleton" style={{ height: 260, borderRadius: "var(--radius-lg)" }} />
+            <div key={i} className="skeleton" style={{ height: 300, borderRadius: "var(--radius-lg)" }} />
           ))}
         </div>
       ) : products.length === 0 ? (
@@ -153,11 +222,10 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
         <>
           <div className="product-grid">
             {products.map((product, i) => {
-              const images      = product.seller_images?.length > 0 ? product.seller_images : product.system_images;
-              const imgUrl      = images?.[0] || null;
-              const precio1     = product.precio_1;
-              const precioVenta = precio1 ? precio1 * (1 + pct / 100) : null;
-              const inStore     = !!product.in_my_store;
+              const images  = product.seller_images?.length > 0 ? product.seller_images : product.system_images;
+              const imgUrl  = images?.[0] || null;
+              const inStore = !!product.in_my_store;
+              const currentPrice = product.custom_price ?? product.precio_1;
 
               return (
                 <div
@@ -181,14 +249,17 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
                     <div className="product-card__name">{product.custom_name || product.name}</div>
                     <div className="product-card__meta">{product.code || "—"} · Stock: {product.stock_total}</div>
 
-                    <div className="product-card__price-row">
-                      <div className="product-card__base-price">Base: {fmt(precio1)}</div>
-                      {precioVenta && (
-                        <div className="product-card__sale-price">{fmt(precioVenta)}</div>
-                      )}
-                    </div>
+                    {inStore && (
+                      <div style={{ marginTop: 6 }}>
+                        <div style={{ fontSize: ".75rem", color: "var(--text-secondary)", marginBottom: 2 }}>
+                          Precio actual: <strong style={{ color: "var(--brand)" }}>{fmt(currentPrice)}</strong>
+                          {!product.custom_price && <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}> (mínimo)</span>}
+                        </div>
+                        <PriceEditor product={product} pageId={pageId} onSaved={handlePriceSaved} />
+                      </div>
+                    )}
 
-                    <div className="product-card__actions">
+                    <div className="product-card__actions" style={{ marginTop: 10 }}>
                       <button
                         onClick={() => toggle(product)}
                         disabled={saving[product.id]}
@@ -199,9 +270,9 @@ export default function PageProducts({ pageId, pctMarkup = 0 }) {
                       </button>
                       {inStore && (
                         <Link
-                          to={`/products/${product.id}/edit`}
+                          to={`/pages/${pageId}/products/${product.id}/edit`}
                           className="btn btn--secondary btn--sm"
-                          title="Editar imágenes"
+                          title="Editar imágenes y nombre"
                         >
                           <Image size={13} />
                         </Link>

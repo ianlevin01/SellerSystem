@@ -39,7 +39,8 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/dashboard"                     element={<Dashboard />} />
               <Route path="/products"                      element={<Navigate to="/pages" replace />} />
-              <Route path="/products/:productId/edit"      element={<ProductEditor />} />
+              <Route path="/products/:productId/edit"                        element={<ProductEditor />} />
+              <Route path="/pages/:pageId/products/:productId/edit"        element={<ProductEditor />} />
               <Route path="/pages"                         element={<Pages />} />
               <Route path="/pages/:pageId"                 element={<PageEditor tab="config" />} />
               <Route path="/pages/:pageId/products"        element={<PageEditor tab="products" />} />

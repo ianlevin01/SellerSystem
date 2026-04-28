@@ -6,7 +6,7 @@ import { Trash2, Upload, ArrowLeft, Image } from "lucide-react";
 import RichEditor from "../components/RichEditor";
 
 export default function ProductEditor() {
-  const { productId } = useParams();
+  const { productId, pageId } = useParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -22,10 +22,12 @@ export default function ProductEditor() {
   const [saveMsg, setSaveMsg]           = useState("");
 
   useEffect(() => {
-    Promise.all([
-      client.get("/seller/products", { params: { only_mine: "true", limit: 200 } }),
-      client.get(`/seller/images/${productId}`),
-    ]).then(([productsRes, imagesRes]) => {
+    const productsFetch = pageId
+      ? client.get(`/seller/store/pages/${pageId}/products`, { params: { only_mine: "true", limit: 200 } })
+      : client.get("/seller/products", { params: { only_mine: "true", limit: 200 } });
+    const imagesFetch = client.get(`/seller/images/${productId}`, pageId ? { params: { pageId } } : {});
+
+    Promise.all([productsFetch, imagesFetch]).then(([productsRes, imagesRes]) => {
       const found = productsRes.data.products.find(p => p.id === productId);
       setProduct(found);
       setSystemImages(found?.system_images || []);
@@ -33,14 +35,16 @@ export default function ProductEditor() {
       setCustomName(found?.custom_name || "");
       setCustomDesc(found?.custom_desc || "");
     }).finally(() => setLoading(false));
-  }, [productId]);
+  }, [productId, pageId]);
 
   async function handleSaveCustom() {
     setSaving(true); setSaveMsg("");
     try {
-      // strip HTML tags to detect truly empty rich-text content
       const descText = customDesc.replace(/<[^>]*>/g, "").trim();
-      await client.patch(`/seller/products/${productId}/customize`, {
+      const endpoint = pageId
+        ? `/seller/store/pages/${pageId}/products/${productId}/customize`
+        : `/seller/products/${productId}/customize`;
+      await client.patch(endpoint, {
         custom_name: customName.trim() || null,
         custom_desc: descText ? customDesc : null,
       });
@@ -61,6 +65,7 @@ export default function ProductEditor() {
       for (const file of files) {
         const formData = new FormData();
         formData.append("image", file);
+        if (pageId) formData.append("pageId", pageId);
         const res = await client.post(`/seller/images/${productId}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
