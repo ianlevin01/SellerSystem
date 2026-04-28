@@ -60,10 +60,7 @@ export default function Layout() {
       <aside className="sidebar">
         <div className="sidebar__logo">
           <div className="sidebar__logo-mark">
-            <div className="sidebar__logo-icon">
-              <Zap size={16} />
-            </div>
-            <span className="sidebar__app-name">Vendedores</span>
+            <img src="/ventaz.png" alt="Ventaz" style={{ height: 32, objectFit: "contain" }} />
           </div>
           <div className="sidebar__store-name">
             {seller?.store_name || seller?.name || "Mi tienda"}

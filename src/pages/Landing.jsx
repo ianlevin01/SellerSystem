@@ -291,10 +291,7 @@ export default function Landing() {
 
       <header className="vtz-nav">
         <button type="button" className="vtz-brand" onClick={() => goTo("inicio")}>
-          <span className="vtz-brand__mark">
-            <Zap size={18} />
-          </span>
-          <span>Ventaz</span>
+          <img src="/ventaz.png" alt="Ventaz" style={{ height: 30, objectFit: "contain" }} />
         </button>
 
         <nav className={`vtz-nav__links ${menuOpen ? "is-open" : ""}`}>
@@ -758,10 +755,7 @@ export default function Landing() {
 
       <footer className="vtz-footer">
         <button type="button" className="vtz-brand" onClick={() => goTo("inicio")}>
-          <span className="vtz-brand__mark">
-            <Zap size={17} />
-          </span>
-          <span>Ventaz</span>
+          <img src="/ventaz.png" alt="Ventaz" style={{ height: 28, objectFit: "contain" }} />
         </button>
 
         <p>© {year} Ventaz. Plataforma para vendedores online.</p>

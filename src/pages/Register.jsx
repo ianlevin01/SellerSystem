@@ -196,10 +196,7 @@ export default function Register() {
         <div className="vtz-register-panel__glow" />
 
         <Link to="/" className="vtz-register-brand">
-          <span>
-            <Zap size={18} />
-          </span>
-          Ventaz
+          <img src="/ventaz.png" alt="Ventaz" style={{ height: 30, objectFit: "contain" }} />
         </Link>
 
         <div className="vtz-register-panel__content">
@@ -238,10 +235,7 @@ export default function Register() {
       <section className="vtz-register-form-section">
         <div className="vtz-register-form-wrap">
           <div className="vtz-register-mobile-brand">
-            <span>
-              <Zap size={16} />
-            </span>
-            Ventaz
+            <img src="/ventaz.png" alt="Ventaz" style={{ height: 24, objectFit: "contain" }} />
           </div>
 
           <div className="vtz-register-head">

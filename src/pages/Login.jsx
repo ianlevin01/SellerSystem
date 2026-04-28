@@ -118,10 +118,7 @@ export default function Login() {
         <div className="vtz-login-side__orb" />
 
         <Link to="/" className="vtz-login-brand">
-          <span>
-            <Zap size={18} />
-          </span>
-          Ventaz
+          <img src="/ventaz.png" alt="Ventaz" style={{ height: 30, objectFit: "contain" }} />
         </Link>
 
         <div className="vtz-login-side__content">
@@ -153,10 +150,7 @@ export default function Login() {
       <section className="vtz-login-form-section">
         <div className="vtz-login-form-wrap">
           <div className="vtz-login-mobile-brand">
-            <span>
-              <Zap size={16} />
-            </span>
-            Ventaz
+            <img src="/ventaz.png" alt="Ventaz" style={{ height: 24, objectFit: "contain" }} />
           </div>
 
           <div className="vtz-login-head">
