@@ -15,6 +15,7 @@ import {
   Search,
   ShoppingBag,
   Sparkles,
+  Truck,
   TrendingUp,
 } from "lucide-react";
 
@@ -321,10 +322,34 @@ export default function Orders() {
                                 </div>
                               ))
                             )}
+
+                            {Number(order.shipping_amount) > 0 && (
+                              <div className="vtz-order-item" style={{ color: "var(--text-secondary, #666)" }}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <Truck size={13} />
+                                  {order.shipping?.service_name || "Envío"}
+                                  {order.shipping?.shipping_type === "branch"
+                                    ? " — Sucursal"
+                                    : order.shipping?.shipping_type === "home"
+                                      ? " — Domicilio"
+                                      : ""}
+                                </span>
+                                <strong>{money(order.shipping_amount)}</strong>
+                              </div>
+                            )}
                           </div>
 
                           <div className="vtz-order__resume">
                             <h3>Resumen</h3>
+
+                            {Number(order.shipping_amount) > 0 && (
+                              <div>
+                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <Truck size={13} /> Envío
+                                </span>
+                                <strong>{money(order.shipping_amount)}</strong>
+                              </div>
+                            )}
 
                             <div>
                               <span>Diferencia bruta</span>
