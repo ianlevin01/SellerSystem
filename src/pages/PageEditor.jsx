@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
-import { ChevronLeft, Plus, Trash2, Percent, Tag, TrendingDown, ChevronDown, AlertTriangle, ExternalLink } from "lucide-react";
+import {
+  AlertTriangle, Building2, ChevronDown, ChevronLeft,
+  ExternalLink, FileText, Image as ImageIcon, Layers,
+  Palette, Percent, Plus, Save, Share2, Tag,
+  TrendingDown, Trash2, Zap,
+} from "lucide-react";
 import PageProducts from "./PageProducts";
 
 function fmt(n) { return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 }); }
@@ -14,13 +19,54 @@ function storeUrl(slug) {
   return `https://${slug}.${domain}`;
 }
 
-// ── Config tab ────────────────────────────────────────────────
+// ── Shared helpers ────────────────────────────────────────────
 
 const GOOGLE_FONTS = [
   "Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Poppins",
   "Raleway", "Nunito", "Playfair Display", "Merriweather", "Source Sans 3",
   "Ubuntu", "PT Sans", "Josefin Sans", "Quicksand",
 ];
+
+function Field({ label, hint, children }) {
+  return (
+    <div className="pe-field">
+      <label className="pe-field__label">
+        {label}
+        {hint && <span className="pe-field__hint">{hint}</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function ColorRow({ value, onChange, onClear }) {
+  return (
+    <div className="pe-color-row">
+      <input type="color" value={value || "#ffffff"} onChange={e => onChange(e.target.value)} />
+      <span className="pe-color-row__hex">{value || "—"}</span>
+      {onClear && value && (
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onClear}>
+          Quitar
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Config sections sidebar nav ───────────────────────────────
+
+const CONFIG_SECTIONS = [
+  { id: "identidad",  label: "Identidad",      Icon: Building2  },
+  { id: "info",       label: "Info pública",    Icon: FileText   },
+  { id: "hero",       label: "Hero & Banner",   Icon: ImageIcon  },
+  { id: "promo",      label: "Barra de promo",  Icon: Zap        },
+  { id: "colores",    label: "Colores",         Icon: Palette    },
+  { id: "apariencia", label: "Apariencia",      Icon: Layers     },
+  { id: "redes",      label: "Redes sociales",  Icon: Share2     },
+  { id: "categorias", label: "Categorías",      Icon: Tag        },
+];
+
+// ── ConfigTab ─────────────────────────────────────────────────
 
 function ConfigTab({ pageId }) {
   const [form, setForm] = useState({
@@ -29,12 +75,15 @@ function ConfigTab({ pageId }) {
     logo_url: "", font_family: "", color_secondary: "", color_bg: "", color_text: "",
     featured_categories: [],
     card_border_radius: 12, card_show_shadow: true,
+    hero_headline: "", hero_image_url: "",
+    promo_text: "", show_promo_bar: true,
   });
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [error,   setError]   = useState("");
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
+  const [error,    setError]    = useState("");
+  const [section,  setSection]  = useState("identidad");
 
   function formFromData(d) {
     setForm({
@@ -54,6 +103,10 @@ function ConfigTab({ pageId }) {
       featured_categories: Array.isArray(d.featured_categories) ? d.featured_categories : [],
       card_border_radius:  d.card_border_radius  != null ? Number(d.card_border_radius) : 12,
       card_show_shadow:    d.card_show_shadow     != null ? Boolean(d.card_show_shadow)  : true,
+      hero_headline:       d.hero_headline        || "",
+      hero_image_url:      d.hero_image_url       || "",
+      promo_text:          d.promo_text           || "",
+      show_promo_bar:      d.show_promo_bar       != null ? Boolean(d.show_promo_bar) : true,
     });
   }
 
@@ -68,6 +121,8 @@ function ConfigTab({ pageId }) {
     }).finally(() => setLoading(false));
   }, [pageId]);
 
+  function set(key, val) { setForm(p => ({ ...p, [key]: val })); }
+
   function toggleCategory(id) {
     setForm(p => {
       const cats = Array.isArray(p.featured_categories) ? p.featured_categories : [];
@@ -77,7 +132,7 @@ function ConfigTab({ pageId }) {
   }
 
   async function handleSave(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(""); setSaving(true); setSaved(false);
     try {
       const res = await client.put(`/seller/store/pages/${pageId}`, form);
@@ -92,255 +147,426 @@ function ConfigTab({ pageId }) {
   }
 
   if (loading) return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 160, borderRadius: "var(--radius-lg)" }} />)}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 120, borderRadius: "var(--radius-lg)" }} />)}
     </div>
   );
 
+  const activeCats = Array.isArray(form.featured_categories) ? form.featured_categories : [];
+
   return (
     <form onSubmit={handleSave}>
-      <div className="config-grid">
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-          <div className="card">
-            <h2 style={{ marginBottom: 18 }}>Identificación</h2>
-            <div className="form-group">
-              <label className="form-label">Nombre interno (solo vos lo ves)</label>
-              <input className="form-input" value={form.page_name}
-                onChange={e => setForm(p => ({ ...p, page_name: e.target.value }))}
-                placeholder="Ej: Tienda Verano" />
-            </div>
-          </div>
+      {/* ── Save bar (sticky) ── */}
+      <div className="pe-save-bar">
+        <div className="pe-save-bar__left">
+          {error && <span className="pe-save-bar__error">⚠ {error}</span>}
+          {saved && <span className="pe-save-bar__ok">✓ Cambios guardados</span>}
+        </div>
+        <button type="submit" disabled={saving} className="pe-save-bar__btn">
+          <Save size={15} />
+          {saving ? "Guardando..." : "Guardar cambios"}
+        </button>
+      </div>
 
-          <div className="card">
-            <h2 style={{ marginBottom: 18 }}>Información pública</h2>
-            <div className="form-group">
-              <label className="form-label">Nombre de la tienda</label>
-              <input className="form-input" value={form.store_name}
-                onChange={e => setForm(p => ({ ...p, store_name: e.target.value }))}
-                placeholder="Mi tienda" />
+      {/* ── Panel ── */}
+      <div className="pe-panel">
+
+        {/* Sidebar */}
+        <aside className="pe-sidebar">
+          {CONFIG_SECTIONS.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`pe-sidebar-item ${section === id ? "is-active" : ""}`}
+              onClick={() => setSection(id)}
+            >
+              <Icon size={15} />
+              {label}
+            </button>
+          ))}
+        </aside>
+
+        {/* Content area */}
+        <div className="pe-content">
+
+          {/* ── Identidad ── */}
+          {section === "identidad" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <Building2 size={18} />
+                <div>
+                  <h3>Identidad</h3>
+                  <p>Nombre interno y datos de la tienda que solo vos ves.</p>
+                </div>
+              </div>
+              <Field label="Nombre interno" hint="Solo lo ves vos, para identificar esta tienda">
+                <input className="form-input" value={form.page_name}
+                  onChange={e => set("page_name", e.target.value)}
+                  placeholder="Ej: Tienda principal" />
+              </Field>
             </div>
-            <div className="form-group">
-              <label className="form-label">Descripción</label>
-              <textarea className="form-textarea" value={form.store_description}
-                onChange={e => setForm(p => ({ ...p, store_description: e.target.value }))}
-                placeholder="Breve descripción que aparece en tu tienda..." />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tagline <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(subtítulo corto)</span></label>
-              <input className="form-input" value={form.tagline}
-                onChange={e => setForm(p => ({ ...p, tagline: e.target.value }))}
-                placeholder="La mejor selección al mejor precio" maxLength={160} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Color principal</label>
-              <div className="color-picker-row">
-                <input type="color" value={form.banner_color}
-                  onChange={e => setForm(p => ({ ...p, banner_color: e.target.value }))} />
-                <span className="color-picker-hex">{form.banner_color}</span>
+          )}
+
+          {/* ── Info pública ── */}
+          {section === "info" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <FileText size={18} />
+                <div>
+                  <h3>Información pública</h3>
+                  <p>Estos datos aparecen en tu tienda y son visibles para los clientes.</p>
+                </div>
+              </div>
+              <Field label="Nombre de la tienda">
+                <input className="form-input" value={form.store_name}
+                  onChange={e => set("store_name", e.target.value)}
+                  placeholder="Ej: Belissia Shop" />
+              </Field>
+              <Field label="Descripción" hint="Breve descripción de tu tienda">
+                <textarea className="form-textarea" value={form.store_description}
+                  onChange={e => set("store_description", e.target.value)}
+                  placeholder="Los mejores productos al mejor precio..." />
+              </Field>
+              <Field label="Tagline" hint="Subtítulo corto, máx 160 caracteres">
+                <input className="form-input" value={form.tagline}
+                  onChange={e => set("tagline", e.target.value)}
+                  placeholder="Todo lo que necesitás, al mejor precio"
+                  maxLength={160} />
+              </Field>
+
+              {/* Preview */}
+              <div className="pe-preview-mini">
+                <div className="pe-preview-mini__banner" style={{ background: form.banner_color }}>
+                  {form.logo_url
+                    ? <img src={form.logo_url} alt="logo" style={{ height: 32, objectFit: "contain" }} />
+                    : <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>{form.store_name || "Mi tienda"}</span>
+                  }
+                </div>
+                <div className="pe-preview-mini__body">
+                  <p style={{ fontWeight: 700, fontSize: ".9rem", margin: 0 }}>{form.store_name || "Nombre de tu tienda"}</p>
+                  <p style={{ fontSize: ".78rem", color: "var(--text-secondary)", margin: "2px 0 0" }}>{form.tagline || form.store_description || "Descripción de tu tienda"}</p>
+                </div>
               </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Color secundario <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(acento / botones secundarios)</span></label>
-              <div className="color-picker-row">
-                <input type="color" value={form.color_secondary || "#000000"}
-                  onChange={e => setForm(p => ({ ...p, color_secondary: e.target.value }))} />
-                <span className="color-picker-hex">{form.color_secondary || "—"}</span>
-                {form.color_secondary && (
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => setForm(p => ({ ...p, color_secondary: "" }))}>
-                    Quitar
-                  </button>
+          )}
+
+          {/* ── Hero & Banner ── */}
+          {section === "hero" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <ImageIcon size={18} />
+                <div>
+                  <h3>Hero & Banner</h3>
+                  <p>Personalizá la sección principal que ven los clientes al entrar a tu tienda.</p>
+                </div>
+              </div>
+              <Field label="Título principal del hero" hint="El texto grande que aparece en el banner">
+                <input className="form-input" value={form.hero_headline}
+                  onChange={e => set("hero_headline", e.target.value)}
+                  placeholder="Ej: Todo lo que necesitás, en un solo lugar" />
+              </Field>
+              <Field label="Color del banner / acento principal">
+                <ColorRow
+                  value={form.banner_color}
+                  onChange={v => set("banner_color", v)}
+                />
+              </Field>
+              <Field label="Imagen del hero" hint="URL de una imagen para mostrar en el banner (opcional)">
+                <input className="form-input" value={form.hero_image_url}
+                  onChange={e => set("hero_image_url", e.target.value)}
+                  placeholder="https://mi-imagen.com/banner.jpg" />
+                {form.hero_image_url && (
+                  <img src={form.hero_image_url} alt="hero preview"
+                    style={{ marginTop: 10, width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}
+                    onError={e => { e.target.style.display = "none"; }}
+                  />
+                )}
+              </Field>
+
+              {/* Preview del hero */}
+              <div className="pe-hero-preview" style={{ background: form.banner_color }}>
+                <div className="pe-hero-preview__content">
+                  <span className="pe-hero-preview__label">Tu tienda online</span>
+                  <h4>{form.hero_headline || form.store_name || "Nombre de tu tienda"}</h4>
+                  <p>{form.tagline || form.store_description || "Subtítulo de tu tienda"}</p>
+                  <button type="button" className="pe-hero-preview__cta">Ver productos →</button>
+                </div>
+                {form.hero_image_url && (
+                  <img src={form.hero_image_url} alt=""
+                    style={{ height: 100, width: 120, objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }}
+                    onError={e => { e.target.style.display = "none"; }}
+                  />
                 )}
               </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Color de fondo</label>
-              <div className="color-picker-row">
-                <input type="color" value={form.color_bg || "#ffffff"}
-                  onChange={e => setForm(p => ({ ...p, color_bg: e.target.value }))} />
-                <span className="color-picker-hex">{form.color_bg || "—"}</span>
-                {form.color_bg && (
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => setForm(p => ({ ...p, color_bg: "" }))}>
-                    Quitar
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Color de texto</label>
-              <div className="color-picker-row">
-                <input type="color" value={form.color_text || "#111111"}
-                  onChange={e => setForm(p => ({ ...p, color_text: e.target.value }))} />
-                <span className="color-picker-hex">{form.color_text || "—"}</span>
-                {form.color_text && (
-                  <button type="button" className="btn btn--ghost btn--sm" onClick={() => setForm(p => ({ ...p, color_text: "" }))}>
-                    Quitar
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          )}
 
-          <div className="card">
-            <h2 style={{ marginBottom: 18 }}>Apariencia</h2>
-            <div className="form-group">
-              <label className="form-label">Logo (URL de imagen)</label>
-              <input className="form-input" value={form.logo_url}
-                onChange={e => setForm(p => ({ ...p, logo_url: e.target.value }))}
-                placeholder="https://..." />
-              {form.logo_url && (
-                <div style={{ marginTop: 8 }}>
-                  <img src={form.logo_url} alt="logo preview" style={{ height: 48, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }} />
+          {/* ── Barra de promo ── */}
+          {section === "promo" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <Zap size={18} />
+                <div>
+                  <h3>Barra de promoción</h3>
+                  <p>Franja animada que aparece arriba del hero con mensajes de tu tienda.</p>
+                </div>
+              </div>
+              <Field
+                label="Mostrar barra de promo"
+              >
+                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={form.show_promo_bar}
+                    onChange={e => set("show_promo_bar", e.target.checked)} />
+                  <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
+                    {form.show_promo_bar ? "Visible" : "Oculta"}
+                  </span>
+                </label>
+              </Field>
+              <Field
+                label="Texto de la barra"
+                hint="Separá mensajes con · para que se repitan en el scroll"
+              >
+                <textarea className="form-textarea" value={form.promo_text}
+                  onChange={e => set("promo_text", e.target.value)}
+                  placeholder="🚀 Envíos a todo el país · 💳 Pago seguro · ⭐ Los mejores precios"
+                  rows={3} />
+              </Field>
+              {form.show_promo_bar && form.promo_text && (
+                <div className="pe-promo-preview">
+                  <span className="pe-promo-preview__label">Vista previa:</span>
+                  <div className="pe-promo-preview__bar" style={{ background: form.banner_color }}>
+                    <span>{form.promo_text} &nbsp;·&nbsp; {form.promo_text}</span>
+                  </div>
                 </div>
               )}
             </div>
-            <div className="form-group">
-              <label className="form-label">Tipografía</label>
-              <select className="form-input" value={form.font_family} onChange={e => setForm(p => ({ ...p, font_family: e.target.value }))}>
-                <option value="">Predeterminada</option>
-                {GOOGLE_FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">
-                Borde de las tarjetas de producto
-                <span style={{ float: "right", fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
-                  {form.card_border_radius}px
-                </span>
-              </label>
-              <input type="range" min={0} max={32} step={2}
-                value={form.card_border_radius}
-                onChange={e => setForm(p => ({ ...p, card_border_radius: Number(e.target.value) }))}
-              />
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                {[0, 8, 12, 20, 32].map(r => (
-                  <button key={r} type="button"
-                    onClick={() => setForm(p => ({ ...p, card_border_radius: r }))}
-                    style={{
-                      padding: "4px 10px", fontSize: ".78rem", cursor: "pointer",
-                      borderRadius: 6, border: `1.5px solid ${form.card_border_radius === r ? "var(--brand)" : "var(--border)"}`,
-                      background: form.card_border_radius === r ? "var(--brand)" : "transparent",
-                      color: form.card_border_radius === r ? "#fff" : "var(--text-secondary)",
-                      fontWeight: 500,
-                    }}>
-                    {r}px
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <span>Sombra en las tarjetas</span>
-                <label className="toggle-switch">
-                  <input type="checkbox" checked={form.card_show_shadow}
-                    onChange={e => setForm(p => ({ ...p, card_show_shadow: e.target.checked }))} />
-                  <span className="toggle-track"><span className="toggle-thumb" /></span>
-                </label>
-              </label>
-            </div>
-            {categories.length > 0 && (
-              <div className="form-group">
-                <label className="form-label">Categorías destacadas <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(solo mostrar estos productos)</span></label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
-                  {categories.map(cat => {
-                    const activeCats = Array.isArray(form.featured_categories) ? form.featured_categories : [];
-                    const active = activeCats.includes(cat.id);
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => toggleCategory(cat.id)}
-                        style={{
-                          padding: "5px 12px",
-                          borderRadius: 20,
-                          border: `1.5px solid ${active ? "var(--brand)" : "var(--border)"}`,
-                          background: active ? "var(--brand)" : "transparent",
-                          color: active ? "#fff" : "var(--text-secondary)",
-                          fontSize: ".8125rem",
-                          fontWeight: 500,
-                          cursor: "pointer",
-                          transition: "all .15s",
-                        }}
-                      >
-                        {cat.name}
-                      </button>
-                    );
-                  })}
+          )}
+
+          {/* ── Colores ── */}
+          {section === "colores" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <Palette size={18} />
+                <div>
+                  <h3>Colores</h3>
+                  <p>Personalizá la paleta de colores de tu tienda.</p>
                 </div>
-                {(Array.isArray(form.featured_categories) ? form.featured_categories : []).length > 0 && (
-                  <p style={{ fontSize: ".78rem", color: "var(--text-tertiary)", marginTop: 6 }}>
-                    Solo se mostrarán productos de las categorías seleccionadas. Deseleccioná todas para mostrar todos los productos.
-                  </p>
+              </div>
+              <Field label="Color principal / acento" hint="Botones, links y destacados">
+                <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
+              </Field>
+              <Field label="Color secundario" hint="Elementos secundarios">
+                <ColorRow
+                  value={form.color_secondary || "#000000"}
+                  onChange={v => set("color_secondary", v)}
+                  onClear={() => set("color_secondary", "")}
+                />
+              </Field>
+              <Field label="Color de fondo">
+                <ColorRow
+                  value={form.color_bg || "#ffffff"}
+                  onChange={v => set("color_bg", v)}
+                  onClear={() => set("color_bg", "")}
+                />
+              </Field>
+              <Field label="Color de texto">
+                <ColorRow
+                  value={form.color_text || "#111111"}
+                  onChange={v => set("color_text", v)}
+                  onClear={() => set("color_text", "")}
+                />
+              </Field>
+
+              {/* Swatch preview */}
+              <div className="pe-swatch-row">
+                <div className="pe-swatch" style={{ background: form.banner_color }}>
+                  <span>Principal</span>
+                </div>
+                {form.color_secondary && (
+                  <div className="pe-swatch" style={{ background: form.color_secondary }}>
+                    <span>Secundario</span>
+                  </div>
+                )}
+                {form.color_bg && (
+                  <div className="pe-swatch" style={{ background: form.color_bg, border: "1px solid var(--border)" }}>
+                    <span style={{ color: form.color_text || "#111" }}>Fondo</span>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="card">
-            <h2 style={{ marginBottom: 18 }}>Contacto y redes sociales</h2>
-            <div className="form-group">
-              <label className="form-label">WhatsApp</label>
-              <input className="form-input" value={form.whatsapp}
-                onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))}
-                placeholder="5491112345678" maxLength={30} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Instagram <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(usuario sin @)</span></label>
-              <input className="form-input" value={form.instagram}
-                onChange={e => setForm(p => ({ ...p, instagram: e.target.value }))}
-                placeholder="mitienda" maxLength={60} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Facebook</label>
-              <input className="form-input" value={form.facebook}
-                onChange={e => setForm(p => ({ ...p, facebook: e.target.value }))}
-                placeholder="https://facebook.com/mitienda" maxLength={120} />
-            </div>
-          </div>
-
-        </div>
-
-        {/* Preview */}
-        <div>
-          <div className="preview-card">
-            <div className="preview-card__banner" style={{ background: form.banner_color }}>
-              <h2 style={{ color: "#fff", marginBottom: 4, fontSize: "1.125rem" }}>{form.store_name || "Mi tienda"}</h2>
-              <p style={{ color: "rgba(255,255,255,.8)", fontSize: ".875rem", margin: 0 }}>
-                {form.store_description || "Descripción de tu tienda"}
-              </p>
-            </div>
-            <div className="preview-card__body">
-              <div style={{ fontSize: ".75rem", color: "var(--text-tertiary)", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".05em", fontWeight: 600 }}>
-                Vista previa
-              </div>
-              <div className="preview-product">
-                <div className="preview-product__img">📦</div>
-                <div className="preview-product__info">
-                  <div className="preview-product__name">Nombre del producto</div>
-                  <div style={{ fontSize: "1rem", fontWeight: 700, color: form.banner_color, letterSpacing: "-.02em" }}>
-                    $10.000
-                  </div>
+          {/* ── Apariencia ── */}
+          {section === "apariencia" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <Layers size={18} />
+                <div>
+                  <h3>Apariencia</h3>
+                  <p>Logo, tipografía y estilo de las tarjetas de productos.</p>
                 </div>
               </div>
+              <Field label="Logo (URL de imagen)">
+                <input className="form-input" value={form.logo_url}
+                  onChange={e => set("logo_url", e.target.value)}
+                  placeholder="https://..." />
+                {form.logo_url && (
+                  <img src={form.logo_url} alt="logo preview"
+                    style={{ marginTop: 8, height: 52, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
+                    onError={e => { e.target.style.display = "none"; }}
+                  />
+                )}
+              </Field>
+              <Field label="Tipografía">
+                <select className="form-input" value={form.font_family}
+                  onChange={e => set("font_family", e.target.value)}>
+                  <option value="">Predeterminada (Inter)</option>
+                  {GOOGLE_FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+                </select>
+                {form.font_family && (
+                  <p style={{ marginTop: 6, fontFamily: form.font_family, fontSize: ".9rem", color: "var(--text-secondary)" }}>
+                    Vista previa: The quick brown fox jumps
+                  </p>
+                )}
+              </Field>
+              <Field
+                label="Borde de tarjetas de producto"
+                hint={`${form.card_border_radius}px`}
+              >
+                <input type="range" min={0} max={32} step={2}
+                  value={form.card_border_radius}
+                  onChange={e => set("card_border_radius", Number(e.target.value))}
+                  style={{ width: "100%" }}
+                />
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  {[0, 8, 12, 20, 32].map(r => (
+                    <button key={r} type="button"
+                      onClick={() => set("card_border_radius", r)}
+                      style={{
+                        padding: "4px 10px", fontSize: ".78rem", cursor: "pointer",
+                        borderRadius: 6, border: `1.5px solid ${form.card_border_radius === r ? "var(--brand)" : "var(--border)"}`,
+                        background: form.card_border_radius === r ? "var(--brand)" : "transparent",
+                        color: form.card_border_radius === r ? "#fff" : "var(--text-secondary)",
+                        fontWeight: 500, transition: "all .15s",
+                      }}>
+                      {r}px
+                    </button>
+                  ))}
+                </div>
+                {/* Card preview */}
+                <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                  {[1,2,3].map(i => (
+                    <div key={i} style={{
+                      flex: 1, background: "var(--bg)", border: "1px solid var(--border)",
+                      borderRadius: form.card_border_radius,
+                      boxShadow: form.card_show_shadow ? "0 4px 12px rgba(0,0,0,.08)" : "none",
+                      padding: "10px", fontSize: ".72rem", color: "var(--text-secondary)",
+                      transition: "border-radius .2s, box-shadow .2s",
+                    }}>
+                      <div style={{ height: 36, background: "var(--border)", borderRadius: Math.max(0, form.card_border_radius - 2), marginBottom: 6 }} />
+                      Producto {i}
+                    </div>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Sombra en las tarjetas">
+                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={form.card_show_shadow}
+                    onChange={e => set("card_show_shadow", e.target.checked)} />
+                  <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
+                    {form.card_show_shadow ? "Con sombra" : "Sin sombra"}
+                  </span>
+                </label>
+              </Field>
             </div>
-          </div>
-        </div>
-      </div>
+          )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
-        {error && <span style={{ fontSize: ".875rem", color: "var(--danger)" }}>{error}</span>}
-        {saved && <span style={{ fontSize: ".875rem", color: "var(--success)", fontWeight: 500 }}>✓ Guardado</span>}
-        <button type="submit" disabled={saving} className="btn btn--primary btn--lg">
-          {saving ? "Guardando..." : "Guardar cambios"}
-        </button>
+          {/* ── Redes sociales ── */}
+          {section === "redes" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <Share2 size={18} />
+                <div>
+                  <h3>Redes sociales y contacto</h3>
+                  <p>Aparecen como íconos y links en el pie de tu tienda.</p>
+                </div>
+              </div>
+              <Field label="WhatsApp" hint="Número completo con código de país">
+                <input className="form-input" value={form.whatsapp}
+                  onChange={e => set("whatsapp", e.target.value)}
+                  placeholder="5491112345678" maxLength={30} />
+              </Field>
+              <Field label="Instagram" hint="Solo el usuario, sin @">
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", fontSize: ".9rem" }}>@</span>
+                  <input className="form-input" value={form.instagram}
+                    onChange={e => set("instagram", e.target.value)}
+                    placeholder="mitienda" maxLength={60}
+                    style={{ paddingLeft: 28 }} />
+                </div>
+              </Field>
+              <Field label="Facebook" hint="URL completa">
+                <input className="form-input" value={form.facebook}
+                  onChange={e => set("facebook", e.target.value)}
+                  placeholder="https://facebook.com/mitienda" maxLength={120} />
+              </Field>
+            </div>
+          )}
+
+          {/* ── Categorías ── */}
+          {section === "categorias" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <Tag size={18} />
+                <div>
+                  <h3>Categorías destacadas</h3>
+                  <p>Filtrá qué categorías aparecen en tu tienda. Si no seleccionás ninguna, se muestran todos los productos.</p>
+                </div>
+              </div>
+              {categories.length === 0 ? (
+                <div className="pe-empty">
+                  No hay categorías disponibles aún.
+                </div>
+              ) : (
+                <>
+                  <div className="pe-cat-grid">
+                    {categories.map(cat => {
+                      const active = activeCats.includes(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          className={`pe-cat-pill ${active ? "is-active" : ""}`}
+                          onClick={() => toggleCategory(cat.id)}
+                        >
+                          {cat.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {activeCats.length > 0 && (
+                    <p className="pe-cat-note">
+                      Mostrando {activeCats.length} categoría{activeCats.length !== 1 ? "s" : ""} seleccionada{activeCats.length !== 1 ? "s" : ""}.
+                      <button type="button" className="pe-cat-clear" onClick={() => set("featured_categories", [])}>
+                        Mostrar todas
+                      </button>
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+        </div>
       </div>
     </form>
   );
 }
 
-// ── Discounts tab ─────────────────────────────────────────────
-
-const EMPTY_DISCOUNTS = { enabled_quantity: false, enabled_price: false, quantity_tiers: [], price_tiers: [] };
+// ── TiersSection ──────────────────────────────────────────────
 
 function TiersSection({ type, tiers, onChange }) {
   const isQty    = type === "quantity";
@@ -409,6 +635,8 @@ function TiersSection({ type, tiers, onChange }) {
   );
 }
 
+// ── DiscountAccordion ─────────────────────────────────────────
+
 function DiscountAccordion({ icon: Icon, title, enabled, onToggle, children }) {
   const [open, setOpen] = useState(false);
   return (
@@ -427,12 +655,16 @@ function DiscountAccordion({ icon: Icon, title, enabled, onToggle, children }) {
   );
 }
 
+// ── DiscountsTab ──────────────────────────────────────────────
+
+const EMPTY_DISCOUNTS = { enabled_quantity: false, enabled_price: false, quantity_tiers: [], price_tiers: [] };
+
 function DiscountsTab({ pageId }) {
-  const [config,    setConfig]    = useState(EMPTY_DISCOUNTS);
-  const [products,  setProducts]  = useState([]);
-  const [priceAdj,  setPriceAdj]  = useState({});
-  const [draftAdj,  setDraftAdj]  = useState({});
-  const [loading,   setLoading]   = useState(true);
+  const [config,   setConfig]   = useState(EMPTY_DISCOUNTS);
+  const [products, setProducts] = useState([]);
+  const [priceAdj, setPriceAdj] = useState({});
+  const [draftAdj, setDraftAdj] = useState({});
+  const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
@@ -537,12 +769,8 @@ function DiscountsTab({ pageId }) {
                     <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                       <div style={{ position: "relative", flex: 1 }}>
                         <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: ".75rem", color: "var(--text-secondary)", pointerEvents: "none" }}>$</span>
-                        <input
-                          type="number"
-                          min={Math.ceil(v.minNeeded)}
-                          step={1}
-                          className="form-input form-input--sm"
-                          style={{ paddingLeft: 18 }}
+                        <input type="number" min={Math.ceil(v.minNeeded)} step={1}
+                          className="form-input form-input--sm" style={{ paddingLeft: 18 }}
                           value={draft}
                           placeholder={Math.ceil(v.minNeeded).toLocaleString("es-AR")}
                           onChange={e => setDraftAdj(p => ({ ...p, [v.id]: e.target.value }))}
@@ -554,15 +782,11 @@ function DiscountsTab({ pageId }) {
                           }}
                         />
                       </div>
-                      <button
-                        type="button"
-                        className="btn btn--sm btn--primary"
-                        disabled={!canAccept}
+                      <button type="button" className="btn btn--sm btn--primary" disabled={!canAccept}
                         onClick={() => {
                           setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
                           setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
-                        }}
-                      >
+                        }}>
                         Aceptar
                       </button>
                     </div>
@@ -619,9 +843,15 @@ export default function PageEditor({ tab = "config" }) {
 
       {/* Tabs */}
       <div className="page-tabs">
-        <button className={`page-tab ${tab === "config"    ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}`)}>Configuración</button>
-        <button className={`page-tab ${tab === "products"  ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/products`)}>Productos</button>
-        <button className={`page-tab ${tab === "discounts" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/discounts`)}>Descuentos</button>
+        <button className={`page-tab ${tab === "config"    ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}`)}>
+          Configuración
+        </button>
+        <button className={`page-tab ${tab === "products"  ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/products`)}>
+          Productos
+        </button>
+        <button className={`page-tab ${tab === "discounts" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/discounts`)}>
+          Descuentos
+        </button>
       </div>
 
       <div style={{ marginTop: 24 }}>
