@@ -5,13 +5,14 @@ import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Layers, Zap, User, MessageSquare, ChevronUp, Store
+  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet
 } from "lucide-react";
 
 const nav = [
   { to: "/dashboard",  label: "Dashboard",   icon: LayoutDashboard },
   { to: "/pages",      label: "Mis tiendas", icon: Layers },
   { to: "/orders",     label: "Mis pedidos", icon: ShoppingBag },
+  { to: "/cobros",     label: "Cobros",      icon: Wallet },
   { to: "/chat",       label: "Chat",        icon: MessageSquare },
   { to: "/calculator", label: "Calculadora", icon: Calculator },
   { to: "/profile",    label: "Mi perfil",   icon: User },

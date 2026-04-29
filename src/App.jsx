@@ -16,6 +16,7 @@ import Calculator   from "./pages/Calculator";
 import PublicStore  from "./pages/PublicStore";
 import Profile      from "./pages/Profile";
 import Chat         from "./pages/Chat";
+import Payouts      from "./pages/Payouts";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -49,6 +50,7 @@ export default function App() {
               <Route path="/calculator"                    element={<Calculator />} />
               <Route path="/profile"                       element={<Profile />} />
               <Route path="/chat"                          element={<Chat />} />
+              <Route path="/cobros"                       element={<Payouts />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />

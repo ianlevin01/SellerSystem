@@ -71,6 +71,12 @@ function getStatus(order) {
       icon: BadgeCheck,
       description: "El pedido está confirmado.",
     },
+    paid: {
+      label: "Pagado",
+      tone: "green",
+      icon: BadgeCheck,
+      description: "Pago confirmado por MercadoPago.",
+    },
     blue: {
       label: "En proceso",
       tone: "blue",
