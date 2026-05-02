@@ -843,13 +843,13 @@ export default function PageEditor({ tab = "config" }) {
 
       {/* Tabs */}
       <div className="page-tabs">
-        <button className={`page-tab ${tab === "config"    ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}`)}>
+        <button type="button" className={`page-tab ${tab === "config"    ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}`)}>
           Configuración
         </button>
-        <button className={`page-tab ${tab === "products"  ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/products`)}>
+        <button type="button" className={`page-tab ${tab === "products"  ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/products`)}>
           Productos
         </button>
-        <button className={`page-tab ${tab === "discounts" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/discounts`)}>
+        <button type="button" className={`page-tab ${tab === "discounts" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/discounts`)}>
           Descuentos
         </button>
       </div>

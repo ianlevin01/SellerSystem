@@ -89,6 +89,7 @@ export default function AiAssistant() {
     <>
       {/* Floating button */}
       <button
+        type="button"
         className={`vtz-ai-fab ${open ? "vtz-ai-fab--active" : ""}`}
         onClick={() => setOpen(o => !o)}
         aria-label="Asistente Ventaz"
@@ -113,6 +114,7 @@ export default function AiAssistant() {
             </div>
             <div className="vtz-ai-panel__head-actions">
               <button
+                type="button"
                 className="vtz-ai-icon-btn"
                 onClick={clearHistory}
                 title="Limpiar historial"
@@ -120,6 +122,7 @@ export default function AiAssistant() {
                 <Trash2 size={14} />
               </button>
               <button
+                type="button"
                 className="vtz-ai-icon-btn"
                 onClick={() => setOpen(false)}
                 title="Cerrar"
@@ -180,6 +183,7 @@ export default function AiAssistant() {
               disabled={loading}
             />
             <button
+              type="button"
               className="vtz-ai-send"
               onClick={send}
               disabled={!input.trim() || loading}

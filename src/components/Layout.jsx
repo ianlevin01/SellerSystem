@@ -167,6 +167,7 @@ export default function Layout() {
                 </div>
               )}
               <button
+                type="button"
                 className={`sidebar__footer-btn${storeOpen ? " sidebar__footer-btn--active" : ""}`}
                 onClick={() => setStoreOpen(p => !p)}
               >
@@ -179,7 +180,7 @@ export default function Layout() {
               </button>
             </div>
           )}
-          <button className="sidebar__footer-btn" onClick={handleLogout}>
+          <button type="button" className="sidebar__footer-btn" onClick={handleLogout}>
             <LogOut size={15} />
             Cerrar sesión
           </button>
