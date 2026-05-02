@@ -12,6 +12,7 @@ import {
   ChevronRight,
   CircleAlert,
   Loader2,
+  Mail,
   MapPin,
   Phone,
   Save,
@@ -44,6 +45,7 @@ export default function Profile() {
 
   const [form, setForm] = useState({
     name: "",
+    email: "",
     phone: "",
     city: "",
     age: "",
@@ -68,6 +70,7 @@ export default function Profile() {
 
         setForm({
           name: d.name || "",
+          email: d.email || d.seller_email || d.user_email || "",
           phone: d.phone || "",
           city: d.city || "",
           age: d.age != null ? String(d.age) : "",
@@ -85,6 +88,11 @@ export default function Profile() {
         key: "name",
         label: "Nombre",
         done: form.name.trim().length >= 2,
+      },
+      {
+        key: "email",
+        label: "Email",
+        done: /\S+@\S+\.\S+/.test(form.email),
       },
       {
         key: "city",
@@ -135,11 +143,11 @@ export default function Profile() {
 
     try {
       await client.put("/seller/auth/profile", {
-        ...form,
         name: form.name.trim(),
         city: form.city.trim(),
         phone: form.phone.trim(),
         age: form.age ? Number(form.age) : null,
+        how_found_us: form.how_found_us,
       });
 
       await refreshSeller();
@@ -230,8 +238,8 @@ export default function Profile() {
           <h1>Completá tus datos</h1>
 
           <p>
-            Esta información ayuda a validar tu cuenta, ordenar el soporte y dejar tu
-            perfil listo para operar dentro de Ventaz.
+            Esta información ayuda a validar tu cuenta, ordenar el soporte y dejar tus
+            datos de vendedor listos para operar dentro de Ventaz.
           </p>
         </div>
 
@@ -270,7 +278,7 @@ export default function Profile() {
             <label className="vtz-profile-field">
               <span>
                 <User size={17} />
-                Nombre completo
+                Nombre/s y apellido/s
               </span>
               <input
                 name="name"
@@ -279,6 +287,21 @@ export default function Profile() {
                 required
                 placeholder="Ej: Lucas Dercye"
               />
+            </label>
+
+            <label className="vtz-profile-field">
+              <span>
+                <Mail size={17} />
+                Email de la cuenta
+              </span>
+              <input
+                name="email"
+                value={form.email}
+                readOnly
+                disabled
+                placeholder="tu@email.com"
+              />
+              <small>Se usa para ingresar y recibir avisos importantes.</small>
             </label>
 
             <label className="vtz-profile-field">

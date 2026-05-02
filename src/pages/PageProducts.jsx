@@ -1,301 +1,713 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
-import client from "../api/client";
-import { Plus, Minus, Search, Image, PlusCircle, Check, AlertCircle } from "lucide-react";
+// src/pages/PageProducts.jsx
+// Productos de tienda corregido: claro, redondeado y sin marcar todos como "en tienda"
+// cambio hecho por Yolo
 
-const PAGE_SIZE = 20;
+import { useEffect, useMemo, useState } from "react";
+import client from "../api/client";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  CheckCircle2,
+  Image as ImageIcon,
+  Loader2,
+  PackagePlus,
+  Plus,
+  Save,
+  Search,
+  ShoppingCart,
+  Sparkles,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 
 function fmt(n) {
-  if (!n && n !== 0) return "—";
-  return Number(n).toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+  return Number(Math.round(Number(n || 0))).toLocaleString("es-AR", {
+    maximumFractionDigits: 0,
+  });
 }
 
-function PriceEditor({ product, pageId, onSaved }) {
-  const precio1    = product.precio_1;
-  const initial    = product.custom_price ?? precio1 ?? "";
-  const [value,    setValue]   = useState(initial !== "" ? Number(initial).toFixed(0) : "");
-  const [saving,   setSaving]  = useState(false);
-  const [error,    setError]   = useState("");
-  const [success,  setSuccess] = useState(false);
+function money(n) {
+  const value = Math.round(Number(n || 0));
+  if (!Number.isFinite(value) || value <= 0) return "—";
+  return `$${fmt(value)}`;
+}
 
-  const tooLow = precio1 && value !== "" && Number(value) < precio1 - 0.01;
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
 
-  async function handleSave() {
-    if (tooLow || value === "") return;
-    setSaving(true); setError(""); setSuccess(false);
-    try {
-      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, {
-        custom_price: Number(value),
-      });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      onSaved(product.id, Number(value));
-    } catch (err) {
-      setError(err.response?.data?.message || "Error");
-    } finally {
-      setSaving(false);
-    }
+function roundPrice(value) {
+  const n = toNumber(value);
+  if (n <= 0) return 0;
+  return Math.round(n);
+}
+
+function normalizeProducts(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.products)) return payload.products;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
+
+function firstDefined(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== "");
+}
+
+function firstImage(product) {
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const img = product.images[0];
+    return typeof img === "string" ? img : img?.url || img?.image_url || "";
   }
 
   return (
-    <div style={{ marginTop: 8 }}>
-      {precio1 && (
-        <div style={{ fontSize: ".72rem", color: "var(--text-muted)", marginBottom: 4 }}>
-          Mínimo: {fmt(precio1)}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <div style={{ position: "relative", flex: 1 }}>
-          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: ".8rem", color: "var(--text-secondary)" }}>$</span>
-          <input
-            type="number"
-            min={precio1 || 0}
-            step={1}
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSave()}
-            className="form-input form-input--sm"
-            style={{ paddingLeft: 20, borderColor: tooLow ? "var(--danger)" : undefined }}
-            placeholder="Tu precio"
-          />
-        </div>
-        <button
-          className="btn btn--primary"
-          style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 5, padding: "0 14px", height: 36, fontSize: ".8125rem", fontWeight: 600 }}
-          onClick={handleSave}
-          disabled={saving || tooLow || value === ""}
-        >
-          {saving ? "Guardando..." : <><Check size={14} /> Guardar</>}
-        </button>
+    product.image_url ||
+    product.image ||
+    product.thumbnail ||
+    product.main_image ||
+    product.photo_url ||
+    ""
+  );
+}
+
+function productName(product) {
+  return product.custom_name || product.name || product.nombre || "Producto sin nombre";
+}
+
+function productCode(product) {
+  return product.codigo || product.code || product.sku || product.barcode || "Sin código";
+}
+
+function productStock(product) {
+  return product.stock ?? product.stock_actual ?? product.quantity ?? product.available_stock ?? 0;
+}
+
+function productCategoryName(product) {
+  return (
+    product.category_name ||
+    product.categoria ||
+    product.category?.name ||
+    product.category ||
+    "Sin categoría"
+  );
+}
+
+function resellerCost(product) {
+  return roundPrice(
+    firstDefined(
+      product.precio_1,
+      product.precio_base,
+      product.base_price,
+      product.cost_price,
+      product.costo,
+      product.price_floor,
+      product.min_price,
+      product.minimum_price,
+      product.precio_minimo,
+      product.provider_price
+    )
+  );
+}
+
+function isProductInStore(product) {
+  // Importante:
+  // NO usamos "enabled", "active" ni "custom_price" solos porque muchos productos del catálogo
+  // pueden venir activos o con precio calculado aunque todavía NO estén publicados en esta tienda.
+  return Boolean(
+    product.in_store === true ||
+      product.in_page === true ||
+      product.is_in_page === true ||
+      product.selected === true ||
+      product.is_selected === true ||
+      product.page_product_id ||
+      product.store_product_id ||
+      product.pageProductId ||
+      product.storeProductId
+  );
+}
+
+function backendPagePrice(product) {
+  return roundPrice(
+    firstDefined(
+      product.custom_price,
+      product.precio_venta,
+      product.sale_price,
+      product.public_price,
+      product.store_price
+    )
+  );
+}
+
+function suggestedPrice(product) {
+  const cost = resellerCost(product);
+  const backendSuggested = roundPrice(
+    firstDefined(
+      product.precio_sugerido,
+      product.suggested_price,
+      product.recommended_price,
+      product.price_suggested,
+      product.default_sale_price
+    )
+  );
+
+  if (backendSuggested > 0) return Math.max(cost, backendSuggested);
+
+  const publicLikePrice = roundPrice(firstDefined(product.public_price, product.sale_price));
+
+  if (publicLikePrice > cost) return publicLikePrice;
+
+  // Si no viene precio sugerido del backend, damos una referencia simple y redonda.
+  return Math.max(cost, roundPrice(cost * 1.25));
+}
+
+function initialPriceFor(product) {
+  const cost = resellerCost(product);
+  const saved = isProductInStore(product) ? backendPagePrice(product) : 0;
+  const suggested = suggestedPrice(product);
+  return String(Math.max(cost, saved || suggested || cost));
+}
+
+async function tryMany(requests) {
+  let lastError;
+
+  for (const request of requests) {
+    try {
+      return await request();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError;
+}
+
+function ProductImage({ product }) {
+  const img = firstImage(product);
+
+  if (!img) {
+    return (
+      <div className="seller-product-card__image seller-product-card__image--empty">
+        <ImageIcon size={28} />
       </div>
-      {tooLow && (
-        <div style={{ fontSize: ".72rem", color: "var(--danger)", marginTop: 3, display: "flex", gap: 4, alignItems: "center" }}>
-          <AlertCircle size={11} /> Por debajo del mínimo
-        </div>
-      )}
-      {success && (
-        <div style={{ fontSize: ".72rem", color: "var(--success)", marginTop: 3 }}>✓ Guardado</div>
-      )}
-      {error && (
-        <div style={{ fontSize: ".72rem", color: "var(--danger)", marginTop: 3 }}>{error}</div>
-      )}
+    );
+  }
+
+  return (
+    <div className="seller-product-card__image">
+      <img src={img} alt={productName(product)} loading="lazy" />
     </div>
   );
 }
 
 export default function PageProducts({ pageId }) {
-  const [products,    setProducts]    = useState([]);
-  const [total,       setTotal]       = useState(0);
-  const [offset,      setOffset]      = useState(0);
-  const [hasMore,     setHasMore]     = useState(false);
-  const [loading,     setLoading]     = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [search,      setSearch]      = useState("");
-  const [filter,      setFilter]      = useState("all");
-  const [categoryId,  setCategoryId]  = useState(null);
-  const [categories,  setCategories]  = useState([]);
-  const [saving,      setSaving]      = useState({});
-  const searchTimeout = useRef(null);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [prices, setPrices] = useState({});
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [onlyMine, setOnlyMine] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    client.get("/seller/store/categories").then(r => setCategories(r.data || [])).catch(() => {});
-  }, []);
+  async function loadData() {
+    setLoading(true);
+    setMessage("");
 
-  const fetchProducts = useCallback(async (newOffset = 0, append = false) => {
-    if (newOffset === 0) setLoading(true);
-    else setLoadingMore(true);
     try {
-      const res = await client.get(`/seller/store/pages/${pageId}/products`, {
-        params: {
-          search:      search || undefined,
-          only_mine:   filter === "mine" ? "true" : undefined,
-          category_id: categoryId || undefined,
-          limit:       PAGE_SIZE,
-          offset:      newOffset,
-        },
+      const [productsRes, categoriesRes] = await Promise.allSettled([
+        client.get(`/seller/store/pages/${pageId}/products`, {
+          params: { limit: 1000 },
+        }),
+        client.get("/seller/store/categories"),
+      ]);
+
+      const list =
+        productsRes.status === "fulfilled"
+          ? normalizeProducts(productsRes.value.data)
+          : [];
+
+      const nextPrices = {};
+      list.forEach((product) => {
+        nextPrices[product.id] = initialPriceFor(product);
       });
-      const { products: incoming, total: t, hasMore: more } = res.data;
-      setProducts(prev => append ? [...prev, ...incoming] : incoming);
-      setTotal(t);
-      setHasMore(more);
-      setOffset(newOffset);
+
+      setProducts(list);
+      setPrices(nextPrices);
+
+      if (categoriesRes.status === "fulfilled") {
+        const cats = Array.isArray(categoriesRes.value.data)
+          ? categoriesRes.value.data
+          : categoriesRes.value.data?.categories || [];
+        setCategories(cats);
+      }
+    } catch (err) {
+      setMessage(err.response?.data?.message || "No se pudieron cargar los productos.");
     } finally {
       setLoading(false);
-      setLoadingMore(false);
     }
-  }, [pageId, search, filter, categoryId]);
+  }
 
   useEffect(() => {
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => fetchProducts(0, false), 300);
-    return () => clearTimeout(searchTimeout.current);
-  }, [fetchProducts]);
+    loadData();
+  }, [pageId]);
 
-  async function toggle(product) {
-    setSaving(p => ({ ...p, [product.id]: true }));
-    setProducts(prev => prev.map(p => p.id === product.id ? { ...p, in_my_store: !p.in_my_store } : p));
+  const categoryOptions = useMemo(() => {
+    if (categories.length > 0) {
+      return categories.map((cat) => ({
+        id: String(cat.id ?? cat.value ?? cat.name),
+        name: cat.name ?? cat.label ?? String(cat.id),
+      }));
+    }
+
+    const map = new Map();
+
+    products.forEach((product) => {
+      const name = productCategoryName(product);
+      if (name && name !== "Sin categoría") map.set(name, name);
+    });
+
+    return Array.from(map, ([id, name]) => ({ id, name }));
+  }, [categories, products]);
+
+  const filteredProducts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const inStore = isProductInStore(product);
+
+      const productCategoryId = String(
+        product.category_id ?? product.categoria_id ?? product.category?.id ?? ""
+      );
+
+      const productCategoryText = String(productCategoryName(product)).toLowerCase();
+
+      const matchesStore = !onlyMine || inStore;
+
+      const matchesCategory =
+        category === "all" ||
+        productCategoryId === String(category) ||
+        productCategoryText === String(category).toLowerCase();
+
+      const matchesSearch =
+        !q ||
+        productName(product).toLowerCase().includes(q) ||
+        productCode(product).toLowerCase().includes(q);
+
+      return matchesStore && matchesCategory && matchesSearch;
+    });
+  }, [products, query, category, onlyMine]);
+
+  const stats = useMemo(() => {
+    const inStore = products.filter(isProductInStore).length;
+
+    return {
+      total: products.length,
+      inStore,
+      visible: filteredProducts.length,
+    };
+  }, [products, filteredProducts]);
+
+  function setPrice(productId, value) {
+    const rounded = value === "" ? "" : String(Math.round(Number(value) || 0));
+    setPrices((prev) => ({ ...prev, [productId]: rounded }));
+    if (message) setMessage("");
+  }
+
+  function getInfo(product) {
+    const cost = resellerCost(product);
+    const suggested = suggestedPrice(product);
+    const sale = roundPrice(prices[product.id]);
+    const saved = backendPagePrice(product);
+    const inStore = isProductInStore(product);
+    const profit = sale - cost;
+    const valid = cost > 0 && sale >= cost;
+    const changed = inStore && Math.round(sale) !== Math.round(saved || suggested);
+
+    return {
+      cost,
+      suggested,
+      sale,
+      saved,
+      profit,
+      valid,
+      changed,
+      inStore,
+      profitPct: cost > 0 ? Math.round((profit / cost) * 100) : 0,
+    };
+  }
+
+  function useSuggested(product) {
+    setPrice(product.id, suggestedPrice(product));
+  }
+
+  async function addProduct(product) {
+    const info = getInfo(product);
+
+    if (!info.valid) {
+      setMessage(`Para agregar "${productName(product)}", el precio tiene que ser igual o mayor a ${money(info.cost)}.`);
+      return false;
+    }
+
+    setSavingId(product.id);
+    setMessage("");
+
     try {
-      if (product.in_my_store) {
-        await client.delete(`/seller/store/pages/${pageId}/products/${product.id}`);
-      } else {
-        await client.post(`/seller/store/pages/${pageId}/products/${product.id}`);
-      }
-    } catch {
-      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, in_my_store: product.in_my_store } : p));
+      const res = await tryMany([
+        () =>
+          client.post(`/seller/store/pages/${pageId}/products/${product.id}`, {
+            custom_price: info.sale,
+          }),
+        () =>
+          client.post(`/seller/store/pages/${pageId}/products`, {
+            product_id: product.id,
+            custom_price: info.sale,
+          }),
+        () =>
+          client.patch(`/seller/store/pages/${pageId}/products/${product.id}`, {
+            in_store: true,
+            custom_price: info.sale,
+          }),
+      ]);
+
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === product.id
+            ? {
+                ...item,
+                ...(res.data || {}),
+                in_store: true,
+                in_page: true,
+                selected: true,
+                custom_price: info.sale,
+              }
+            : item
+        )
+      );
+
+      setPrices((prev) => ({ ...prev, [product.id]: String(info.sale) }));
+      setMessage("Producto agregado a tu tienda.");
+      return true;
+    } catch (err) {
+      setMessage(err.response?.data?.message || "No se pudo agregar el producto.");
+      return false;
     } finally {
-      setSaving(p => ({ ...p, [product.id]: false }));
+      setSavingId(null);
     }
   }
 
-  async function addAll() {
-    if (!confirm("¿Agregar todos los productos activos a esta tienda?")) return;
-    await client.post(`/seller/store/pages/${pageId}/products/add-all`);
-    await fetchProducts(0, false);
+  async function savePrice(product) {
+    const info = getInfo(product);
+
+    if (!info.valid) {
+      setMessage(`El precio de "${productName(product)}" no puede ser menor a ${money(info.cost)}.`);
+      return false;
+    }
+
+    setSavingId(product.id);
+    setMessage("");
+
+    try {
+      const res = await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, {
+        custom_price: info.sale,
+      });
+
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === product.id
+            ? {
+                ...item,
+                ...(res.data || {}),
+                custom_price: info.sale,
+                in_store: true,
+                in_page: true,
+                selected: true,
+              }
+            : item
+        )
+      );
+
+      setMessage("Precio guardado.");
+      return true;
+    } catch (err) {
+      setMessage(err.response?.data?.message || "No se pudo guardar el precio.");
+      return false;
+    } finally {
+      setSavingId(null);
+    }
   }
 
-  function handlePriceSaved(productId, newPrice) {
-    setProducts(prev => prev.map(p => p.id === productId ? { ...p, custom_price: newPrice } : p));
+  async function removeProduct(product) {
+    setSavingId(product.id);
+    setMessage("");
+
+    try {
+      await tryMany([
+        () => client.delete(`/seller/store/pages/${pageId}/products/${product.id}`),
+        () =>
+          client.patch(`/seller/store/pages/${pageId}/products/${product.id}`, {
+            in_store: false,
+            enabled: false,
+          }),
+      ]);
+
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === product.id
+            ? {
+                ...item,
+                in_store: false,
+                in_page: false,
+                is_in_page: false,
+                selected: false,
+                is_selected: false,
+                page_product_id: null,
+                store_product_id: null,
+                custom_price: null,
+              }
+            : item
+        )
+      );
+
+      setPrices((prev) => ({ ...prev, [product.id]: String(suggestedPrice(product)) }));
+      setMessage("Producto quitado de tu tienda.");
+      return true;
+    } catch (err) {
+      setMessage(err.response?.data?.message || "No se pudo quitar el producto.");
+      return false;
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function addVisibleProducts() {
+    const candidates = filteredProducts.filter((product) => !isProductInStore(product));
+
+    if (candidates.length === 0) {
+      setMessage("No hay productos visibles para agregar.");
+      return;
+    }
+
+    setBulkSaving(true);
+    let ok = 0;
+
+    for (const product of candidates) {
+      const done = await addProduct(product);
+      if (done) ok += 1;
+    }
+
+    setBulkSaving(false);
+    setMessage(`${ok} producto${ok !== 1 ? "s" : ""} agregado${ok !== 1 ? "s" : ""} a tu tienda.`);
+  }
+
+  if (loading) {
+    return (
+      <div className="seller-products">
+        <div className="seller-products-loading">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="seller-products-skeleton" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <p style={{ margin: 0, fontSize: ".875rem", color: "var(--text-secondary)" }}>
-          Elegí qué productos aparecen en esta tienda y fijá el precio de cada uno.
-        </p>
-        <button className="btn btn--primary btn--sm" onClick={addAll}>
-          <PlusCircle size={14} /> Agregar todos
-        </button>
-      </div>
+    <div className="seller-products">
+      <section className="seller-products-intro">
+        <div>
+          <span>
+            <Sparkles size={15} />
+            Productos
+          </span>
+          <h2>Elegí productos y definí tu precio de venta</h2>
+          <p>
+            El <strong>costo revendedor</strong> es tu base. El <strong>precio sugerido</strong> es una referencia.
+            Tu ganancia se calcula con el precio que cargues.
+          </p>
+        </div>
 
-      <div className="toolbar" style={{ marginBottom: 10 }}>
-        <div className="search-wrapper" style={{ flex: 1, minWidth: 200 }}>
-          <Search className="search-wrapper__icon" size={15} />
+        <button type="button" onClick={addVisibleProducts} disabled={bulkSaving}>
+          {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
+          {bulkSaving ? "Agregando..." : "Agregar visibles"}
+        </button>
+      </section>
+
+      <section className="seller-products-toolbar">
+        <div className="seller-products-search">
+          <Search size={16} />
           <input
-            className="form-input"
-            style={{ paddingLeft: 38 }}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por nombre o código..."
           />
         </div>
-        <div className="pill-tabs">
-          <button className={`pill-tab${filter === "all"  ? " active" : ""}`} onClick={() => setFilter("all")}>Todos</button>
-          <button className={`pill-tab${filter === "mine" ? " active" : ""}`} onClick={() => setFilter("mine")}>En esta tienda</button>
+
+        <div className="seller-products-tabs">
+          <button type="button" className={!onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(false)}>
+            Todos
+          </button>
+          <button type="button" className={onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(true)}>
+            En mi tienda
+          </button>
         </div>
+      </section>
+
+      <section className="seller-products-cats">
+        <button type="button" className={category === "all" ? "is-active" : ""} onClick={() => setCategory("all")}>
+          Todas
+        </button>
+
+        {categoryOptions.map((cat) => (
+          <button
+            type="button"
+            key={cat.id}
+            className={String(category) === String(cat.id) || String(category) === String(cat.name) ? "is-active" : ""}
+            onClick={() => setCategory(cat.id)}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </section>
+
+      <div className="seller-products-count">
+        <ShoppingCart size={15} />
+        <span>
+          Mostrando {stats.visible} de {stats.total} productos · {stats.inStore} en tu tienda
+        </span>
       </div>
 
-      {categories.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
-          <button className={`pill-tab${!categoryId ? " active" : ""}`} onClick={() => setCategoryId(null)}>
-            Todas las categorías
-          </button>
-          {categories.map(c => (
-            <button
-              key={c.id}
-              className={`pill-tab${categoryId === c.id ? " active" : ""}`}
-              onClick={() => setCategoryId(categoryId === c.id ? null : c.id)}
-            >
-              {c.name}
-            </button>
-          ))}
+      {message && (
+        <div className={`seller-products-message ${message.includes("No se pudo") || message.includes("menor") || message.includes("agregar") && message.includes("igual") ? "is-error" : "is-ok"}`}>
+          {message.includes("No se pudo") || message.includes("menor") ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />}
+          <span>{message}</span>
         </div>
       )}
 
-      {!loading && (
-        <p style={{ fontSize: ".82rem", color: "var(--text-muted)", marginBottom: 12 }}>
-          {products.length} de {total} producto{total !== 1 ? "s" : ""}
-        </p>
-      )}
-
-      {loading ? (
-        <div className="product-grid">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="skeleton" style={{ height: 300, borderRadius: "var(--radius-lg)" }} />
-          ))}
-        </div>
-      ) : products.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)", fontSize: ".9rem" }}>
-          No se encontraron productos.
+      {filteredProducts.length === 0 ? (
+        <div className="seller-products-empty">
+          <ShoppingCart size={34} />
+          <h3>No encontramos productos</h3>
+          <p>Probá con otra búsqueda, otra categoría o cambiá el filtro.</p>
         </div>
       ) : (
-        <>
-          <div className="product-grid">
-            {products.map((product, i) => {
-              const images  = product.seller_images?.length > 0 ? product.seller_images : product.system_images;
-              const imgUrl  = images?.[0] || null;
-              const inStore = !!product.in_my_store;
-              const currentPrice = product.custom_price ?? product.precio_1;
+        <section className="seller-products-grid">
+          {filteredProducts.map((product, index) => {
+            const info = getInfo(product);
+            const saving = savingId === product.id;
 
-              return (
-                <div
-                  key={product.id}
-                  className={`product-card${inStore ? " product-card--active" : ""}`}
-                  style={{ animationDelay: `${i * 20}ms` }}
-                >
-                  <div className="product-card__img">
-                    {imgUrl
-                      ? <img src={imgUrl} alt={product.custom_name || product.name} />
-                      : <div className="product-card__img-placeholder"><Image size={24} /></div>
-                    }
-                    {inStore && (
-                      <div className="product-card__badge-wrap">
-                        <span className="badge badge--brand">En tienda</span>
-                      </div>
-                    )}
+            return (
+              <article
+                key={product.id}
+                className={`seller-product-card ${info.inStore ? "is-in-store" : ""} ${!info.valid && info.sale > 0 ? "has-price-error" : ""}`}
+                style={{ animationDelay: `${index * 22}ms` }}
+              >
+                <div className="seller-product-card__media">
+                  <ProductImage product={product} />
+
+                  {info.inStore && (
+                    <span className="seller-product-card__badge">
+                      <BadgeCheck size={13} />
+                      En tienda
+                    </span>
+                  )}
+                </div>
+
+                <div className="seller-product-card__body">
+                  <div>
+                    <h3 title={productName(product)}>{productName(product)}</h3>
+                    <p className="seller-product-card__meta">
+                      {productCode(product)} · Stock: {fmt(productStock(product))}
+                    </p>
                   </div>
 
-                  <div className="product-card__body">
-                    <div className="product-card__name">{product.custom_name || product.name}</div>
-                    <div className="product-card__meta">{product.code || "—"} · Stock: {product.stock_total}</div>
-
-                    {inStore && (
-                      <div style={{ marginTop: 6 }}>
-                        <div style={{ fontSize: ".75rem", color: "var(--text-secondary)", marginBottom: 2 }}>
-                          Precio actual: <strong style={{ color: "var(--brand)" }}>{fmt(currentPrice)}</strong>
-                          {!product.custom_price && <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}> (mínimo)</span>}
-                        </div>
-                        <PriceEditor product={product} pageId={pageId} onSaved={handlePriceSaved} />
-                      </div>
-                    )}
-
-                    <div className="product-card__actions" style={{ marginTop: 10 }}>
-                      <button
-                        onClick={() => toggle(product)}
-                        disabled={saving[product.id]}
-                        className={`btn btn--sm${inStore ? " btn--danger" : ""}`}
-                        style={!inStore ? { background: "var(--brand-light)", color: "var(--brand-text)", flex: 1 } : { flex: 1 }}
-                      >
-                        {inStore ? <><Minus size={12} /> Quitar</> : <><Plus size={12} /> Agregar</>}
-                      </button>
-                      {inStore && (
-                        <Link
-                          to={`/pages/${pageId}/products/${product.id}/edit`}
-                          className="btn btn--secondary btn--sm"
-                          title="Editar imágenes y nombre"
-                        >
-                          <Image size={13} />
-                        </Link>
-                      )}
+                  <div className="seller-product-prices">
+                    <div className="seller-product-price seller-product-price--cost">
+                      <span>Costo revendedor</span>
+                      <strong>{money(info.cost)}</strong>
                     </div>
+
+                    <button
+                      type="button"
+                      className="seller-product-price seller-product-price--suggested"
+                      onClick={() => useSuggested(product)}
+                      title="Usar precio sugerido"
+                    >
+                      <span>Precio sugerido</span>
+                      <strong>{money(info.suggested)}</strong>
+                      <small>Usar sugerido</small>
+                    </button>
+                  </div>
+
+                  <label className="seller-product-sale">
+                    <span>Tu precio de venta</span>
+                    <div>
+                      <b>$</b>
+                      <input
+                        type="number"
+                        min={info.cost || 0}
+                        step="1"
+                        value={prices[product.id] ?? ""}
+                        onChange={(e) => setPrice(product.id, e.target.value)}
+                      />
+                    </div>
+                  </label>
+
+                  <div className={`seller-product-profit ${info.profit > 0 ? "is-positive" : ""}`}>
+                    <TrendingUp size={16} />
+                    <span>Ganancia estimada</span>
+                    <strong>{info.valid && info.profit >= 0 ? money(info.profit) : "—"}</strong>
+                  </div>
+
+                  {!info.valid && info.sale > 0 && (
+                    <div className="seller-product-warning">
+                      <AlertTriangle size={14} />
+                      No puede ser menor a {money(info.cost)}
+                    </div>
+                  )}
+
+                  <div className="seller-product-actions">
+                    {!info.inStore ? (
+                      <button
+                        type="button"
+                        className="seller-product-btn seller-product-btn--add"
+                        onClick={() => addProduct(product)}
+                        disabled={saving || !info.valid}
+                      >
+                        {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Plus size={16} />}
+                        Agregar a mi tienda
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="seller-product-btn seller-product-btn--save"
+                          onClick={() => savePrice(product)}
+                          disabled={saving || !info.valid || !info.changed}
+                        >
+                          {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Save size={16} />}
+                          {info.changed ? "Guardar precio" : "Precio guardado"}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="seller-product-btn seller-product-btn--remove"
+                          onClick={() => removeProduct(product)}
+                          disabled={saving}
+                        >
+                          {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Trash2 size={16} />}
+                          Quitar
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-
-          {hasMore && (
-            <div style={{ textAlign: "center", marginTop: 24 }}>
-              <button
-                className="btn btn--secondary"
-                onClick={() => fetchProducts(offset + PAGE_SIZE, true)}
-                disabled={loadingMore}
-              >
-                {loadingMore ? "Cargando..." : `Cargar más (${total - products.length} restantes)`}
-              </button>
-            </div>
-          )}
-        </>
+              </article>
+            );
+          })}
+        </section>
       )}
     </div>
   );

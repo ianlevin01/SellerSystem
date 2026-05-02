@@ -836,3 +836,200 @@
     height: 48px;
   }
 }
+
+
+/* Responsive mobile final - cambio hecho por Yolo */
+@media (max-width: 920px) {
+  .vtz-pages-hero,
+  .vtz-orders-hero,
+  .vtz-chat-hero,
+  .vtz-calc-top,
+  .vtz-calc-hero,
+  .vtz-profile-hero,
+  .vtz-payouts-hero {
+    min-height: auto !important;
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    padding: 22px 18px !important;
+    border-radius: 24px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .vtz-pages-hero h1,
+  .vtz-orders-hero h1,
+  .vtz-chat-hero h1,
+  .vtz-calc-top h1,
+  .vtz-calc-hero h1,
+  .vtz-profile-hero h1,
+  .vtz-payouts-hero h1 {
+    font-size: clamp(2.25rem, 11vw, 3.8rem) !important;
+    line-height: .9 !important;
+    letter-spacing: -.08em !important;
+  }
+
+  .vtz-pages-hero p,
+  .vtz-orders-hero p,
+  .vtz-chat-hero p,
+  .vtz-calc-top p,
+  .vtz-calc-hero p,
+  .vtz-profile-hero p,
+  .vtz-payouts-hero p {
+    font-size: .94rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .vtz-pages-stats,
+  .vtz-orders-stats,
+  .vtz-calc-layout,
+  .vtz-calc-grid,
+  .vtz-calc-guide,
+  .vtz-profile-grid,
+  .vtz-profile-progress,
+  .vtz-payouts-stats,
+  .vtz-payouts-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .vtz-pages-toolbar,
+  .vtz-orders-content,
+  .vtz-orders-side,
+  .vtz-chat-layout,
+  .vtz-profile-fields {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtz-pages-btn--hero,
+  .vtz-pages-search,
+  .vtz-orders-search,
+  .vtz-calc-example,
+  .vtz-profile-status,
+  .vtz-orders-hero__status,
+  .vtz-chat-hero__status {
+    width: 100% !important;
+  }
+
+  .vtz-pages-grid,
+  .vtz-orders-stats,
+  .vtz-calc-summary-grid,
+  .vtz-calc-breakdown,
+  .vtz-chat-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtz-page-card,
+  .vtz-orders-side,
+  .vtz-orders-list-wrap,
+  .vtz-chat-sidebar,
+  .vtz-chat-main,
+  .vtz-profile-card,
+  .vtz-calc-box,
+  .vtz-calc-result-card,
+  .vtz-calc-card {
+    border-radius: 22px !important;
+  }
+
+  .vtz-orders-side {
+    position: static !important;
+    padding: 14px !important;
+  }
+
+  .vtz-orders-filters {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .vtz-order__summary {
+    grid-template-columns: 1fr !important;
+    align-items: flex-start !important;
+  }
+
+  .vtz-order__money {
+    text-align: left !important;
+  }
+
+  .vtz-order__detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtz-chat-layout {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  .vtz-chat-sidebar {
+    min-height: auto !important;
+  }
+
+  .vtz-chat-list {
+    max-height: 330px !important;
+  }
+
+  .vtz-chat-main {
+    min-height: 560px !important;
+  }
+
+  .vtz-chat-bubble,
+  .vtz-chat-system-bubble,
+  .vtz-chat-quote {
+    max-width: 92% !important;
+  }
+
+  .vtz-chat-main__badge {
+    display: none !important;
+  }
+
+  .vtz-calc-main-numbers,
+  .vtz-calc-detail,
+  .vtz-calc-quick > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtz-calc-result-card h2,
+  .vtz-calc-main-result h2 {
+    font-size: clamp(3rem, 18vw, 5rem) !important;
+  }
+
+  .vtz-profile-progress {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .vtz-profile-bottom-help {
+    align-items: flex-start !important;
+  }
+
+  .vtz-pages-modal {
+    width: calc(100vw - 18px) !important;
+    max-height: calc(100dvh - 18px) !important;
+    border-radius: 24px !important;
+  }
+
+  .vtz-pages-modal__grid {
+    grid-template-columns: 1fr !important;
+    min-height: 0 !important;
+  }
+
+  .vtz-pages-modal__intro,
+  .vtz-pages-modal__form {
+    padding: 24px 18px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .vtz-orders-filters,
+  .vtz-profile-progress,
+  .vtz-page-card__actions,
+  .vtz-chat-composer {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vtz-chat-composer button {
+    width: 100% !important;
+  }
+
+  .vtz-pages-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+}

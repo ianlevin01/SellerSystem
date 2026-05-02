@@ -1534,3 +1534,61 @@ html {
     border-radius: 20px;
   }
 }
+
+
+/* Responsive mobile final - cambio hecho por Yolo */
+@media (max-width: 920px) {
+  .vtz-landing,
+  .landing,
+  .hero-section,
+  .features-section {
+    overflow-x: hidden;
+  }
+
+  .vtz-landing-nav,
+  .landing-nav,
+  .nav,
+  .navbar {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .vtz-landing-hero,
+  .landing-hero,
+  .hero {
+    min-height: auto !important;
+    padding: 86px 14px 36px !important;
+  }
+
+  .vtz-landing-hero h1,
+  .landing-hero h1,
+  .hero h1 {
+    font-size: clamp(2.8rem, 13vw, 4.3rem) !important;
+    line-height: .88 !important;
+    letter-spacing: -.08em !important;
+  }
+
+  .vtz-landing-hero p,
+  .landing-hero p,
+  .hero p {
+    font-size: 1rem !important;
+    line-height: 1.55 !important;
+  }
+
+  .vtz-landing-grid,
+  .landing-grid,
+  .features-grid,
+  .steps-grid,
+  .benefits-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .vtz-landing-card,
+  .landing-card,
+  .feature-card,
+  .step-card {
+    border-radius: 22px !important;
+    padding: 18px !important;
+  }
+}

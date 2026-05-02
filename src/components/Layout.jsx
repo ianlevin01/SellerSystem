@@ -1,12 +1,12 @@
 // src/components/Layout.jsx
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import AiAssistant from "./AiAssistant";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet
+  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet, Menu, X
 } from "lucide-react";
 
 const nav = [
@@ -35,13 +35,25 @@ function storeUrl(slug) {
 export default function Layout() {
   const { seller, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [pages, setPages]         = useState([]);
   const [storeOpen, setStoreOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const storeRef                  = useRef(null);
 
   useEffect(() => {
     client.get("/seller/store/pages").then(r => setPages(r.data)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+    setStoreOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.classList.toggle("mobile-menu-open", mobileOpen);
+    return () => document.body.classList.remove("mobile-menu-open");
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!storeOpen) return;
@@ -53,13 +65,49 @@ export default function Layout() {
   }, [storeOpen]);
 
   function handleLogout() {
+    setMobileOpen(false);
     logout();
     navigate("/login");
   }
 
   return (
-    <div className="layout">
-      <aside className="sidebar">
+    <div className={`layout ${mobileOpen ? "layout--mobile-open" : ""}`}>
+      <header className="mobile-topbar">
+        <button
+          type="button"
+          className="mobile-topbar__menu"
+          onClick={() => setMobileOpen(true)}
+          aria-label="Abrir menú"
+        >
+          <Menu size={20} />
+        </button>
+
+        <div className="mobile-topbar__brand">
+          <img src="/ventaz.png" alt="Ventaz" />
+          <span>Panel</span>
+        </div>
+
+        <div className="mobile-topbar__avatar">
+          {(seller?.name?.[0] || "V").toUpperCase()}
+        </div>
+      </header>
+
+      <button
+        type="button"
+        className={`mobile-sidebar-backdrop ${mobileOpen ? "is-open" : ""}`}
+        onClick={() => setMobileOpen(false)}
+        aria-label="Cerrar menú"
+      />
+
+      <aside className={`sidebar ${mobileOpen ? "sidebar--open" : ""}`}>
+        <button
+          type="button"
+          className="sidebar__mobile-close"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Cerrar menú"
+        >
+          <X size={18} />
+        </button>
         <div className="sidebar__logo">
           <div className="sidebar__logo-mark">
             <img src="/ventaz.png" alt="Ventaz" style={{ height: 32, objectFit: "contain" }} />
@@ -87,6 +135,7 @@ export default function Layout() {
             <NavLink
               key={to}
               to={to}
+              onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 "sidebar__link" + (isActive ? " active" : "")
               }
@@ -109,7 +158,7 @@ export default function Layout() {
                       target="_blank"
                       rel="noreferrer"
                       className="sidebar__store-item"
-                      onClick={() => setStoreOpen(false)}
+                      onClick={() => { setStoreOpen(false); setMobileOpen(false); }}
                     >
                       <ExternalLink size={12} />
                       <span>{page.store_name || page.page_name}</span>
