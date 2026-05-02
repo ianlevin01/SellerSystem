@@ -1003,3 +1003,91 @@ body:has(.vtz-register) {
 .vtz-register-form-wrap:has(.has-error) .vtz-register-completion-lines span {
   height: 5px;
 }
+
+
+/* Responsive mobile final - cambio hecho por Yolo */
+@media (max-width: 920px) {
+  body:has(.vtz-login),
+  body:has(.vtz-register) {
+    overflow: auto !important;
+  }
+
+  .vtz-login,
+  .vtz-register {
+    min-height: 100dvh !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .vtz-login-side,
+  .vtz-register-panel {
+    display: none !important;
+  }
+
+  .vtz-login-form-section,
+  .vtz-register-form-section {
+    min-height: 100dvh !important;
+    height: auto !important;
+    display: grid !important;
+    place-items: center !important;
+    padding: 18px !important;
+    overflow: visible !important;
+  }
+
+  .vtz-login-form-wrap,
+  .vtz-register-form-wrap {
+    width: min(100%, 460px) !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 24px 20px !important;
+    border-radius: 28px !important;
+  }
+
+  .vtz-login-mobile-brand,
+  .vtz-register-mobile-brand {
+    display: inline-flex !important;
+  }
+
+  .vtz-login-head h2,
+  .vtz-register-head h2 {
+    font-size: clamp(2.15rem, 12vw, 3.25rem) !important;
+    letter-spacing: -.075em !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .vtz-login-form-section,
+  .vtz-register-form-section {
+    place-items: start center !important;
+    padding: 12px !important;
+  }
+
+  .vtz-login-form-wrap,
+  .vtz-register-form-wrap {
+    width: 100% !important;
+    padding: 22px 16px !important;
+    border-radius: 24px !important;
+  }
+
+  .vtz-login-input,
+  .vtz-register-input {
+    min-height: 48px !important;
+  }
+
+  .vtz-login-input input,
+  .vtz-register-input input {
+    font-size: 16px !important;
+  }
+
+  .vtz-login-btn,
+  .vtz-register-btn {
+    min-height: 50px !important;
+    width: 100% !important;
+  }
+
+  .vtz-register-onboarding span {
+    display: none !important;
+  }
+}
