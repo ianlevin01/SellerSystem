@@ -35,8 +35,8 @@ export default function StoreConfig() {
     setError(""); setSaving(true); setSaved(false);
     try {
       await client.put("/seller/store/config", { ...form, pct_markup: Number(form.pct_markup) });
-      await refreshSeller();
       setSaved(true);
+      refreshSeller().catch(() => {});
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setError(err.response?.data?.message || "Error al guardar");

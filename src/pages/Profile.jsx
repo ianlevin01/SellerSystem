@@ -150,10 +150,9 @@ export default function Profile() {
         how_found_us: form.how_found_us,
       });
 
-      await refreshSeller();
-
       setSaveMsg("Guardado correctamente");
       setTimeout(() => setSaveMsg(""), 3000);
+      refreshSeller().catch(() => {});
     } catch (err) {
       setSaveMsg(err.response?.data?.message || "Error al guardar");
     } finally {
@@ -201,8 +200,7 @@ export default function Profile() {
       setOtpMode(false);
       setOtpCode("");
       setOtpMsg("Teléfono verificado");
-
-      await refreshSeller();
+      refreshSeller().catch(() => {});
     } catch (err) {
       setOtpMsg(err.response?.data?.message || "Código incorrecto");
     } finally {
