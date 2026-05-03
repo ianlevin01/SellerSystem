@@ -4,6 +4,7 @@ import client from "../api/client";
 import {
   AlertTriangle, Building2, ChevronDown, ChevronLeft,
   ExternalLink, FileText, Image as ImageIcon, Layers,
+  LayoutGrid, MousePointerClick, PanelBottom,
   Palette, Percent, Plus, Save, Share2, Tag,
   TrendingDown, Trash2, Zap,
 } from "lucide-react";
@@ -56,19 +57,31 @@ function ColorRow({ value, onChange, onClear }) {
 // ── Config sections sidebar nav ───────────────────────────────
 
 const CONFIG_SECTIONS = [
-  { id: "identidad",  label: "Identidad",      Icon: Building2  },
-  { id: "info",       label: "Info pública",    Icon: FileText   },
-  { id: "hero",       label: "Hero & Banner",   Icon: ImageIcon  },
-  { id: "promo",      label: "Barra de promo",  Icon: Zap        },
-  { id: "colores",    label: "Colores",         Icon: Palette    },
-  { id: "apariencia", label: "Apariencia",      Icon: Layers     },
-  { id: "redes",      label: "Redes sociales",  Icon: Share2     },
-  { id: "categorias", label: "Categorías",      Icon: Tag        },
+  { id: "identidad",  label: "Identidad",      Icon: Building2         },
+  { id: "info",       label: "Info pública",   Icon: FileText          },
+  { id: "inicio",     label: "Inicio / Hero",  Icon: ImageIcon         },
+  { id: "catalogo",   label: "Catálogo",       Icon: LayoutGrid        },
+  { id: "botones",    label: "Botones & CTA",  Icon: MousePointerClick },
+  { id: "promo",      label: "Barra de promo", Icon: Zap               },
+  { id: "colores",    label: "Colores",        Icon: Palette           },
+  { id: "apariencia", label: "Apariencia",     Icon: Layers            },
+  { id: "footer",     label: "Pie de página",  Icon: PanelBottom       },
+  { id: "redes",      label: "Redes sociales", Icon: Share2            },
+  { id: "categorias", label: "Categorías",     Icon: Tag               },
 ];
 
 // ── ConfigTab ─────────────────────────────────────────────────
 
 function ConfigTab({ pageId }) {
+  const DEFAULT_THEME = {
+    hero_bg_type: "color", hero_overlay_opacity: 50,
+    hero_btn_text: "Ver productos", hero_btn_radius: 99,
+    products_cols: 3, products_section_title: "",
+    card_style: "default", btn_radius: 8,
+    show_trust_badges: true, show_search_bar: true,
+    footer_bg: "", footer_text_color: "", footer_tagline: "",
+  };
+
   const [form, setForm] = useState({
     page_name: "", store_name: "", store_description: "", banner_color: "#5b52f0",
     tagline: "", whatsapp: "", instagram: "", facebook: "",
@@ -77,6 +90,7 @@ function ConfigTab({ pageId }) {
     card_border_radius: 12, card_show_shadow: true,
     hero_headline: "", hero_image_url: "",
     promo_text: "", show_promo_bar: true,
+    theme_config: { ...DEFAULT_THEME },
   });
   const [categories, setCategories] = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -107,6 +121,7 @@ function ConfigTab({ pageId }) {
       hero_image_url:      d.hero_image_url       || "",
       promo_text:          d.promo_text           || "",
       show_promo_bar:      d.show_promo_bar       != null ? Boolean(d.show_promo_bar) : true,
+      theme_config:        { ...DEFAULT_THEME, ...(d.theme_config || {}) },
     });
   }
 
@@ -122,6 +137,7 @@ function ConfigTab({ pageId }) {
   }, [pageId]);
 
   function set(key, val) { setForm(p => ({ ...p, [key]: val })); }
+  function setTheme(key, val) { setForm(p => ({ ...p, theme_config: { ...(p.theme_config || {}), [key]: val } })); }
 
   function toggleCategory(id) {
     setForm(p => {
@@ -153,6 +169,7 @@ function ConfigTab({ pageId }) {
   );
 
   const activeCats = Array.isArray(form.featured_categories) ? form.featured_categories : [];
+  const tc = form.theme_config || {};
 
   return (
     <form onSubmit={handleSave}>
@@ -251,54 +268,245 @@ function ConfigTab({ pageId }) {
             </div>
           )}
 
-          {/* ── Hero & Banner ── */}
-          {section === "hero" && (
+          {/* ── Inicio / Hero ── */}
+          {section === "inicio" && (
             <div className="pe-section">
               <div className="pe-section__head">
                 <ImageIcon size={18} />
                 <div>
-                  <h3>Hero & Banner</h3>
-                  <p>Personalizá la sección principal que ven los clientes al entrar a tu tienda.</p>
+                  <h3>Inicio / Hero</h3>
+                  <p>El banner principal que ven los clientes al entrar a tu tienda.</p>
                 </div>
               </div>
-              <Field label="Título principal del hero" hint="El texto grande que aparece en el banner">
+
+              <Field label="Tipo de fondo">
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[
+                    { val: "color", label: "Color sólido" },
+                    { val: "image", label: "Imagen de fondo" },
+                  ].map(({ val, label }) => (
+                    <button key={val} type="button"
+                      onClick={() => setTheme("hero_bg_type", val)}
+                      style={{
+                        flex: 1, padding: "9px 0", fontSize: ".875rem", fontWeight: 600,
+                        borderRadius: 8, cursor: "pointer",
+                        border: `1.5px solid ${(tc.hero_bg_type || "color") === val ? "var(--brand)" : "var(--border)"}`,
+                        background: (tc.hero_bg_type || "color") === val ? "var(--brand)" : "transparent",
+                        color: (tc.hero_bg_type || "color") === val ? "#fff" : "var(--text-secondary)",
+                        transition: "all .15s",
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+
+              {tc.hero_bg_type === "image" ? (
+                <>
+                  <Field label="URL de la imagen de fondo">
+                    <input className="form-input" value={form.hero_image_url}
+                      onChange={e => set("hero_image_url", e.target.value)}
+                      placeholder="https://mi-imagen.com/banner.jpg" />
+                  </Field>
+                  <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
+                    <input type="range" min={0} max={90} step={5}
+                      value={tc.hero_overlay_opacity ?? 50}
+                      onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
+                      style={{ width: "100%" }} />
+                  </Field>
+                </>
+              ) : (
+                <Field label="Color del banner">
+                  <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
+                </Field>
+              )}
+
+              <Field label="Título principal">
                 <input className="form-input" value={form.hero_headline}
                   onChange={e => set("hero_headline", e.target.value)}
                   placeholder="Ej: Todo lo que necesitás, en un solo lugar" />
               </Field>
-              <Field label="Color del banner / acento principal">
-                <ColorRow
-                  value={form.banner_color}
-                  onChange={v => set("banner_color", v)}
-                />
-              </Field>
-              <Field label="Imagen del hero" hint="URL de una imagen para mostrar en el banner (opcional)">
-                <input className="form-input" value={form.hero_image_url}
-                  onChange={e => set("hero_image_url", e.target.value)}
-                  placeholder="https://mi-imagen.com/banner.jpg" />
-                {form.hero_image_url && (
-                  <img src={form.hero_image_url} alt="hero preview"
-                    style={{ marginTop: 10, width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}
-                    onError={e => { e.target.style.display = "none"; }}
-                  />
+
+              {/* Vista previa grande del hero */}
+              <div style={{
+                marginTop: 8, borderRadius: "var(--radius-lg)", overflow: "hidden",
+                minHeight: 180, position: "relative",
+                ...(tc.hero_bg_type === "image" && form.hero_image_url
+                  ? { backgroundImage: `url(${form.hero_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+                  : { background: form.banner_color || "#5b52f0" }),
+              }}>
+                {tc.hero_bg_type === "image" && form.hero_image_url && (
+                  <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${(tc.hero_overlay_opacity ?? 50) / 100})` }} />
                 )}
+                <div style={{ position: "relative", zIndex: 1, padding: "28px 24px" }}>
+                  <div style={{ fontSize: ".65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.6)", marginBottom: 6 }}>
+                    Tu tienda online
+                  </div>
+                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 6 }}>
+                    {form.hero_headline || form.store_name || "Mi tienda"}
+                  </div>
+                  <div style={{ fontSize: ".82rem", color: "rgba(255,255,255,.75)", marginBottom: 14 }}>
+                    {form.tagline || form.store_description || "Subtítulo de tu tienda"}
+                  </div>
+                  <button type="button" style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    background: "rgba(255,255,255,.18)", backdropFilter: "blur(8px)",
+                    color: "#fff", fontWeight: 600, fontSize: ".8rem",
+                    padding: "8px 18px", borderRadius: `${tc.hero_btn_radius ?? 99}px`,
+                    border: "1.5px solid rgba(255,255,255,.35)", cursor: "default",
+                  }}>
+                    {tc.hero_btn_text || "Ver productos"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Catálogo ── */}
+          {section === "catalogo" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <LayoutGrid size={18} />
+                <div>
+                  <h3>Catálogo</h3>
+                  <p>Personalizá cómo se muestran los productos en tu tienda.</p>
+                </div>
+              </div>
+
+              <Field label="Columnas de productos" hint={`${tc.products_cols ?? 3} columnas`}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[2, 3, 4].map(n => (
+                    <button key={n} type="button"
+                      onClick={() => setTheme("products_cols", n)}
+                      style={{
+                        flex: 1, padding: "9px 0", fontSize: ".875rem", fontWeight: 600,
+                        borderRadius: 8, cursor: "pointer",
+                        border: `1.5px solid ${(tc.products_cols ?? 3) === n ? "var(--brand)" : "var(--border)"}`,
+                        background: (tc.products_cols ?? 3) === n ? "var(--brand)" : "transparent",
+                        color: (tc.products_cols ?? 3) === n ? "#fff" : "var(--text-secondary)",
+                        transition: "all .15s",
+                      }}>
+                      {n} col.
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: `repeat(${tc.products_cols ?? 3}, 1fr)`, gap: 5 }}>
+                  {Array.from({ length: (tc.products_cols ?? 3) * 2 }, (_, i) => (
+                    <div key={i} style={{ height: 44, borderRadius: 6, background: "var(--border)", position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "40%", background: "var(--bg)", padding: "4px 5px" }}>
+                        <div style={{ height: 3, width: "65%", borderRadius: 2, background: "var(--border)", marginBottom: 3 }} />
+                        <div style={{ height: 3, width: "40%", borderRadius: 2, background: "var(--border-light)" }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </Field>
 
-              {/* Preview del hero */}
-              <div className="pe-hero-preview" style={{ background: form.banner_color }}>
-                <div className="pe-hero-preview__content">
-                  <span className="pe-hero-preview__label">Tu tienda online</span>
-                  <h4>{form.hero_headline || form.store_name || "Nombre de tu tienda"}</h4>
-                  <p>{form.tagline || form.store_description || "Subtítulo de tu tienda"}</p>
-                  <button type="button" className="pe-hero-preview__cta">Ver productos →</button>
+              <Field label="Estilo de tarjetas">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {[
+                    { value: "default",  label: "Clásico",   desc: "Sombra suave" },
+                    { value: "minimal",  label: "Mínimo",    desc: "Sin bordes" },
+                    { value: "bordered", label: "Con borde", desc: "Borde prominente" },
+                    { value: "floating", label: "Flotante",  desc: "Sombra profunda" },
+                  ].map(({ value, label, desc }) => (
+                    <button key={value} type="button"
+                      onClick={() => setTheme("card_style", value)}
+                      style={{
+                        padding: "12px", borderRadius: 8, cursor: "pointer", textAlign: "left",
+                        border: `1.5px solid ${(tc.card_style || "default") === value ? "var(--brand)" : "var(--border)"}`,
+                        background: (tc.card_style || "default") === value ? "rgba(var(--brand-rgb),.08)" : "transparent",
+                        transition: "all .15s",
+                      }}>
+                      <div style={{ fontWeight: 600, fontSize: ".82rem", marginBottom: 2, color: "var(--text-primary)" }}>{label}</div>
+                      <div style={{ fontSize: ".73rem", color: "var(--text-secondary)" }}>{desc}</div>
+                    </button>
+                  ))}
                 </div>
-                {form.hero_image_url && (
-                  <img src={form.hero_image_url} alt=""
-                    style={{ height: 100, width: 120, objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }}
-                    onError={e => { e.target.style.display = "none"; }}
-                  />
-                )}
+              </Field>
+
+              <Field label="Título de la sección de productos">
+                <input className="form-input" value={tc.products_section_title || ""}
+                  onChange={e => setTheme("products_section_title", e.target.value)}
+                  placeholder="Todos los productos" />
+              </Field>
+
+              <Field label="Barra de búsqueda">
+                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={tc.show_search_bar !== false}
+                    onChange={e => setTheme("show_search_bar", e.target.checked)} />
+                  <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
+                    {tc.show_search_bar !== false ? "Visible" : "Oculta"}
+                  </span>
+                </label>
+              </Field>
+
+              <Field label="Badges de confianza (Pago seguro · Envíos...)">
+                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={tc.show_trust_badges !== false}
+                    onChange={e => setTheme("show_trust_badges", e.target.checked)} />
+                  <span className="toggle-track"><span className="toggle-thumb" /></span>
+                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
+                    {tc.show_trust_badges !== false ? "Visibles" : "Ocultos"}
+                  </span>
+                </label>
+              </Field>
+            </div>
+          )}
+
+          {/* ── Botones & CTA ── */}
+          {section === "botones" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <MousePointerClick size={18} />
+                <div>
+                  <h3>Botones & CTA</h3>
+                  <p>Estilo de los botones de acción en tu tienda.</p>
+                </div>
               </div>
+
+              <Field label="Redondeo de botones" hint={`${tc.btn_radius ?? 8}px`}>
+                <input type="range" min={0} max={24} step={2}
+                  value={tc.btn_radius ?? 8}
+                  onChange={e => setTheme("btn_radius", Number(e.target.value))}
+                  style={{ width: "100%" }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  {[0, 6, 8, 12, 24].map(r => (
+                    <button key={r} type="button"
+                      onClick={() => setTheme("btn_radius", r)}
+                      style={{
+                        padding: "6px 14px", cursor: "pointer",
+                        borderRadius: `${r}px`,
+                        background: (tc.btn_radius ?? 8) === r ? "var(--brand)" : "var(--border)",
+                        color: (tc.btn_radius ?? 8) === r ? "#fff" : "var(--text-secondary)",
+                        border: "none", fontWeight: 500, fontSize: ".8rem",
+                        transition: "all .15s",
+                      }}>
+                      {r}px
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <button type="button" style={{
+                    background: form.banner_color || "#5b52f0", color: "#fff",
+                    padding: "10px 20px", borderRadius: `${tc.btn_radius ?? 8}px`,
+                    fontWeight: 600, fontSize: ".875rem", border: "none",
+                  }}>Agregar al carrito</button>
+                  <button type="button" style={{
+                    background: "transparent", color: form.banner_color || "#5b52f0",
+                    padding: "10px 20px", borderRadius: `${tc.btn_radius ?? 8}px`,
+                    fontWeight: 600, fontSize: ".875rem",
+                    border: `1.5px solid ${form.banner_color || "#5b52f0"}`,
+                  }}>Ver más</button>
+                </div>
+              </Field>
+
+              <Field label="Texto del botón principal (hero)">
+                <input className="form-input" value={tc.hero_btn_text || ""}
+                  onChange={e => setTheme("hero_btn_text", e.target.value)}
+                  placeholder="Ver productos" />
+              </Field>
             </div>
           )}
 
@@ -481,6 +689,72 @@ function ConfigTab({ pageId }) {
                   </span>
                 </label>
               </Field>
+            </div>
+          )}
+
+          {/* ── Pie de página ── */}
+          {section === "footer" && (
+            <div className="pe-section">
+              <div className="pe-section__head">
+                <PanelBottom size={18} />
+                <div>
+                  <h3>Pie de página</h3>
+                  <p>Personalizá los colores y el texto extra del footer de tu tienda.</p>
+                </div>
+              </div>
+
+              <Field label="Color de fondo del footer">
+                <ColorRow
+                  value={tc.footer_bg || "#0a0f09"}
+                  onChange={v => setTheme("footer_bg", v)}
+                  onClear={() => setTheme("footer_bg", "")}
+                />
+              </Field>
+              <Field label="Color del texto del footer">
+                <ColorRow
+                  value={tc.footer_text_color || "#ffffff"}
+                  onChange={v => setTheme("footer_text_color", v)}
+                  onClear={() => setTheme("footer_text_color", "")}
+                />
+              </Field>
+              <Field label="Texto extra" hint="Aparece debajo del nombre de la tienda">
+                <input className="form-input" value={tc.footer_tagline || ""}
+                  onChange={e => setTheme("footer_tagline", e.target.value)}
+                  placeholder="Ej: Envíos a todo el país · Atención personalizada" />
+              </Field>
+
+              {/* Preview footer */}
+              <div style={{
+                marginTop: 8, padding: "20px 24px",
+                background: tc.footer_bg || "#0a0f09",
+                borderRadius: "var(--radius-md)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+                    background: form.banner_color || "#5b52f0",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontWeight: 700, fontSize: ".9rem",
+                  }}>
+                    {(form.store_name || "T")[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: ".9rem", color: tc.footer_text_color || "#fff" }}>
+                      {form.store_name || "Mi tienda"}
+                    </div>
+                    {form.store_description && (
+                      <div style={{ fontSize: ".75rem", color: tc.footer_text_color || "rgba(255,255,255,.5)", opacity: .7, marginTop: 2 }}>
+                        {form.store_description}
+                      </div>
+                    )}
+                    {tc.footer_tagline && (
+                      <div style={{ fontSize: ".75rem", color: tc.footer_text_color || "rgba(255,255,255,.5)", opacity: .6, marginTop: 2 }}>
+                        {tc.footer_tagline}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

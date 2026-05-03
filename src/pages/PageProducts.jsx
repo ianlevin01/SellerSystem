@@ -61,7 +61,7 @@ function productCode(product) {
   return product.codigo || product.code || product.sku || product.barcode || "Sin código";
 }
 function productStock(product) {
-  return product.stock ?? product.stock_actual ?? product.quantity ?? product.available_stock ?? 0;
+  return product.available_stock ?? product.stock ?? product.stock_actual ?? product.quantity ?? 0;
 }
 function productCategoryName(product) {
   return product.category_name || product.categoria || product.category?.name || product.category || "Sin categoría";
@@ -408,12 +408,13 @@ export default function PageProducts({ pageId }) {
       ) : (
         <section className="seller-products-grid">
           {products.map((product, index) => {
-            const info   = getInfo(product);
-            const saving = savingId === product.id;
+            const info       = getInfo(product);
+            const saving     = savingId === product.id;
+            const isLowStock = typeof product.available_stock === "number" && product.available_stock < 10;
             return (
               <article
                 key={product.id}
-                className={`seller-product-card ${info.inStore ? "is-in-store" : ""} ${!info.valid && info.sale > 0 ? "has-price-error" : ""}`}
+                className={`seller-product-card ${info.inStore ? "is-in-store" : ""} ${!info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
                 style={{ animationDelay: `${index * 22}ms` }}
               >
                 <div className="seller-product-card__media">
@@ -424,13 +425,22 @@ export default function PageProducts({ pageId }) {
                       En tienda
                     </span>
                   )}
+                  {isLowStock && info.inStore && (
+                    <div className="seller-product-card__stock-warn">
+                      <AlertTriangle size={11} />
+                      <span>Sin stock · No visible en tu tienda</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="seller-product-card__body">
                   <div>
                     <h3 title={productName(product)}>{productName(product)}</h3>
                     <p className="seller-product-card__meta">
-                      {productCode(product)} · Stock: {fmt(productStock(product))}
+                      {productCode(product)} ·{" "}
+                      <span style={{ color: isLowStock ? "#f59e0b" : "inherit", fontWeight: isLowStock ? 600 : undefined }}>
+                        Stock: {fmt(productStock(product))}{isLowStock ? " ⚠" : ""}
+                      </span>
                     </p>
                   </div>
 
