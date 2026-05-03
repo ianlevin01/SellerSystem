@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+
+Disallow: /dashboard
+Disallow: /orders
+Disallow: /pages
+Disallow: /cobros
+Disallow: /chat
+Disallow: /calculator
+Disallow: /profile
+Disallow: /products
+Disallow: /store-config
+Disallow: /discounts
+
+Sitemap: https://ventaz.com.ar/sitemap.xml

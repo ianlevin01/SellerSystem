@@ -1,0 +1,16 @@
+{
+  "name": "Ventaz",
+  "short_name": "Ventaz",
+  "description": "Panel de vendedores Ventaz",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#57d625",
+  "icons": [
+    {
+      "src": "/ventaz.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
