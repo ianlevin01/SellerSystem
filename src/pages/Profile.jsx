@@ -154,7 +154,7 @@ export default function Profile() {
       setTimeout(() => setSaveMsg(""), 3000);
       refreshSeller().catch(() => {});
     } catch (err) {
-      setSaveMsg(err.response?.data?.message || "Error al guardar");
+      setSaveMsg(err.response?.data?.message || err.message || "Error al guardar");
     } finally {
       setSaving(false);
     }
