@@ -41,7 +41,7 @@ function isSuccessMessage(message) {
 }
 
 export default function Profile() {
-  const { refreshSeller } = useAuth();
+  const { updateSeller } = useAuth();
 
   const [form, setForm] = useState({
     name: "",
@@ -152,7 +152,13 @@ export default function Profile() {
 
       setSaveMsg("Guardado correctamente");
       setTimeout(() => setSaveMsg(""), 3000);
-      refreshSeller().catch(() => {});
+      updateSeller({
+        name: form.name.trim(),
+        city: form.city.trim(),
+        phone: form.phone.trim(),
+        age: form.age ? Number(form.age) : null,
+        how_found_us: form.how_found_us,
+      });
     } catch (err) {
       setSaveMsg(err.response?.data?.message || err.message || "Error al guardar");
     } finally {

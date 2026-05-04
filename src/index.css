@@ -2750,6 +2750,161 @@ input[type="color"] {
 }
 
 
+/* ── Page Editor Split Layout ──────────────────────────────── */
+.pe-editor {
+  display: flex;
+  height: calc(100vh - 220px);
+  min-height: 480px;
+  margin: 0 -40px -36px;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.pe-editor__left {
+  flex: 0 0 360px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.pe-editor__tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.pe-editor__tab {
+  padding: 13px 4px;
+  font-size: .72rem;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all .15s;
+  text-align: center;
+  letter-spacing: .01em;
+}
+.pe-editor__tab:hover { color: var(--text-primary); background: var(--border-subtle); }
+.pe-editor__tab.is-active {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+  background: rgba(var(--brand-rgb), .04);
+}
+
+.pe-editor__fields {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pe-editor__save {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg);
+}
+
+.pe-editor__save-status { font-size: .8125rem; font-weight: 500; }
+
+/* Right preview panel */
+.pe-editor__right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #e4e7eb;
+}
+
+.pe-editor__preview-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.pe-editor__device-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.pe-editor__device-btn:hover,
+.pe-editor__device-btn.is-active {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: rgba(var(--brand-rgb), .06);
+}
+
+.pe-editor__preview-url {
+  flex: 1;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: .72rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pe-editor__iframe-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.pe-editor__iframe-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+}
+
+.pe-editor__iframe-wrap.is-mobile {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 24px;
+  overflow-y: auto;
+}
+.pe-editor__iframe-wrap.is-mobile iframe {
+  width: 390px;
+  min-width: 390px;
+  height: 844px;
+  border-radius: 44px;
+  box-shadow: 0 0 0 10px #1c1c1e, 0 40px 100px rgba(0,0,0,.5);
+}
+
 /* ──────────────────────────────────────────────────────────────
    Productos de tienda - versión corregida
    cambio hecho por Yolo

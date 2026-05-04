@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
 import {
-  AlertTriangle, Building2, ChevronDown, ChevronLeft,
-  ExternalLink, FileText, Image as ImageIcon, Layers,
-  LayoutGrid, MousePointerClick, PanelBottom,
-  Palette, Percent, Plus, Save, Share2, Tag,
-  TrendingDown, Trash2, Zap,
+  AlertTriangle, ChevronDown, ChevronLeft,
+  ExternalLink, Monitor, Percent, Plus,
+  RefreshCw, Save, Smartphone, Tag, TrendingDown, Trash2,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
@@ -54,6 +52,16 @@ function ColorRow({ value, onChange, onClear }) {
   );
 }
 
+function Toggle({ checked, onChange, label }) {
+  return (
+    <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+      <span className="toggle-track"><span className="toggle-thumb" /></span>
+      <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>{label}</span>
+    </label>
+  );
+}
+
 // ── Config sections sidebar nav ───────────────────────────────
 
 const CONFIG_SECTIONS = [
@@ -73,6 +81,10 @@ const CONFIG_SECTIONS = [
 // ── ConfigTab ─────────────────────────────────────────────────
 
 function ConfigTab({ pageId }) {
+  const iframeRef = useRef(null);
+  const [previewMode, setPreviewMode] = useState("desktop");
+  const [iframeSrc,   setIframeSrc]   = useState("");
+
   const DEFAULT_THEME = {
     hero_bg_type: "color", hero_overlay_opacity: 50,
     hero_btn_text: "Ver productos", hero_btn_radius: 99,
@@ -83,6 +95,7 @@ function ConfigTab({ pageId }) {
   };
 
   const [form, setForm] = useState({
+    slug: "",
     page_name: "", store_name: "", store_description: "", banner_color: "#5b52f0",
     tagline: "", whatsapp: "", instagram: "", facebook: "",
     logo_url: "", font_family: "", color_secondary: "", color_bg: "", color_text: "",
@@ -97,10 +110,11 @@ function ConfigTab({ pageId }) {
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
-  const [section,  setSection]  = useState("identidad");
+  const [section,  setSection]  = useState("tienda");
 
   function formFromData(d) {
     setForm({
+      slug:                d.slug                || "",
       page_name:           d.page_name           || "",
       store_name:          d.store_name          || "",
       store_description:   d.store_description   || "",
@@ -133,8 +147,16 @@ function ConfigTab({ pageId }) {
     ]).then(([pageRes, catRes]) => {
       formFromData(pageRes.data);
       setCategories(catRes.data || []);
+      if (pageRes.data.slug) setIframeSrc(storeUrl(pageRes.data.slug));
     }).finally(() => setLoading(false));
   }, [pageId]);
+
+  // Sync CSS variables to the preview iframe in real time
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow || !iframeSrc) return;
+    iframe.contentWindow.postMessage({ type: "ventaz_preview", payload: form }, "*");
+  }, [form, iframeSrc]);
 
   function set(key, val) { setForm(p => ({ ...p, [key]: val })); }
   function setTheme(key, val) { setForm(p => ({ ...p, theme_config: { ...(p.theme_config || {}), [key]: val } })); }
@@ -142,19 +164,18 @@ function ConfigTab({ pageId }) {
   function toggleCategory(id) {
     setForm(p => {
       const cats = Array.isArray(p.featured_categories) ? p.featured_categories : [];
-      const has  = cats.includes(id);
-      return { ...p, featured_categories: has ? cats.filter(c => c !== id) : [...cats, id] };
+      return { ...p, featured_categories: cats.includes(id) ? cats.filter(c => c !== id) : [...cats, id] };
     });
   }
 
-  async function handleSave(e) {
-    if (e) e.preventDefault();
+  async function handleSave() {
     setError(""); setSaving(true); setSaved(false);
     try {
       const res = await client.put(`/seller/store/pages/${pageId}`, form);
       formFromData(res.data);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => iframeRef.current?.contentWindow?.location.reload(), 400);
     } catch (err) {
       setError(err.response?.data?.message || "Error al guardar");
     } finally {
@@ -171,672 +192,438 @@ function ConfigTab({ pageId }) {
   const activeCats = Array.isArray(form.featured_categories) ? form.featured_categories : [];
   const tc = form.theme_config || {};
 
+  const SECTIONS = [
+    { id: "tienda",   label: "Tienda"   },
+    { id: "hero",     label: "Hero"     },
+    { id: "catalogo", label: "Catálogo" },
+    { id: "colores",  label: "Colores"  },
+    { id: "contacto", label: "Contacto" },
+  ];
+
   return (
-    <form onSubmit={handleSave}>
+    <div className="pe-editor">
 
-      {/* ── Save bar (sticky) ── */}
-      <div className="pe-save-bar">
-        <div className="pe-save-bar__left">
-          {error && <span className="pe-save-bar__error">⚠ {error}</span>}
-          {saved && <span className="pe-save-bar__ok">✓ Cambios guardados</span>}
-        </div>
-        <button type="submit" disabled={saving} className="pe-save-bar__btn">
-          <Save size={15} />
-          {saving ? "Guardando..." : "Guardar cambios"}
-        </button>
-      </div>
+      {/* ── Left panel ──────────────────────────────────────────── */}
+      <div className="pe-editor__left">
 
-      {/* ── Panel ── */}
-      <div className="pe-panel">
-
-        {/* Sidebar */}
-        <aside className="pe-sidebar">
-          {CONFIG_SECTIONS.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className={`pe-sidebar-item ${section === id ? "is-active" : ""}`}
-              onClick={() => setSection(id)}
-            >
-              <Icon size={15} />
-              {label}
+        {/* Section tabs */}
+        <div className="pe-editor__tabs">
+          {SECTIONS.map(s => (
+            <button key={s.id} type="button"
+              className={`pe-editor__tab ${section === s.id ? "is-active" : ""}`}
+              onClick={() => setSection(s.id)}>
+              {s.label}
             </button>
           ))}
-        </aside>
+        </div>
 
-        {/* Content area */}
-        <div className="pe-content">
+        {/* Scrollable fields */}
+        <div className="pe-editor__fields">
 
-          {/* ── Identidad ── */}
-          {section === "identidad" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <Building2 size={18} />
-                <div>
-                  <h3>Identidad</h3>
-                  <p>Nombre interno y datos de la tienda que solo vos ves.</p>
-                </div>
-              </div>
-              <Field label="Nombre interno" hint="Solo lo ves vos, para identificar esta tienda">
-                <input className="form-input" value={form.page_name}
-                  onChange={e => set("page_name", e.target.value)}
-                  placeholder="Ej: Tienda principal" />
-              </Field>
-            </div>
-          )}
-
-          {/* ── Info pública ── */}
-          {section === "info" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <FileText size={18} />
-                <div>
-                  <h3>Información pública</h3>
-                  <p>Estos datos aparecen en tu tienda y son visibles para los clientes.</p>
-                </div>
-              </div>
-              <Field label="Nombre de la tienda">
-                <input className="form-input" value={form.store_name}
-                  onChange={e => set("store_name", e.target.value)}
-                  placeholder="Ej: Belissia Shop" />
-              </Field>
-              <Field label="Descripción" hint="Breve descripción de tu tienda">
-                <textarea className="form-textarea" value={form.store_description}
-                  onChange={e => set("store_description", e.target.value)}
-                  placeholder="Los mejores productos al mejor precio..." />
-              </Field>
-              <Field label="Tagline" hint="Subtítulo corto, máx 160 caracteres">
-                <input className="form-input" value={form.tagline}
-                  onChange={e => set("tagline", e.target.value)}
-                  placeholder="Todo lo que necesitás, al mejor precio"
-                  maxLength={160} />
-              </Field>
-
-              {/* Preview */}
-              <div className="pe-preview-mini">
-                <div className="pe-preview-mini__banner" style={{ background: form.banner_color }}>
-                  {form.logo_url
-                    ? <img src={form.logo_url} alt="logo" style={{ height: 32, objectFit: "contain" }} />
-                    : <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#fff" }}>{form.store_name || "Mi tienda"}</span>
-                  }
-                </div>
-                <div className="pe-preview-mini__body">
-                  <p style={{ fontWeight: 700, fontSize: ".9rem", margin: 0 }}>{form.store_name || "Nombre de tu tienda"}</p>
-                  <p style={{ fontSize: ".78rem", color: "var(--text-secondary)", margin: "2px 0 0" }}>{form.tagline || form.store_description || "Descripción de tu tienda"}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Inicio / Hero ── */}
-          {section === "inicio" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <ImageIcon size={18} />
-                <div>
-                  <h3>Inicio / Hero</h3>
-                  <p>El banner principal que ven los clientes al entrar a tu tienda.</p>
-                </div>
-              </div>
-
-              <Field label="Tipo de fondo">
-                <div style={{ display: "flex", gap: 8 }}>
-                  {[
-                    { val: "color", label: "Color sólido" },
-                    { val: "image", label: "Imagen de fondo" },
-                  ].map(({ val, label }) => (
-                    <button key={val} type="button"
-                      onClick={() => setTheme("hero_bg_type", val)}
-                      style={{
-                        flex: 1, padding: "9px 0", fontSize: ".875rem", fontWeight: 600,
-                        borderRadius: 8, cursor: "pointer",
-                        border: `1.5px solid ${(tc.hero_bg_type || "color") === val ? "var(--brand)" : "var(--border)"}`,
-                        background: (tc.hero_bg_type || "color") === val ? "var(--brand)" : "transparent",
-                        color: (tc.hero_bg_type || "color") === val ? "#fff" : "var(--text-secondary)",
-                        transition: "all .15s",
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </Field>
-
-              {tc.hero_bg_type === "image" ? (
-                <>
-                  <Field label="URL de la imagen de fondo">
-                    <input className="form-input" value={form.hero_image_url}
-                      onChange={e => set("hero_image_url", e.target.value)}
-                      placeholder="https://mi-imagen.com/banner.jpg" />
-                  </Field>
-                  <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
-                    <input type="range" min={0} max={90} step={5}
-                      value={tc.hero_overlay_opacity ?? 50}
-                      onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
-                      style={{ width: "100%" }} />
-                  </Field>
-                </>
-              ) : (
-                <Field label="Color del banner">
-                  <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
-                </Field>
+          {/* ── Tienda ─────────────────────────────────── */}
+          {section === "tienda" && <>
+            <Field label="Nombre de la tienda">
+              <input className="form-input" value={form.store_name}
+                onChange={e => set("store_name", e.target.value)}
+                placeholder="Ej: Belissia Shop" />
+            </Field>
+            <Field label="Descripción" hint="Visible en el footer y SEO">
+              <textarea className="form-textarea" value={form.store_description}
+                onChange={e => set("store_description", e.target.value)}
+                placeholder="Los mejores productos..." rows={2} />
+            </Field>
+            <Field label="Tagline" hint="Subtítulo debajo del título en el hero">
+              <input className="form-input" value={form.tagline}
+                onChange={e => set("tagline", e.target.value)}
+                placeholder="Todo lo que necesitás" maxLength={160} />
+            </Field>
+            <Field label="Logo (URL de imagen)">
+              <input className="form-input" value={form.logo_url}
+                onChange={e => set("logo_url", e.target.value)}
+                placeholder="https://..." />
+              {form.logo_url && (
+                <img src={form.logo_url} alt="logo"
+                  style={{ marginTop: 6, height: 48, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
+                  onError={e => { e.target.style.display = "none"; }} />
               )}
+            </Field>
+            <Field label="Tipografía">
+              <select className="form-input" value={form.font_family}
+                onChange={e => set("font_family", e.target.value)}>
+                <option value="">Predeterminada (Inter)</option>
+                {GOOGLE_FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+              {form.font_family && (
+                <p style={{ fontFamily: form.font_family, fontSize: ".875rem", color: "var(--text-secondary)", margin: "4px 0 0" }}>
+                  The quick brown fox jumps
+                </p>
+              )}
+            </Field>
+            <Field label="Nombre interno" hint="Solo para identificar esta tienda, no es visible">
+              <input className="form-input" value={form.page_name}
+                onChange={e => set("page_name", e.target.value)}
+                placeholder="Tienda principal" />
+            </Field>
+          </>}
 
-              <Field label="Título principal">
-                <input className="form-input" value={form.hero_headline}
-                  onChange={e => set("hero_headline", e.target.value)}
-                  placeholder="Ej: Todo lo que necesitás, en un solo lugar" />
-              </Field>
-
-              {/* Vista previa grande del hero */}
-              <div style={{
-                marginTop: 8, borderRadius: "var(--radius-lg)", overflow: "hidden",
-                minHeight: 180, position: "relative",
-                ...(tc.hero_bg_type === "image" && form.hero_image_url
-                  ? { backgroundImage: `url(${form.hero_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
-                  : { background: form.banner_color || "#5b52f0" }),
-              }}>
-                {tc.hero_bg_type === "image" && form.hero_image_url && (
-                  <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${(tc.hero_overlay_opacity ?? 50) / 100})` }} />
-                )}
-                <div style={{ position: "relative", zIndex: 1, padding: "28px 24px" }}>
-                  <div style={{ fontSize: ".65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", color: "rgba(255,255,255,.6)", marginBottom: 6 }}>
-                    Tu tienda online
-                  </div>
-                  <div style={{ fontSize: "1.35rem", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 6 }}>
-                    {form.hero_headline || form.store_name || "Mi tienda"}
-                  </div>
-                  <div style={{ fontSize: ".82rem", color: "rgba(255,255,255,.75)", marginBottom: 14 }}>
-                    {form.tagline || form.store_description || "Subtítulo de tu tienda"}
-                  </div>
-                  <button type="button" style={{
-                    display: "inline-flex", alignItems: "center", gap: 5,
-                    background: "rgba(255,255,255,.18)", backdropFilter: "blur(8px)",
-                    color: "#fff", fontWeight: 600, fontSize: ".8rem",
-                    padding: "8px 18px", borderRadius: `${tc.hero_btn_radius ?? 99}px`,
-                    border: "1.5px solid rgba(255,255,255,.35)", cursor: "default",
-                  }}>
-                    {tc.hero_btn_text || "Ver productos"}
+          {/* ── Hero ───────────────────────────────────── */}
+          {section === "hero" && <>
+            <Field label="Fondo del hero">
+              <div style={{ display: "flex", gap: 6 }}>
+                {[{ val: "color", label: "Color sólido" }, { val: "image", label: "Imagen" }].map(({ val, label }) => (
+                  <button key={val} type="button"
+                    onClick={() => setTheme("hero_bg_type", val)}
+                    style={{
+                      flex: 1, padding: "9px 0", fontSize: ".82rem", fontWeight: 600,
+                      borderRadius: 8, cursor: "pointer",
+                      border: `1.5px solid ${(tc.hero_bg_type || "color") === val ? "var(--brand)" : "var(--border)"}`,
+                      background: (tc.hero_bg_type || "color") === val ? "var(--brand)" : "transparent",
+                      color: (tc.hero_bg_type || "color") === val ? "#fff" : "var(--text-secondary)",
+                    }}>
+                    {label}
                   </button>
+                ))}
+              </div>
+            </Field>
+
+            {tc.hero_bg_type === "image" ? (<>
+              <Field label="URL de la imagen de fondo">
+                <input className="form-input" value={form.hero_image_url}
+                  onChange={e => set("hero_image_url", e.target.value)}
+                  placeholder="https://..." />
+              </Field>
+              <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
+                <input type="range" min={0} max={90} step={5}
+                  value={tc.hero_overlay_opacity ?? 50}
+                  onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
+                  style={{ width: "100%", accentColor: "var(--brand)" }} />
+              </Field>
+            </>) : (
+              <Field label="Color principal / hero">
+                <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
+              </Field>
+            )}
+
+            {/* Mini hero preview */}
+            <div style={{
+              borderRadius: 10, overflow: "hidden", position: "relative", minHeight: 120,
+              ...(tc.hero_bg_type === "image" && form.hero_image_url
+                ? { backgroundImage: `url(${form.hero_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+                : { background: form.banner_color || "#5b52f0" }),
+            }}>
+              {tc.hero_bg_type === "image" && form.hero_image_url && (
+                <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${(tc.hero_overlay_opacity ?? 50) / 100})` }} />
+              )}
+              <div style={{ position: "relative", zIndex: 1, padding: "18px 16px" }}>
+                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#fff", marginBottom: 3 }}>
+                  {form.hero_headline || form.store_name || "Mi tienda"}
                 </div>
+                <div style={{ fontSize: ".74rem", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
+                  {form.tagline || "Tu subtítulo aquí"}
+                </div>
+                <span style={{
+                  display: "inline-block", padding: "5px 14px",
+                  borderRadius: `${tc.hero_btn_radius ?? 99}px`,
+                  background: "rgba(255,255,255,.2)", color: "#fff",
+                  fontSize: ".72rem", fontWeight: 600,
+                  border: "1px solid rgba(255,255,255,.35)",
+                }}>
+                  {tc.hero_btn_text || "Ver productos"}
+                </span>
               </div>
             </div>
-          )}
 
-          {/* ── Catálogo ── */}
-          {section === "catalogo" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <LayoutGrid size={18} />
-                <div>
-                  <h3>Catálogo</h3>
-                  <p>Personalizá cómo se muestran los productos en tu tienda.</p>
-                </div>
+            <Field label="Título principal">
+              <input className="form-input" value={form.hero_headline}
+                onChange={e => set("hero_headline", e.target.value)}
+                placeholder="Ej: Todo lo que necesitás" />
+            </Field>
+            <Field label="Texto del botón">
+              <input className="form-input" value={tc.hero_btn_text || ""}
+                onChange={e => setTheme("hero_btn_text", e.target.value)}
+                placeholder="Ver productos" />
+            </Field>
+            <Field label="Redondeo del botón" hint={`${tc.hero_btn_radius ?? 99}px`}>
+              <input type="range" min={0} max={99} step={4}
+                value={tc.hero_btn_radius ?? 99}
+                onChange={e => setTheme("hero_btn_radius", Number(e.target.value))}
+                style={{ width: "100%", accentColor: "var(--brand)" }} />
+            </Field>
+            <Field label="Badges de confianza">
+              <Toggle checked={tc.show_trust_badges !== false}
+                onChange={v => setTheme("show_trust_badges", v)}
+                label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
+            </Field>
+            <Field label="Barra de promoción">
+              <Toggle checked={form.show_promo_bar}
+                onChange={v => set("show_promo_bar", v)}
+                label={form.show_promo_bar ? "Visible" : "Oculta"} />
+            </Field>
+            {form.show_promo_bar && (
+              <Field label="Texto de la barra" hint="Separá mensajes con ·">
+                <textarea className="form-textarea" value={form.promo_text}
+                  onChange={e => set("promo_text", e.target.value)}
+                  placeholder="🚀 Envíos a todo el país · 💳 Pago seguro"
+                  rows={2} />
+              </Field>
+            )}
+          </>}
+
+          {/* ── Catálogo ────────────────────────────────── */}
+          {section === "catalogo" && <>
+            <Field label="Columnas de productos">
+              <div style={{ display: "flex", gap: 6 }}>
+                {[2, 3, 4].map(n => (
+                  <button key={n} type="button"
+                    onClick={() => setTheme("products_cols", n)}
+                    style={{
+                      flex: 1, padding: "9px 0", fontSize: ".82rem", fontWeight: 600,
+                      borderRadius: 8, cursor: "pointer",
+                      border: `1.5px solid ${(tc.products_cols ?? 3) === n ? "var(--brand)" : "var(--border)"}`,
+                      background: (tc.products_cols ?? 3) === n ? "var(--brand)" : "transparent",
+                      color: (tc.products_cols ?? 3) === n ? "#fff" : "var(--text-secondary)",
+                    }}>
+                    {n} col.
+                  </button>
+                ))}
               </div>
+              <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: `repeat(${tc.products_cols ?? 3}, 1fr)`, gap: 4 }}>
+                {Array.from({ length: tc.products_cols ?? 3 }, (_, i) => (
+                  <div key={i} style={{ height: 40, borderRadius: 5, background: "var(--border)", overflow: "hidden" }}>
+                    <div style={{ height: "55%", background: "var(--border-subtle)" }} />
+                  </div>
+                ))}
+              </div>
+            </Field>
 
-              <Field label="Columnas de productos" hint={`${tc.products_cols ?? 3} columnas`}>
-                <div style={{ display: "flex", gap: 8 }}>
-                  {[2, 3, 4].map(n => (
-                    <button key={n} type="button"
-                      onClick={() => setTheme("products_cols", n)}
-                      style={{
-                        flex: 1, padding: "9px 0", fontSize: ".875rem", fontWeight: 600,
-                        borderRadius: 8, cursor: "pointer",
-                        border: `1.5px solid ${(tc.products_cols ?? 3) === n ? "var(--brand)" : "var(--border)"}`,
-                        background: (tc.products_cols ?? 3) === n ? "var(--brand)" : "transparent",
-                        color: (tc.products_cols ?? 3) === n ? "#fff" : "var(--text-secondary)",
-                        transition: "all .15s",
-                      }}>
-                      {n} col.
+            <Field label="Estilo de tarjetas">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {[
+                  { value: "default",  label: "Clásico",    desc: "Sombra suave"  },
+                  { value: "minimal",  label: "Mínimo",     desc: "Sin bordes"    },
+                  { value: "bordered", label: "Con borde",  desc: "Borde visible" },
+                  { value: "floating", label: "Flotante",   desc: "Sombra fuerte" },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    onClick={() => setTheme("card_style", value)}
+                    style={{
+                      padding: "10px", borderRadius: 8, cursor: "pointer", textAlign: "left",
+                      border: `1.5px solid ${(tc.card_style || "default") === value ? "var(--brand)" : "var(--border)"}`,
+                      background: (tc.card_style || "default") === value ? "rgba(var(--brand-rgb),.08)" : "transparent",
+                    }}>
+                    <div style={{ fontWeight: 600, fontSize: ".8rem", color: "var(--text-primary)" }}>{label}</div>
+                    <div style={{ fontSize: ".72rem", color: "var(--text-secondary)", marginTop: 1 }}>{desc}</div>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Redondeo de tarjetas" hint={`${form.card_border_radius}px`}>
+              <input type="range" min={0} max={32} step={2}
+                value={form.card_border_radius}
+                onChange={e => set("card_border_radius", Number(e.target.value))}
+                style={{ width: "100%", accentColor: "var(--brand)" }} />
+              <div style={{ display: "flex", gap: 5, marginTop: 6 }}>
+                {[0, 8, 16, 24, 32].map(r => (
+                  <div key={r} style={{
+                    flex: 1, height: 28, borderRadius: r,
+                    background: form.card_border_radius === r ? "var(--brand)" : "var(--border)",
+                    transition: "all .15s",
+                  }} />
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Sombra en tarjetas">
+              <Toggle checked={form.card_show_shadow}
+                onChange={v => set("card_show_shadow", v)}
+                label={form.card_show_shadow ? "Con sombra" : "Sin sombra"} />
+            </Field>
+            <Field label="Barra de búsqueda">
+              <Toggle checked={tc.show_search_bar !== false}
+                onChange={v => setTheme("show_search_bar", v)}
+                label={tc.show_search_bar !== false ? "Visible" : "Oculta"} />
+            </Field>
+            <Field label="Título de la sección">
+              <input className="form-input" value={tc.products_section_title || ""}
+                onChange={e => setTheme("products_section_title", e.target.value)}
+                placeholder="Todos los productos" />
+            </Field>
+
+            {categories.length > 0 && (
+              <Field label="Categorías visibles" hint="Vacío = todas">
+                <div className="pe-cat-grid">
+                  {categories.map(cat => (
+                    <button key={cat.id} type="button"
+                      className={`pe-cat-pill ${activeCats.includes(cat.id) ? "is-active" : ""}`}
+                      onClick={() => toggleCategory(cat.id)}>
+                      {cat.name}
                     </button>
                   ))}
                 </div>
-                <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: `repeat(${tc.products_cols ?? 3}, 1fr)`, gap: 5 }}>
-                  {Array.from({ length: (tc.products_cols ?? 3) * 2 }, (_, i) => (
-                    <div key={i} style={{ height: 44, borderRadius: 6, background: "var(--border)", position: "relative", overflow: "hidden" }}>
-                      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "40%", background: "var(--bg)", padding: "4px 5px" }}>
-                        <div style={{ height: 3, width: "65%", borderRadius: 2, background: "var(--border)", marginBottom: 3 }} />
-                        <div style={{ height: 3, width: "40%", borderRadius: 2, background: "var(--border-light)" }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {activeCats.length > 0 && (
+                  <button type="button" className="pe-cat-clear"
+                    onClick={() => set("featured_categories", [])}>
+                    Mostrar todas
+                  </button>
+                )}
               </Field>
+            )}
+          </>}
 
-              <Field label="Estilo de tarjetas">
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {[
-                    { value: "default",  label: "Clásico",   desc: "Sombra suave" },
-                    { value: "minimal",  label: "Mínimo",    desc: "Sin bordes" },
-                    { value: "bordered", label: "Con borde", desc: "Borde prominente" },
-                    { value: "floating", label: "Flotante",  desc: "Sombra profunda" },
-                  ].map(({ value, label, desc }) => (
-                    <button key={value} type="button"
-                      onClick={() => setTheme("card_style", value)}
-                      style={{
-                        padding: "12px", borderRadius: 8, cursor: "pointer", textAlign: "left",
-                        border: `1.5px solid ${(tc.card_style || "default") === value ? "var(--brand)" : "var(--border)"}`,
-                        background: (tc.card_style || "default") === value ? "rgba(var(--brand-rgb),.08)" : "transparent",
-                        transition: "all .15s",
-                      }}>
-                      <div style={{ fontWeight: 600, fontSize: ".82rem", marginBottom: 2, color: "var(--text-primary)" }}>{label}</div>
-                      <div style={{ fontSize: ".73rem", color: "var(--text-secondary)" }}>{desc}</div>
-                    </button>
-                  ))}
-                </div>
+          {/* ── Colores ─────────────────────────────────── */}
+          {section === "colores" && <>
+            <Field label="Color principal" hint="Hero, botones, links, acentos">
+              <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
+            </Field>
+            <Field label="Color secundario">
+              <ColorRow value={form.color_secondary || "#000000"}
+                onChange={v => set("color_secondary", v)}
+                onClear={() => set("color_secondary", "")} />
+            </Field>
+            <Field label="Fondo de la tienda">
+              <ColorRow value={form.color_bg || "#fafafa"}
+                onChange={v => set("color_bg", v)}
+                onClear={() => set("color_bg", "")} />
+            </Field>
+            <Field label="Texto principal">
+              <ColorRow value={form.color_text || "#111111"}
+                onChange={v => set("color_text", v)}
+                onClear={() => set("color_text", "")} />
+            </Field>
+
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+              <p style={{ fontSize: ".74rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Footer</p>
+              <Field label="Fondo del footer">
+                <ColorRow value={tc.footer_bg || "#0a0f09"}
+                  onChange={v => setTheme("footer_bg", v)}
+                  onClear={() => setTheme("footer_bg", "")} />
               </Field>
-
-              <Field label="Título de la sección de productos">
-                <input className="form-input" value={tc.products_section_title || ""}
-                  onChange={e => setTheme("products_section_title", e.target.value)}
-                  placeholder="Todos los productos" />
+              <Field label="Texto del footer" hint="Aplica también a íconos de redes">
+                <ColorRow value={tc.footer_text_color || "#ffffff"}
+                  onChange={v => setTheme("footer_text_color", v)}
+                  onClear={() => setTheme("footer_text_color", "")} />
               </Field>
-
-              <Field label="Barra de búsqueda">
-                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input type="checkbox" checked={tc.show_search_bar !== false}
-                    onChange={e => setTheme("show_search_bar", e.target.checked)} />
-                  <span className="toggle-track"><span className="toggle-thumb" /></span>
-                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
-                    {tc.show_search_bar !== false ? "Visible" : "Oculta"}
-                  </span>
-                </label>
-              </Field>
-
-              <Field label="Badges de confianza (Pago seguro · Envíos...)">
-                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input type="checkbox" checked={tc.show_trust_badges !== false}
-                    onChange={e => setTheme("show_trust_badges", e.target.checked)} />
-                  <span className="toggle-track"><span className="toggle-thumb" /></span>
-                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
-                    {tc.show_trust_badges !== false ? "Visibles" : "Ocultos"}
-                  </span>
-                </label>
+              <Field label="Tagline del footer">
+                <input className="form-input" value={tc.footer_tagline || ""}
+                  onChange={e => setTheme("footer_tagline", e.target.value)}
+                  placeholder="Envíos a todo el país · Atención personalizada" />
               </Field>
             </div>
-          )}
 
-          {/* ── Botones & CTA ── */}
-          {section === "botones" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <MousePointerClick size={18} />
-                <div>
-                  <h3>Botones & CTA</h3>
-                  <p>Estilo de los botones de acción en tu tienda.</p>
-                </div>
-              </div>
-
-              <Field label="Redondeo de botones" hint={`${tc.btn_radius ?? 8}px`}>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+              <p style={{ fontSize: ".74rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Botones del catálogo</p>
+              <Field label="Redondeo" hint={`${tc.btn_radius ?? 8}px`}>
                 <input type="range" min={0} max={24} step={2}
                   value={tc.btn_radius ?? 8}
                   onChange={e => setTheme("btn_radius", Number(e.target.value))}
-                  style={{ width: "100%" }} />
-                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                  {[0, 6, 8, 12, 24].map(r => (
-                    <button key={r} type="button"
-                      onClick={() => setTheme("btn_radius", r)}
-                      style={{
-                        padding: "6px 14px", cursor: "pointer",
-                        borderRadius: `${r}px`,
-                        background: (tc.btn_radius ?? 8) === r ? "var(--brand)" : "var(--border)",
-                        color: (tc.btn_radius ?? 8) === r ? "#fff" : "var(--text-secondary)",
-                        border: "none", fontWeight: 500, fontSize: ".8rem",
-                        transition: "all .15s",
-                      }}>
-                      {r}px
-                    </button>
-                  ))}
-                </div>
-                <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  style={{ width: "100%", accentColor: "var(--brand)" }} />
+                <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
                   <button type="button" style={{
-                    background: form.banner_color || "#5b52f0", color: "#fff",
-                    padding: "10px 20px", borderRadius: `${tc.btn_radius ?? 8}px`,
-                    fontWeight: 600, fontSize: ".875rem", border: "none",
-                  }}>Agregar al carrito</button>
+                    padding: "7px 14px", background: form.banner_color || "#5b52f0", color: "#fff",
+                    borderRadius: `${tc.btn_radius ?? 8}px`, fontWeight: 600, fontSize: ".78rem", border: "none", cursor: "default",
+                  }}>Agregar</button>
                   <button type="button" style={{
-                    background: "transparent", color: form.banner_color || "#5b52f0",
-                    padding: "10px 20px", borderRadius: `${tc.btn_radius ?? 8}px`,
-                    fontWeight: 600, fontSize: ".875rem",
-                    border: `1.5px solid ${form.banner_color || "#5b52f0"}`,
+                    padding: "7px 14px", background: "transparent",
+                    color: form.banner_color || "#5b52f0",
+                    borderRadius: `${tc.btn_radius ?? 8}px`, fontWeight: 600, fontSize: ".78rem",
+                    border: `1.5px solid ${form.banner_color || "#5b52f0"}`, cursor: "default",
                   }}>Ver más</button>
                 </div>
               </Field>
-
-              <Field label="Texto del botón principal (hero)">
-                <input className="form-input" value={tc.hero_btn_text || ""}
-                  onChange={e => setTheme("hero_btn_text", e.target.value)}
-                  placeholder="Ver productos" />
-              </Field>
             </div>
-          )}
+          </>}
 
-          {/* ── Barra de promo ── */}
-          {section === "promo" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <Zap size={18} />
-                <div>
-                  <h3>Barra de promoción</h3>
-                  <p>Franja animada que aparece arriba del hero con mensajes de tu tienda.</p>
-                </div>
-              </div>
-              <Field
-                label="Mostrar barra de promo"
-              >
-                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input type="checkbox" checked={form.show_promo_bar}
-                    onChange={e => set("show_promo_bar", e.target.checked)} />
-                  <span className="toggle-track"><span className="toggle-thumb" /></span>
-                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
-                    {form.show_promo_bar ? "Visible" : "Oculta"}
-                  </span>
-                </label>
-              </Field>
-              <Field
-                label="Texto de la barra"
-                hint="Separá mensajes con · para que se repitan en el scroll"
-              >
-                <textarea className="form-textarea" value={form.promo_text}
-                  onChange={e => set("promo_text", e.target.value)}
-                  placeholder="🚀 Envíos a todo el país · 💳 Pago seguro · ⭐ Los mejores precios"
-                  rows={3} />
-              </Field>
-              {form.show_promo_bar && form.promo_text && (
-                <div className="pe-promo-preview">
-                  <span className="pe-promo-preview__label">Vista previa:</span>
-                  <div className="pe-promo-preview__bar" style={{ background: form.banner_color }}>
-                    <span>{form.promo_text} &nbsp;·&nbsp; {form.promo_text}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Colores ── */}
-          {section === "colores" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <Palette size={18} />
-                <div>
-                  <h3>Colores</h3>
-                  <p>Personalizá la paleta de colores de tu tienda.</p>
-                </div>
-              </div>
-              <Field label="Color principal / acento" hint="Botones, links y destacados">
-                <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
-              </Field>
-              <Field label="Color secundario" hint="Elementos secundarios">
-                <ColorRow
-                  value={form.color_secondary || "#000000"}
-                  onChange={v => set("color_secondary", v)}
-                  onClear={() => set("color_secondary", "")}
-                />
-              </Field>
-              <Field label="Color de fondo">
-                <ColorRow
-                  value={form.color_bg || "#ffffff"}
-                  onChange={v => set("color_bg", v)}
-                  onClear={() => set("color_bg", "")}
-                />
-              </Field>
-              <Field label="Color de texto">
-                <ColorRow
-                  value={form.color_text || "#111111"}
-                  onChange={v => set("color_text", v)}
-                  onClear={() => set("color_text", "")}
-                />
-              </Field>
-
-              {/* Swatch preview */}
-              <div className="pe-swatch-row">
-                <div className="pe-swatch" style={{ background: form.banner_color }}>
-                  <span>Principal</span>
-                </div>
-                {form.color_secondary && (
-                  <div className="pe-swatch" style={{ background: form.color_secondary }}>
-                    <span>Secundario</span>
-                  </div>
-                )}
-                {form.color_bg && (
-                  <div className="pe-swatch" style={{ background: form.color_bg, border: "1px solid var(--border)" }}>
-                    <span style={{ color: form.color_text || "#111" }}>Fondo</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* ── Apariencia ── */}
-          {section === "apariencia" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <Layers size={18} />
-                <div>
-                  <h3>Apariencia</h3>
-                  <p>Logo, tipografía y estilo de las tarjetas de productos.</p>
-                </div>
-              </div>
-              <Field label="Logo (URL de imagen)">
-                <input className="form-input" value={form.logo_url}
-                  onChange={e => set("logo_url", e.target.value)}
-                  placeholder="https://..." />
-                {form.logo_url && (
-                  <img src={form.logo_url} alt="logo preview"
-                    style={{ marginTop: 8, height: 52, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
-                    onError={e => { e.target.style.display = "none"; }}
-                  />
-                )}
-              </Field>
-              <Field label="Tipografía">
-                <select className="form-input" value={form.font_family}
-                  onChange={e => set("font_family", e.target.value)}>
-                  <option value="">Predeterminada (Inter)</option>
-                  {GOOGLE_FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
-                </select>
-                {form.font_family && (
-                  <p style={{ marginTop: 6, fontFamily: form.font_family, fontSize: ".9rem", color: "var(--text-secondary)" }}>
-                    Vista previa: The quick brown fox jumps
-                  </p>
-                )}
-              </Field>
-              <Field
-                label="Borde de tarjetas de producto"
-                hint={`${form.card_border_radius}px`}
-              >
-                <input type="range" min={0} max={32} step={2}
-                  value={form.card_border_radius}
-                  onChange={e => set("card_border_radius", Number(e.target.value))}
-                  style={{ width: "100%" }}
-                />
-                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  {[0, 8, 12, 20, 32].map(r => (
-                    <button key={r} type="button"
-                      onClick={() => set("card_border_radius", r)}
-                      style={{
-                        padding: "4px 10px", fontSize: ".78rem", cursor: "pointer",
-                        borderRadius: 6, border: `1.5px solid ${form.card_border_radius === r ? "var(--brand)" : "var(--border)"}`,
-                        background: form.card_border_radius === r ? "var(--brand)" : "transparent",
-                        color: form.card_border_radius === r ? "#fff" : "var(--text-secondary)",
-                        fontWeight: 500, transition: "all .15s",
-                      }}>
-                      {r}px
-                    </button>
-                  ))}
-                </div>
-                {/* Card preview */}
-                <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-                  {[1,2,3].map(i => (
-                    <div key={i} style={{
-                      flex: 1, background: "var(--bg)", border: "1px solid var(--border)",
-                      borderRadius: form.card_border_radius,
-                      boxShadow: form.card_show_shadow ? "0 4px 12px rgba(0,0,0,.08)" : "none",
-                      padding: "10px", fontSize: ".72rem", color: "var(--text-secondary)",
-                      transition: "border-radius .2s, box-shadow .2s",
-                    }}>
-                      <div style={{ height: 36, background: "var(--border)", borderRadius: Math.max(0, form.card_border_radius - 2), marginBottom: 6 }} />
-                      Producto {i}
-                    </div>
-                  ))}
-                </div>
-              </Field>
-              <Field label="Sombra en las tarjetas">
-                <label className="toggle-switch" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <input type="checkbox" checked={form.card_show_shadow}
-                    onChange={e => set("card_show_shadow", e.target.checked)} />
-                  <span className="toggle-track"><span className="toggle-thumb" /></span>
-                  <span style={{ fontSize: ".875rem", color: "var(--text-secondary)" }}>
-                    {form.card_show_shadow ? "Con sombra" : "Sin sombra"}
-                  </span>
-                </label>
-              </Field>
-            </div>
-          )}
-
-          {/* ── Pie de página ── */}
-          {section === "footer" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <PanelBottom size={18} />
-                <div>
-                  <h3>Pie de página</h3>
-                  <p>Personalizá los colores y el texto extra del footer de tu tienda.</p>
-                </div>
-              </div>
-
-              <Field label="Color de fondo del footer">
-                <ColorRow
-                  value={tc.footer_bg || "#0a0f09"}
-                  onChange={v => setTheme("footer_bg", v)}
-                  onClear={() => setTheme("footer_bg", "")}
-                />
-              </Field>
-              <Field label="Color del texto del footer">
-                <ColorRow
-                  value={tc.footer_text_color || "#ffffff"}
-                  onChange={v => setTheme("footer_text_color", v)}
-                  onClear={() => setTheme("footer_text_color", "")}
-                />
-              </Field>
-              <Field label="Texto extra" hint="Aparece debajo del nombre de la tienda">
-                <input className="form-input" value={tc.footer_tagline || ""}
-                  onChange={e => setTheme("footer_tagline", e.target.value)}
-                  placeholder="Ej: Envíos a todo el país · Atención personalizada" />
-              </Field>
-
-              {/* Preview footer */}
-              <div style={{
-                marginTop: 8, padding: "20px 24px",
-                background: tc.footer_bg || "#0a0f09",
-                borderRadius: "var(--radius-md)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 8, flexShrink: 0,
-                    background: form.banner_color || "#5b52f0",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "#fff", fontWeight: 700, fontSize: ".9rem",
-                  }}>
-                    {(form.store_name || "T")[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: ".9rem", color: tc.footer_text_color || "#fff" }}>
-                      {form.store_name || "Mi tienda"}
-                    </div>
-                    {form.store_description && (
-                      <div style={{ fontSize: ".75rem", color: tc.footer_text_color || "rgba(255,255,255,.5)", opacity: .7, marginTop: 2 }}>
-                        {form.store_description}
-                      </div>
-                    )}
-                    {tc.footer_tagline && (
-                      <div style={{ fontSize: ".75rem", color: tc.footer_text_color || "rgba(255,255,255,.5)", opacity: .6, marginTop: 2 }}>
-                        {tc.footer_tagline}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Redes sociales ── */}
-          {section === "redes" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <Share2 size={18} />
-                <div>
-                  <h3>Redes sociales y contacto</h3>
-                  <p>Aparecen como íconos y links en el pie de tu tienda.</p>
-                </div>
-              </div>
-              <Field label="WhatsApp" hint="Número completo con código de país">
+          {/* ── Contacto ────────────────────────────────── */}
+          {section === "contacto" && <>
+            <Field label="WhatsApp" hint="Con código de país, sin +">
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)" }}>+</span>
                 <input className="form-input" value={form.whatsapp}
                   onChange={e => set("whatsapp", e.target.value)}
-                  placeholder="5491112345678" maxLength={30} />
-              </Field>
-              <Field label="Instagram" hint="Solo el usuario, sin @">
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)", fontSize: ".9rem" }}>@</span>
-                  <input className="form-input" value={form.instagram}
-                    onChange={e => set("instagram", e.target.value)}
-                    placeholder="mitienda" maxLength={60}
-                    style={{ paddingLeft: 28 }} />
-                </div>
-              </Field>
-              <Field label="Facebook" hint="URL completa">
-                <input className="form-input" value={form.facebook}
-                  onChange={e => set("facebook", e.target.value)}
-                  placeholder="https://facebook.com/mitienda" maxLength={120} />
-              </Field>
-            </div>
-          )}
-
-          {/* ── Categorías ── */}
-          {section === "categorias" && (
-            <div className="pe-section">
-              <div className="pe-section__head">
-                <Tag size={18} />
-                <div>
-                  <h3>Categorías destacadas</h3>
-                  <p>Filtrá qué categorías aparecen en tu tienda. Si no seleccionás ninguna, se muestran todos los productos.</p>
-                </div>
+                  placeholder="5491112345678" maxLength={30}
+                  style={{ paddingLeft: 24 }} />
               </div>
-              {categories.length === 0 ? (
-                <div className="pe-empty">
-                  No hay categorías disponibles aún.
-                </div>
-              ) : (
-                <>
-                  <div className="pe-cat-grid">
-                    {categories.map(cat => {
-                      const active = activeCats.includes(cat.id);
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          className={`pe-cat-pill ${active ? "is-active" : ""}`}
-                          onClick={() => toggleCategory(cat.id)}
-                        >
-                          {cat.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {activeCats.length > 0 && (
-                    <p className="pe-cat-note">
-                      Mostrando {activeCats.length} categoría{activeCats.length !== 1 ? "s" : ""} seleccionada{activeCats.length !== 1 ? "s" : ""}.
-                      <button type="button" className="pe-cat-clear" onClick={() => set("featured_categories", [])}>
-                        Mostrar todas
-                      </button>
-                    </p>
-                  )}
-                </>
-              )}
+            </Field>
+            <Field label="Instagram" hint="Solo el usuario, sin @">
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)" }}>@</span>
+                <input className="form-input" value={form.instagram}
+                  onChange={e => set("instagram", e.target.value)}
+                  placeholder="mitienda" maxLength={60}
+                  style={{ paddingLeft: 24 }} />
+              </div>
+            </Field>
+            <Field label="Facebook" hint="URL completa">
+              <input className="form-input" value={form.facebook}
+                onChange={e => set("facebook", e.target.value)}
+                placeholder="https://facebook.com/mitienda" maxLength={120} />
+            </Field>
+          </>}
+
+        </div>{/* end .pe-editor__fields */}
+
+        {/* Save bar */}
+        <div className="pe-editor__save">
+          <span className="pe-editor__save-status">
+            {error && <span style={{ color: "var(--danger)" }}>⚠ {error}</span>}
+            {saved && <span style={{ color: "var(--brand)" }}>✓ Guardado</span>}
+          </span>
+          <button type="button" disabled={saving} className="pe-save-bar__btn" onClick={handleSave}>
+            <Save size={14} />
+            {saving ? "Guardando..." : "Guardar"}
+          </button>
+        </div>
+
+      </div>{/* end .pe-editor__left */}
+
+      {/* ── Right panel (live preview) ───────────────────────────── */}
+      <div className="pe-editor__right">
+        <div className="pe-editor__preview-bar">
+          <button type="button"
+            className={`pe-editor__device-btn ${previewMode === "desktop" ? "is-active" : ""}`}
+            onClick={() => setPreviewMode("desktop")} title="Vista escritorio">
+            <Monitor size={14} />
+          </button>
+          <button type="button"
+            className={`pe-editor__device-btn ${previewMode === "mobile" ? "is-active" : ""}`}
+            onClick={() => setPreviewMode("mobile")} title="Vista móvil">
+            <Smartphone size={14} />
+          </button>
+          <div className="pe-editor__preview-url">{iframeSrc || "Cargando..."}</div>
+          <button type="button" className="pe-editor__device-btn"
+            onClick={() => iframeRef.current?.contentWindow?.location.reload()} title="Recargar">
+            <RefreshCw size={13} />
+          </button>
+          {iframeSrc && (
+            <a href={iframeSrc} target="_blank" rel="noreferrer"
+              className="pe-editor__device-btn" title="Abrir en nueva pestaña">
+              <ExternalLink size={13} />
+            </a>
+          )}
+        </div>
+
+        <div className={`pe-editor__iframe-wrap ${previewMode === "mobile" ? "is-mobile" : ""}`}>
+          {iframeSrc ? (
+            <iframe
+              ref={iframeRef}
+              src={iframeSrc}
+              title="Vista previa"
+              onLoad={() => {
+                if (iframeRef.current?.contentWindow) {
+                  iframeRef.current.contentWindow.postMessage({ type: "ventaz_preview", payload: form }, "*");
+                }
+              }}
+            />
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-tertiary)", fontSize: ".875rem" }}>
+              Cargando vista previa...
             </div>
           )}
-
         </div>
       </div>
-    </form>
+
+    </div>
   );
 }
 

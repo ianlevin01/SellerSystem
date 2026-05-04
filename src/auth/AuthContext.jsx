@@ -61,13 +61,23 @@ export function AuthProvider({ children }) {
 
   const refreshSeller = useCallback(async () => {
     const res = await client.get("/seller/auth/me");
-    localStorage.setItem("seller_user", JSON.stringify(res.data));
-    setSeller(res.data);
+    if (res.data && typeof res.data === "object") {
+      localStorage.setItem("seller_user", JSON.stringify(res.data));
+      setSeller(res.data);
+    }
     return res.data;
   }, []);
 
+  const updateSeller = useCallback((updates) => {
+    setSeller(prev => {
+      const updated = { ...prev, ...updates };
+      try { localStorage.setItem("seller_user", JSON.stringify(updated)); } catch {}
+      return updated;
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ seller, login, loginWithGoogle, logout, refreshSeller, isLoggedIn: !!seller }}>
+    <AuthContext.Provider value={{ seller, login, loginWithGoogle, logout, refreshSeller, updateSeller, isLoggedIn: !!seller }}>
       {children}
     </AuthContext.Provider>
   );

@@ -155,6 +155,7 @@ export default function PageProducts({ pageId }) {
   const [bulkSaving, setBulkSaving] = useState(false);
   const [message,    setMessage]    = useState("");
   const debounceRef = useRef(null);
+  const abortRef    = useRef(null);
 
   // Cargar categorías una sola vez
   useEffect(() => {
@@ -172,7 +173,13 @@ export default function PageProducts({ pageId }) {
   }, [pageId, query, category, onlyMine]);
 
   async function fetchProducts() {
-    setLoading(true);
+    // Cancel any in-flight request to avoid stale results overwriting newer ones
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Don't call setLoading(true) here — loading starts as true and only clears once.
+    // This keeps the search input mounted on subsequent fetches (no focus loss).
     setMessage("");
 
     const params = { limit: 50 };
@@ -181,7 +188,7 @@ export default function PageProducts({ pageId }) {
     if (onlyMine)           params.only_mine   = "true";
 
     try {
-      const res  = await client.get(`/seller/store/pages/${pageId}/products`, { params });
+      const res  = await client.get(`/seller/store/pages/${pageId}/products`, { params, signal: controller.signal });
       const list = normalizeProducts(res.data);
       setProducts(list);
       setTotal(res.data?.total ?? list.length);
@@ -190,10 +197,11 @@ export default function PageProducts({ pageId }) {
         list.forEach(p => { next[p.id] = prev[p.id] ?? initialPriceFor(p); });
         return next;
       });
-    } catch (err) {
-      setMessage(err.response?.data?.message || "No se pudieron cargar los productos.");
-    } finally {
       setLoading(false);
+    } catch (err) {
+      if (err.name === "CanceledError" || err.code === "ERR_CANCELED") return;
+      setLoading(false);
+      setMessage(err.response?.data?.message || "No se pudieron cargar los productos.");
     }
   }
 
@@ -410,7 +418,7 @@ export default function PageProducts({ pageId }) {
           {products.map((product, index) => {
             const info       = getInfo(product);
             const saving     = savingId === product.id;
-            const isLowStock = typeof product.available_stock === "number" && product.available_stock < 10;
+            const isLowStock = product.available_stock != null && Number(product.available_stock) < 10;
             return (
               <article
                 key={product.id}
