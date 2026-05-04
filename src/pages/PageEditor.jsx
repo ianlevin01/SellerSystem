@@ -4,12 +4,16 @@ import client from "../api/client";
 import {
   AlertTriangle, Building2, ChevronDown, ChevronLeft,
   ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
-  Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
-  RefreshCw, Save, Share2, Smartphone, Tag, TrendingDown, Trash2, Zap,
+  Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
+  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
 function fmt(n) { return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 }); }
+function slugify(str) {
+  return String(str || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
 function storeUrl(slug) {
   if (import.meta.env.DEV) {
     const base = import.meta.env.VITE_STORE_DEV_URL || "http://localhost:5174";
@@ -175,6 +179,7 @@ function ConfigTab({ pageId }) {
     try {
       const res = await client.put(`/seller/store/pages/${pageId}`, form);
       formFromData(res.data);
+      if (res.data.slug) setIframeSrc(storeUrl(res.data.slug));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       setTimeout(() => setIframeKey(k => k + 1), 400);
@@ -224,10 +229,27 @@ function ConfigTab({ pageId }) {
 
           {/* ── Tienda ─────────────────────────────────── */}
           {section === "tienda" && <>
-            <Field label="Nombre de la tienda">
+            <Field label="Nombre de la tienda" hint="Aparece en el banner y en todos lados">
               <input className="form-input" value={form.store_name}
-                onChange={e => set("store_name", e.target.value)}
+                onChange={e => setForm(p => ({ ...p, store_name: e.target.value, page_name: e.target.value }))}
                 placeholder="Ej: Belissia Shop" />
+            </Field>
+            <Field label="Link de la tienda (subdominio)" hint="Cambia la URL pública">
+              <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                <span style={{
+                  padding: "0 10px", height: 38, display: "flex", alignItems: "center",
+                  background: "var(--surface-2,#f3f4f6)", border: "1px solid var(--border)",
+                  borderRight: "none", borderRadius: "var(--radius-md) 0 0 var(--radius-md)",
+                  fontSize: ".82rem", color: "var(--text-secondary)", whiteSpace: "nowrap", flexShrink: 0,
+                }}>ventaz.com.ar/</span>
+                <input className="form-input" value={form.slug}
+                  onChange={e => set("slug", slugify(e.target.value))}
+                  placeholder="mi-tienda"
+                  style={{ borderRadius: "0 var(--radius-md) var(--radius-md) 0" }} />
+              </div>
+              <p style={{ margin: "4px 0 0", fontSize: ".78rem", color: "var(--text-secondary)" }}>
+                Solo minúsculas, números y guiones. Cambiar esto modifica el link de tu tienda.
+              </p>
             </Field>
             <Field label="Descripción" hint="Visible en el footer y SEO">
               <textarea className="form-textarea" value={form.store_description}
@@ -260,11 +282,6 @@ function ConfigTab({ pageId }) {
                   The quick brown fox jumps
                 </p>
               )}
-            </Field>
-            <Field label="Nombre interno" hint="Solo para identificar esta tienda, no es visible">
-              <input className="form-input" value={form.page_name}
-                onChange={e => set("page_name", e.target.value)}
-                placeholder="Tienda principal" />
             </Field>
           </>}
 
@@ -873,6 +890,255 @@ function DiscountsTab({ pageId }) {
   );
 }
 
+// ── IntegrationsTab ───────────────────────────────────────────
+
+function StarRating({ rating }) {
+  return (
+    <span style={{ display: "inline-flex", gap: 2 }}>
+      {[1,2,3,4,5].map(i => (
+        <Star key={i} size={13} fill={i <= rating ? "var(--brand, #6366f1)" : "none"}
+          stroke={i <= rating ? "var(--brand, #6366f1)" : "var(--border, #ccc)"} />
+      ))}
+    </span>
+  );
+}
+
+function ReviewCard({ review, onToggle, onDelete }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div style={{
+      background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
+      padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <span style={{ fontWeight: 600, fontSize: ".875rem" }}>{review.author_name}</span>
+          <span style={{ marginLeft: 10 }}><StarRating rating={review.rating} /></span>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <span style={{
+            fontSize: ".72rem", fontWeight: 600, padding: "2px 8px", borderRadius: 99,
+            background: review.published ? "var(--success-light, #d1fae5)" : "var(--surface-2, #f3f4f6)",
+            color: review.published ? "var(--success, #059669)" : "var(--text-secondary)",
+          }}>
+            {review.published ? "Publicada" : "Oculta"}
+          </span>
+          <button
+            type="button" disabled={busy}
+            className="btn btn--sm btn--ghost"
+            style={{ padding: "4px 10px", fontSize: ".78rem" }}
+            onClick={async () => { setBusy(true); await onToggle(review); setBusy(false); }}
+          >
+            {busy ? <Loader2 size={12} className="spin" /> : (review.published ? "Ocultar" : "Publicar")}
+          </button>
+          <button
+            type="button" disabled={busy}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--danger, #ef4444)", display: "flex", padding: 4 }}
+            onClick={async () => { setBusy(true); await onDelete(review.id); }}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+      <p style={{ margin: 0, fontSize: ".875rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+        {review.comment}
+      </p>
+    </div>
+  );
+}
+
+function StarAISection({ pageId, products }) {
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [reviews,         setReviews]         = useState([]);
+  const [generating,      setGenerating]      = useState(false);
+  const [loadingReviews,  setLoadingReviews]  = useState(false);
+  const [msg,             setMsg]             = useState("");
+
+  async function loadReviews(productId) {
+    if (!productId) { setReviews([]); return; }
+    setLoadingReviews(true);
+    try {
+      const res = await client.get(`/seller/store/pages/${pageId}/products/${productId}/reviews`);
+      setReviews(res.data || []);
+    } catch {
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }
+
+  async function handleGenerate() {
+    if (!selectedProduct) { setMsg("Seleccioná un producto primero"); return; }
+    setGenerating(true); setMsg("");
+    try {
+      const res = await client.post(`/seller/store/pages/${pageId}/products/${selectedProduct}/generate-reviews`);
+      setReviews(res.data || []);
+      setMsg("✓ 5 reseñas generadas. Publicá las que quieras mostrar.");
+    } catch (e) {
+      setMsg(e.response?.data?.message || "Error al generar reseñas");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleToggle(review) {
+    try {
+      const res = await client.patch(`/seller/store/pages/${pageId}/reviews/${review.id}`, { published: !review.published });
+      setReviews(prev => prev.map(r => r.id === review.id ? res.data : r));
+    } catch { /* silencio */ }
+  }
+
+  async function handleDelete(reviewId) {
+    try {
+      await client.delete(`/seller/store/pages/${pageId}/reviews/${reviewId}`);
+      setReviews(prev => prev.filter(r => r.id !== reviewId));
+    } catch { /* silencio */ }
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-end", marginBottom: 16 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: ".82rem", color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>
+            Producto
+          </label>
+          <select
+            className="form-input"
+            value={selectedProduct}
+            onChange={e => { setSelectedProduct(e.target.value); loadReviews(e.target.value); setMsg(""); }}
+          >
+            <option value="">Seleccioná un producto...</option>
+            {products.map(p => (
+              <option key={p.id} value={p.id}>{p.custom_name || p.name}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          className="btn btn--primary"
+          onClick={handleGenerate}
+          disabled={generating || !selectedProduct}
+          style={{ whiteSpace: "nowrap", flexShrink: 0 }}
+        >
+          {generating ? <><Loader2 size={14} className="spin" /> Generando...</> : <><Star size={14} /> Generar reseñas</>}
+        </button>
+      </div>
+
+      {msg && (
+        <p style={{ fontSize: ".875rem", color: msg.startsWith("✓") ? "var(--success, #059669)" : "var(--danger, #ef4444)", marginBottom: 12 }}>
+          {msg}
+        </p>
+      )}
+
+      {loadingReviews && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: ".875rem", color: "var(--text-secondary)" }}>
+          <Loader2 size={15} className="spin" /> Cargando reseñas...
+        </div>
+      )}
+
+      {!loadingReviews && reviews.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {reviews.map(r => (
+            <ReviewCard key={r.id} review={r} onToggle={handleToggle} onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
+
+      {!loadingReviews && selectedProduct && reviews.length === 0 && !generating && (
+        <p style={{ fontSize: ".875rem", color: "var(--text-secondary)", textAlign: "center", padding: "24px 0" }}>
+          No hay reseñas para este producto. Generá las primeras con el botón de arriba.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function IntegrationsTab({ pageId }) {
+  const navigate = useNavigate();
+  const [integrations, setIntegrations] = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [toggling,     setToggling]     = useState({});
+
+  useEffect(() => {
+    setLoading(true);
+    client.get(`/seller/store/pages/${pageId}/integrations`)
+      .then(res => setIntegrations(res.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [pageId]);
+
+  async function handleToggle(integration) {
+    const newActive = !integration.activated;
+    setToggling(p => ({ ...p, [integration.key]: true }));
+    try {
+      await client.post(`/seller/store/pages/${pageId}/integrations/${integration.key}/toggle`, { active: newActive });
+      setIntegrations(prev => prev.map(i => i.key === integration.key ? { ...i, activated: newActive } : i));
+    } catch { /* silencio */ } finally {
+      setToggling(p => ({ ...p, [integration.key]: false }));
+    }
+  }
+
+  if (loading) return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {[1,2].map(i => <div key={i} className="skeleton" style={{ height: 80, borderRadius: "var(--radius-lg)" }} />)}
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {integrations.map(integration => (
+        <div key={integration.key} className="card" style={{ padding: "18px 22px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ fontSize: "1.5rem", lineHeight: 1, flexShrink: 0 }}>{integration.icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                <span style={{ fontWeight: 700, fontSize: ".9375rem" }}>{integration.name}</span>
+                <span style={{
+                  fontSize: ".7rem", fontWeight: 600, padding: "2px 7px", borderRadius: 99,
+                  background: integration.activated ? "var(--success-light,#d1fae5)" : "var(--surface-2,#f3f4f6)",
+                  color: integration.activated ? "var(--success,#059669)" : "var(--text-secondary)",
+                }}>
+                  {integration.activated ? "Activo" : "Inactivo"}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: ".8125rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                {integration.description}
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button
+                type="button"
+                className={`btn ${integration.activated ? "btn--ghost" : "btn--primary"} btn--sm`}
+                disabled={!!toggling[integration.key]}
+                onClick={() => handleToggle(integration)}
+              >
+                {toggling[integration.key]
+                  ? <Loader2 size={13} className="spin" />
+                  : integration.activated ? "Desactivar" : "Activar"}
+              </button>
+              {integration.activated && (
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => navigate(`/integrations?pageId=${pageId}`)}
+                >
+                  Configurar →
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {integrations.length === 0 && (
+        <p style={{ textAlign: "center", color: "var(--text-secondary)", padding: "40px 0" }}>
+          No hay integraciones disponibles por el momento.
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────
 
 export default function PageEditor({ tab = "config" }) {
@@ -907,21 +1173,25 @@ export default function PageEditor({ tab = "config" }) {
 
       {/* Tabs */}
       <div className="page-tabs">
-        <button type="button" className={`page-tab ${tab === "config"    ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}`)}>
+        <button type="button" className={`page-tab ${tab === "config"       ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}`)}>
           Configuración
         </button>
-        <button type="button" className={`page-tab ${tab === "products"  ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/products`)}>
+        <button type="button" className={`page-tab ${tab === "products"     ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/products`)}>
           Productos
         </button>
-        <button type="button" className={`page-tab ${tab === "discounts" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/discounts`)}>
+        <button type="button" className={`page-tab ${tab === "discounts"    ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/discounts`)}>
           Descuentos
+        </button>
+        <button type="button" className={`page-tab ${tab === "integrations" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/integrations`)}>
+          Integraciones
         </button>
       </div>
 
       <div style={{ marginTop: 24 }}>
-        {tab === "config"    && <ConfigTab    pageId={pageId} />}
-        {tab === "products"  && <PageProducts pageId={pageId} />}
-        {tab === "discounts" && <DiscountsTab pageId={pageId} />}
+        {tab === "config"       && <ConfigTab          pageId={pageId} />}
+        {tab === "products"     && <PageProducts       pageId={pageId} />}
+        {tab === "discounts"    && <DiscountsTab        pageId={pageId} />}
+        {tab === "integrations" && <IntegrationsTab    pageId={pageId} />}
       </div>
     </div>
   );

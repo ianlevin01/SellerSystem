@@ -17,6 +17,7 @@ import PublicStore  from "./pages/PublicStore";
 import Profile      from "./pages/Profile";
 import Chat         from "./pages/Chat";
 import Payouts      from "./pages/Payouts";
+import Integrations from "./pages/Integrations";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -46,11 +47,13 @@ export default function App() {
               <Route path="/pages/:pageId"                 element={<PageEditor tab="config" />} />
               <Route path="/pages/:pageId/products"        element={<PageEditor tab="products" />} />
               <Route path="/pages/:pageId/discounts"       element={<PageEditor tab="discounts" />} />
+              <Route path="/pages/:pageId/integrations"    element={<PageEditor tab="integrations" />} />
               <Route path="/orders"                        element={<Orders />} />
               <Route path="/calculator"                    element={<Calculator />} />
               <Route path="/profile"                       element={<Profile />} />
               <Route path="/chat"                          element={<Chat />} />
-              <Route path="/cobros"                       element={<Payouts />} />
+              <Route path="/cobros"                        element={<Payouts />} />
+              <Route path="/integrations"                  element={<Integrations />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />

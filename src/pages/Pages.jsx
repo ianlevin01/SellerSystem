@@ -64,7 +64,7 @@ function NewPageModal({ onClose, onCreated }) {
     setForm((prev) => ({
       ...prev,
       page_name: value,
-      store_name: prev.store_name || value,
+      store_name: value,
       slug: slugTouched ? prev.slug : slugify(value),
     }));
 

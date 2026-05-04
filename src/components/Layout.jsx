@@ -6,17 +6,18 @@ import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet, Menu, X
+  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet, Menu, X, Puzzle
 } from "lucide-react";
 
 const nav = [
-  { to: "/dashboard",  label: "Dashboard",   icon: LayoutDashboard },
-  { to: "/pages",      label: "Mis tiendas", icon: Layers },
-  { to: "/orders",     label: "Mis pedidos", icon: ShoppingBag },
-  { to: "/cobros",     label: "Cobros",      icon: Wallet },
-  { to: "/chat",       label: "Chat",        icon: MessageSquare },
-  { to: "/calculator", label: "Calculadora", icon: Calculator },
-  { to: "/profile",    label: "Mi perfil",   icon: User },
+  { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
+  { to: "/pages",        label: "Mis tiendas",    icon: Layers },
+  { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
+  { to: "/cobros",       label: "Cobros",         icon: Wallet },
+  { to: "/integrations", label: "Integraciones",  icon: Puzzle },
+  { to: "/chat",         label: "Chat",           icon: MessageSquare },
+  { to: "/calculator",   label: "Calculadora",    icon: Calculator },
+  { to: "/profile",      label: "Mi perfil",      icon: User },
 ];
 
 /**
