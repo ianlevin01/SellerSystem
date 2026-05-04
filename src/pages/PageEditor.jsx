@@ -85,6 +85,7 @@ function ConfigTab({ pageId }) {
   const iframeRef = useRef(null);
   const [previewMode, setPreviewMode] = useState("desktop");
   const [iframeSrc,   setIframeSrc]   = useState("");
+  const [iframeKey,   setIframeKey]   = useState(0);
 
   const DEFAULT_THEME = {
     hero_bg_type: "color", hero_overlay_opacity: 50,
@@ -176,7 +177,7 @@ function ConfigTab({ pageId }) {
       formFromData(res.data);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-      setTimeout(() => iframeRef.current?.contentWindow?.location.reload(), 400);
+      setTimeout(() => setIframeKey(k => k + 1), 400);
     } catch (err) {
       setError(err.response?.data?.message || "Error al guardar");
     } finally {
@@ -593,7 +594,7 @@ function ConfigTab({ pageId }) {
           </button>
           <div className="pe-editor__preview-url">{iframeSrc || "Cargando..."}</div>
           <button type="button" className="pe-editor__device-btn"
-            onClick={() => iframeRef.current?.contentWindow?.location.reload()} title="Recargar">
+            onClick={() => setIframeKey(k => k + 1)} title="Recargar">
             <RefreshCw size={13} />
           </button>
           {iframeSrc && (
@@ -607,6 +608,7 @@ function ConfigTab({ pageId }) {
         <div className={`pe-editor__iframe-wrap ${previewMode === "mobile" ? "is-mobile" : ""}`}>
           {iframeSrc ? (
             <iframe
+              key={iframeKey}
               ref={iframeRef}
               src={iframeSrc}
               title="Vista previa"
