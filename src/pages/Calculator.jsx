@@ -8,9 +8,6 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  CircleDollarSign,
-  HelpCircle,
-  Package,
   Percent,
   Sparkles,
   TrendingUp,
@@ -55,7 +52,6 @@ export default function Calculator() {
   const [costo, setCosto] = useState("");
   const [precio, setPrecio] = useState("");
   const [cantidad, setCantidad] = useState(1);
-  const [showDetail, setShowDetail] = useState(false);
 
   const data = useMemo(() => {
     const costoUnidad = Math.max(0, numberValue(costo));
@@ -118,11 +114,11 @@ export default function Calculator() {
         <div>
           <span className="vtz-calc-kicker">
             <Sparkles size={16} />
-            Calculadora de ganancias
+            Calculadora
           </span>
-          <h1>Calculá rápido cuánto ganarías.</h1>
+          <h1>Calculá rápido tu ganancia.</h1>
           <p>
-            Poné el costo, elegí tu precio de venta y mirá la ganancia estimada.
+            Cargá costo, precio de venta y cantidad para ver el resultado.
           </p>
         </div>
 
@@ -135,16 +131,12 @@ export default function Calculator() {
         <article className="vtz-calc-box vtz-calc-form">
           <div className="vtz-calc-box__title">
             <div>
-              <span>Paso único</span>
-              <h2>Datos básicos</h2>
+              <h2>Calculadora</h2>
             </div>
           </div>
 
           <label className="vtz-calc-field">
-            <span>
-              <Package size={17} />
-              Costo del producto
-            </span>
+            <span>Costo del producto</span>
             <div className="vtz-calc-input">
               <b>$</b>
               <input
@@ -158,10 +150,7 @@ export default function Calculator() {
           </label>
 
           <label className="vtz-calc-field">
-            <span>
-              <CircleDollarSign size={17} />
-              Precio al que querés vender
-            </span>
+            <span>Precio al que querés vender</span>
             <div className="vtz-calc-input">
               <b>$</b>
               <input
@@ -234,27 +223,22 @@ export default function Calculator() {
             </div>
           </div>
 
-          <button type="button" className="vtz-calc-detail-btn" onClick={() => setShowDetail((v) => !v)}>
-            <HelpCircle size={17} />
-            {showDetail ? "Ocultar detalle" : "Ver detalle simple"}
-          </button>
+          <div className="vtz-calc-detail-title">Detalle</div>
 
-          {showDetail && (
-            <div className="vtz-calc-detail">
-              <div>
-                <span>Total venta</span>
-                <strong>{money(data.totalVenta)}</strong>
-              </div>
-              <div>
-                <span>Margen total</span>
-                <strong>{money(data.margenTotal)}</strong>
-              </div>
-              <div>
-                <span>Escala aplicada</span>
-                <strong>{ready ? `${data.pctComision}%` : "—"}</strong>
-              </div>
+          <div className="vtz-calc-detail">
+            <div>
+              <span>Total venta</span>
+              <strong>{money(data.totalVenta)}</strong>
             </div>
-          )}
+            <div>
+              <span>Margen total</span>
+              <strong>{money(data.margenTotal)}</strong>
+            </div>
+            <div>
+              <span>Escala aplicada</span>
+              <strong>{ready ? `${data.pctComision}%` : "—"}</strong>
+            </div>
+          </div>
         </article>
       </section>
 

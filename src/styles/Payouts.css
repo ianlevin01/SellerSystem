@@ -826,3 +826,56 @@
     gap: 4px !important;
   }
 }
+
+
+/* Ajustes finales de tamaño de encabezados y cards - cambio hecho por Yolo */
+.vtz-calc-top,
+.vtz-profile-hero,
+.vtz-pages-hero,
+.vtz-orders-hero,
+.vtz-chat-hero,
+.vtz-payouts-hero {
+  min-height: 175px !important;
+  padding: clamp(22px, 3vw, 34px) !important;
+  border-radius: 28px !important;
+}
+
+.vtz-calc-top h1,
+.vtz-profile-hero h1,
+.vtz-pages-hero h1,
+.vtz-orders-hero h1,
+.vtz-chat-hero h1,
+.vtz-payouts-hero h1 {
+  font-size: clamp(2.05rem, 3.7vw, 3.8rem) !important;
+  line-height: .96 !important;
+  letter-spacing: -.065em !important;
+}
+
+.vtz-calc-top p,
+.vtz-profile-hero p,
+.vtz-pages-hero p,
+.vtz-orders-hero p,
+.vtz-chat-hero p,
+.vtz-payouts-hero p {
+  display: none !important;
+}
+
+.vtz-calc-kicker,
+.vtz-profile-kicker,
+.vtz-pages-kicker,
+.vtz-orders-kicker,
+.vtz-chat-kicker,
+.vtz-payouts-kicker {
+  margin-bottom: 10px !important;
+}
+
+@media (max-width: 720px) {
+  .vtz-calc-top h1,
+  .vtz-profile-hero h1,
+  .vtz-pages-hero h1,
+  .vtz-orders-hero h1,
+  .vtz-chat-hero h1,
+  .vtz-payouts-hero h1 {
+    font-size: clamp(2rem, 10vw, 3rem) !important;
+  }
+}

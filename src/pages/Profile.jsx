@@ -7,9 +7,7 @@ import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import "../styles/Profile.css";
 import {
-  BadgeCheck,
   CheckCircle2,
-  ChevronRight,
   CircleAlert,
   Loader2,
   Mail,
@@ -17,19 +15,8 @@ import {
   Phone,
   Save,
   ShieldCheck,
-  Sparkles,
   User,
-  WandSparkles,
 } from "lucide-react";
-
-const HOW_FOUND_OPTIONS = [
-  { value: "", label: "Seleccioná una opción" },
-  { value: "redes_sociales", label: "Redes sociales" },
-  { value: "conocido", label: "Un conocido me recomendó" },
-  { value: "publicidad", label: "Publicidad" },
-  { value: "busqueda", label: "Búsqueda en internet" },
-  { value: "otro", label: "Otro" },
-];
 
 function isSuccessMessage(message) {
   return (
@@ -40,16 +27,42 @@ function isSuccessMessage(message) {
   );
 }
 
+function splitName(fullName = "") {
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { first_name: parts[0] || "", last_name: "" };
+  return {
+    first_name: parts.slice(0, -1).join(" "),
+    last_name: parts.slice(-1).join(""),
+  };
+}
+
+function calculateAge(birthDate) {
+  if (!birthDate) return null;
+
+  const date = new Date(birthDate);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
+
 export default function Profile() {
-  const { updateSeller } = useAuth();
+  const { updateSeller, refreshSeller } = useAuth();
 
   const [form, setForm] = useState({
-    name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     phone: "",
     city: "",
-    age: "",
-    how_found_us: "",
+    birth_date: "",
   });
 
   const [phoneVerified, setPhoneVerified] = useState(false);
@@ -67,14 +80,15 @@ export default function Profile() {
       .get("/seller/auth/profile")
       .then((res) => {
         const d = res.data;
+        const fallbackName = splitName(d.name || "");
 
         setForm({
-          name: d.name || "",
+          first_name: d.first_name || d.firstName || fallbackName.first_name || "",
+          last_name: d.last_name || d.lastName || fallbackName.last_name || "",
           email: d.email || d.seller_email || d.user_email || "",
           phone: d.phone || "",
           city: d.city || "",
-          age: d.age != null ? String(d.age) : "",
-          how_found_us: d.how_found_us || "",
+          birth_date: d.birth_date || d.birthDate || "",
         });
 
         setPhoneVerified(!!d.phone_verified);
@@ -82,12 +96,20 @@ export default function Profile() {
       .finally(() => setLoading(false));
   }, []);
 
+  const fullName = `${form.first_name} ${form.last_name}`.trim();
+  const age = calculateAge(form.birth_date);
+
   const progressItems = useMemo(
     () => [
       {
-        key: "name",
+        key: "first_name",
         label: "Nombre",
-        done: form.name.trim().length >= 2,
+        done: form.first_name.trim().length >= 2,
+      },
+      {
+        key: "last_name",
+        label: "Apellido",
+        done: form.last_name.trim().length >= 2,
       },
       {
         key: "email",
@@ -100,14 +122,9 @@ export default function Profile() {
         done: form.city.trim().length >= 2,
       },
       {
-        key: "age",
-        label: "Edad",
-        done: Number(form.age) >= 16,
-      },
-      {
-        key: "source",
-        label: "Origen",
-        done: !!form.how_found_us,
+        key: "birth_date",
+        label: "Nacimiento",
+        done: !!form.birth_date && calculateAge(form.birth_date) >= 16,
       },
       {
         key: "phone",
@@ -141,26 +158,37 @@ export default function Profile() {
     setSaving(true);
     setSaveMsg("");
 
+    const payload = {
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      name: fullName,
+      city: form.city.trim(),
+      phone: form.phone.trim(),
+      birth_date: form.birth_date || null,
+      age,
+    };
+
     try {
-      await client.put("/seller/auth/profile", {
-        name: form.name.trim(),
-        city: form.city.trim(),
-        phone: form.phone.trim(),
-        age: form.age ? Number(form.age) : null,
-        how_found_us: form.how_found_us,
-      });
+      await client.put("/seller/auth/profile", payload);
 
       setSaveMsg("Guardado correctamente");
       setTimeout(() => setSaveMsg(""), 3000);
-      updateSeller({
-        name: form.name.trim(),
-        city: form.city.trim(),
-        phone: form.phone.trim(),
-        age: form.age ? Number(form.age) : null,
-        how_found_us: form.how_found_us,
-      });
+      updateSeller(payload);
     } catch (err) {
-      setSaveMsg(err.response?.data?.message || err.message || "Error al guardar");
+      try {
+        await client.put("/seller/auth/profile", {
+          name: fullName,
+          city: form.city.trim(),
+          phone: form.phone.trim(),
+          age,
+        });
+
+        setSaveMsg("Guardado correctamente");
+        setTimeout(() => setSaveMsg(""), 3000);
+        updateSeller(payload);
+      } catch (fallbackErr) {
+        setSaveMsg(fallbackErr.response?.data?.message || fallbackErr.message || "Error al guardar");
+      }
     } finally {
       setSaving(false);
     }
@@ -206,7 +234,7 @@ export default function Profile() {
       setOtpMode(false);
       setOtpCode("");
       setOtpMsg("Teléfono verificado");
-      refreshSeller().catch(() => {});
+      refreshSeller?.().catch(() => {});
     } catch (err) {
       setOtpMsg(err.response?.data?.message || "Código incorrecto");
     } finally {
@@ -234,17 +262,9 @@ export default function Profile() {
     <main className="vtz-profile">
       <section className="vtz-profile-hero">
         <div>
-          <span className="vtz-profile-kicker">
-            <Sparkles size={16} />
-            Mi perfil
-          </span>
+          <span className="vtz-profile-kicker">Mi perfil</span>
 
           <h1>Completá tus datos</h1>
-
-          <p>
-            Esta información ayuda a validar tu cuenta, ordenar el soporte y dejar tus
-            datos de vendedor listos para operar dentro de Ventaz.
-          </p>
         </div>
 
         <div className={`vtz-profile-status ${profileReady ? "is-ready" : ""}`}>
@@ -271,25 +291,37 @@ export default function Profile() {
         <section className="vtz-profile-card vtz-profile-card--main">
           <div className="vtz-profile-card__head">
             <div>
-              <span>Paso 1</span>
-              <h2>Datos personales</h2>
+              <span>Datos</span>
+              <h2>Información personal</h2>
             </div>
-
-            <WandSparkles size={22} />
           </div>
 
           <div className="vtz-profile-fields">
             <label className="vtz-profile-field">
               <span>
                 <User size={17} />
-                Nombre/s y apellido/s
+                Nombre/s
               </span>
               <input
-                name="name"
-                value={form.name}
+                name="first_name"
+                value={form.first_name}
                 onChange={handleChange}
                 required
-                placeholder="Ej: Lucas Dercye"
+                placeholder="Ej: Lucas"
+              />
+            </label>
+
+            <label className="vtz-profile-field">
+              <span>
+                <User size={17} />
+                Apellido/s
+              </span>
+              <input
+                name="last_name"
+                value={form.last_name}
+                onChange={handleChange}
+                required
+                placeholder="Ej: Dercye"
               />
             </label>
 
@@ -323,33 +355,17 @@ export default function Profile() {
             </label>
 
             <label className="vtz-profile-field">
-              <span>Edad</span>
+              <span>Fecha de nacimiento</span>
               <input
-                type="number"
-                name="age"
-                value={form.age}
+                type="date"
+                name="birth_date"
+                value={form.birth_date}
                 onChange={handleChange}
                 required
-                min={16}
-                max={99}
-                placeholder="Ej: 28"
               />
-            </label>
-
-            <label className="vtz-profile-field">
-              <span>¿Cómo nos conociste?</span>
-              <select
-                name="how_found_us"
-                value={form.how_found_us}
-                onChange={handleChange}
-                required
-              >
-                {HOW_FOUND_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              {form.birth_date && age !== null && age < 16 && (
+                <small>Tenés que tener al menos 16 años.</small>
+              )}
             </label>
           </div>
         </section>
@@ -358,26 +374,13 @@ export default function Profile() {
           <section className="vtz-profile-card">
             <div className="vtz-profile-card__head">
               <div>
-                <span>Paso 2</span>
-                <h2>Verificar teléfono</h2>
+                <span>Teléfono</span>
+                <h2>Verificación</h2>
               </div>
-
-              {phoneVerified ? (
-                <BadgeCheck className="vtz-profile-verified-icon" size={24} />
-              ) : (
-                <Phone size={22} />
-              )}
             </div>
 
-            <p className="vtz-profile-note">
-              Usá tu WhatsApp con código de país. Ejemplo: +54 9 11 1234-5678.
-            </p>
-
             <label className="vtz-profile-field">
-              <span>
-                <Phone size={17} />
-                Teléfono / WhatsApp
-              </span>
+              <span>Teléfono / WhatsApp</span>
               <input
                 name="phone"
                 value={form.phone}
@@ -399,7 +402,7 @@ export default function Profile() {
                 onClick={handleRequestOtp}
                 disabled={otpLoading}
               >
-                {otpLoading ? <Loader2 className="vtz-profile-spin" size={18} /> : <Phone size={18} />}
+                {otpLoading ? <Loader2 className="vtz-profile-spin" size={18} /> : null}
                 {otpLoading ? "Enviando..." : "Enviar código por SMS"}
               </button>
             )}
@@ -446,8 +449,8 @@ export default function Profile() {
             <ShieldCheck size={22} />
 
             <div>
-              <h3>Guardá los cambios</h3>
-              <p>Cuando termines, guardá tu información para dejar el perfil actualizado.</p>
+              <h3>Guardar perfil</h3>
+              <p>Revisá tus datos y guardá los cambios.</p>
             </div>
 
             <button className="vtz-profile-btn vtz-profile-btn--primary" type="submit" disabled={saving}>
@@ -463,15 +466,6 @@ export default function Profile() {
           </section>
         </aside>
       </form>
-
-      <section className="vtz-profile-bottom-help">
-        <CheckCircle2 size={18} />
-        <span>
-          Completá el perfil una sola vez. Después vas a poder concentrarte en configurar tu tienda,
-          publicar productos y vender.
-        </span>
-        <ChevronRight size={18} />
-      </section>
     </main>
   );
 }

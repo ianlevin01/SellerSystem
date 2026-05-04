@@ -31,7 +31,7 @@ export default function Dashboard() {
     { label: "Ganancia total",     value: `$${fmt(totalGanancia)}`,   icon: TrendingUp,  color: "#16a34a", bg: "#f0fdf4" },
   ];
 
-  const profileIncomplete = !seller?.city || !seller?.age || !seller?.how_found_us || !seller?.phone_verified;
+  const profileIncomplete = !seller?.city || (!seller?.birth_date && !seller?.age) || !seller?.phone_verified;
 
   return (
     <div>
@@ -55,7 +55,7 @@ export default function Dashboard() {
       <div className="welcome-banner">
         <div className="welcome-banner__content">
           <div className="welcome-banner__greeting">Bienvenido de vuelta</div>
-          <h1 className="welcome-banner__name">{seller?.name?.split(" ")[0] || "Vendedor"} 👋</h1>
+          <h1 className="welcome-banner__name">{seller?.name?.split(" ")[0] || "Vendedor"}</h1>
           {seller?.slug && (
             <a href={`/store/${seller?.slug}`} target="_blank" rel="noreferrer"
                className="welcome-banner__store-link">

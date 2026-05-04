@@ -1091,3 +1091,22 @@ body:has(.vtz-register) {
     display: none !important;
   }
 }
+
+
+/* Registro: DNI y cómo nos conociste - cambio hecho por Yolo */
+.vtz-register-input select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  background: transparent;
+  font: inherit;
+  font-size: .95rem;
+  font-weight: 750;
+  appearance: none;
+}
+
+.vtz-register-input--select {
+  cursor: pointer;
+}

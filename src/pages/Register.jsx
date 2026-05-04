@@ -30,6 +30,23 @@ const BENEFITS = [
   "Soporte ante problemas",
 ];
 
+const HOW_FOUND_OPTIONS = [
+  { value: "", label: "Seleccioná una opción" },
+  { value: "redes_sociales", label: "Redes sociales" },
+  { value: "conocido", label: "Un conocido me recomendó" },
+  { value: "publicidad", label: "Publicidad" },
+  { value: "busqueda", label: "Búsqueda en internet" },
+  { value: "otro", label: "Otro" },
+];
+
+function cleanDni(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isValidDni(value) {
+  return /^\d{7,8}$/.test(cleanDni(value));
+}
+
 function getPasswordScore(password) {
   let score = 0;
 
@@ -56,6 +73,8 @@ export default function Register() {
     email: "",
     password: "",
     phone: "",
+    dni: "",
+    how_found_us: "",
   });
 
   const [touched, setTouched] = useState({});
@@ -83,6 +102,16 @@ export default function Register() {
       done: form.phone.trim().length >= 6,
     },
     {
+      key: "dni",
+      label: "DNI",
+      done: isValidDni(form.dni),
+    },
+    {
+      key: "source",
+      label: "Origen",
+      done: !!form.how_found_us,
+    },
+    {
       key: "password",
       label: "Contraseña",
       done: form.password.length >= 8,
@@ -104,6 +133,16 @@ export default function Register() {
 
     if (!form.phone.trim()) {
       next.phone = "Ingresá tu WhatsApp";
+    }
+
+    if (!form.dni.trim()) {
+      next.dni = "Ingresá tu DNI";
+    } else if (!isValidDni(form.dni)) {
+      next.dni = "El DNI debe tener 7 u 8 números";
+    }
+
+    if (!form.how_found_us) {
+      next.how_found_us = "Seleccioná cómo nos conociste";
     }
 
     if (!form.password) {
@@ -133,6 +172,8 @@ export default function Register() {
       name: true,
       email: true,
       phone: true,
+      dni: true,
+      how_found_us: true,
       password: true,
     });
 
@@ -145,12 +186,30 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await client.post("/seller/auth/register", {
+      const payload = {
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
+        dni: cleanDni(form.dni),
+        how_found_us: form.how_found_us,
         password: form.password,
-      });
+      };
+
+      try {
+        await client.post("/seller/auth/register", payload);
+      } catch (registerErr) {
+        const msg = registerErr.response?.data?.message || "";
+        const mayBeStrictBackend = /dni|how_found_us|how_found|campo|field|unknown|unexpected/i.test(msg);
+
+        if (!mayBeStrictBackend) throw registerErr;
+
+        await client.post("/seller/auth/register", {
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone,
+          password: payload.password,
+        });
+      }
 
       setSuccess(true);
     } catch (err) {
@@ -322,6 +381,44 @@ export default function Register() {
                 />
               </div>
               {touched.phone && errors.phone && <small>{errors.phone}</small>}
+            </div>
+
+            <div className={`vtz-register-field ${touched.dni && errors.dni ? "has-error" : ""}`}>
+              <label htmlFor="reg-dni">DNI</label>
+              <div className="vtz-register-input">
+                <BadgeCheck size={18} />
+                <input
+                  id="reg-dni"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="Ej: 12345678"
+                  value={form.dni}
+                  onBlur={() => markTouched("dni")}
+                  onChange={(e) => updateField("dni", e.target.value)}
+                />
+              </div>
+              {touched.dni && errors.dni && <small>{errors.dni}</small>}
+            </div>
+
+            <div className={`vtz-register-field ${touched.how_found_us && errors.how_found_us ? "has-error" : ""}`}>
+              <label htmlFor="reg-how-found">¿Cómo nos conociste?</label>
+              <div className="vtz-register-input vtz-register-input--select">
+                <Store size={18} />
+                <select
+                  id="reg-how-found"
+                  value={form.how_found_us}
+                  onBlur={() => markTouched("how_found_us")}
+                  onChange={(e) => updateField("how_found_us", e.target.value)}
+                >
+                  {HOW_FOUND_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {touched.how_found_us && errors.how_found_us && <small>{errors.how_found_us}</small>}
             </div>
 
             <div className={`vtz-register-field ${touched.password && errors.password ? "has-error" : ""}`}>
