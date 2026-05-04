@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
 import {
-  AlertTriangle, ChevronDown, ChevronLeft,
-  ExternalLink, Monitor, Percent, Plus,
-  RefreshCw, Save, Smartphone, Tag, TrendingDown, Trash2,
+  AlertTriangle, Building2, ChevronDown, ChevronLeft,
+  ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
+  Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
+  RefreshCw, Save, Share2, Smartphone, Tag, TrendingDown, Trash2, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
