@@ -1,41 +1,23 @@
-// src/pages/Calculator.jsx
-// Calculadora simple e intuitiva de Ventaz
-// cambio hecho por Yolo
-
 import { useMemo, useState } from "react";
 import "../styles/Calculator.css";
 import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  Percent,
   Sparkles,
   TrendingUp,
   Zap,
 } from "lucide-react";
 
-const COMISIONES = [
-  { min: 0, max: 100000, pct: 40 },
-  { min: 100000, max: 500000, pct: 45 },
-  { min: 500000, max: 1000000, pct: 50 },
-  { min: 1000000, max: Infinity, pct: 60 },
-];
-
 const QUICK_MARKUPS = [
   { label: "Mínimo", pct: 0 },
-  { label: "+25%", pct: 25 },
-  { label: "+50%", pct: 50 },
-  { label: "+100%", pct: 100 },
+  { label: "+25%",   pct: 25 },
+  { label: "+50%",   pct: 50 },
+  { label: "+100%",  pct: 100 },
 ];
 
-function calcPct(total) {
-  return COMISIONES.find((c) => total >= c.min && total < c.max)?.pct || 40;
-}
-
 function fmt(n) {
-  return Number(n || 0).toLocaleString("es-AR", {
-    maximumFractionDigits: 0,
-  });
+  return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
 }
 
 function money(n) {
@@ -49,64 +31,55 @@ function numberValue(value) {
 }
 
 export default function Calculator() {
-  const [costo, setCosto] = useState("");
-  const [precio, setPrecio] = useState("");
+  const [costo,    setCosto]    = useState("");
+  const [precio,   setPrecio]   = useState("");
   const [cantidad, setCantidad] = useState(1);
 
   const data = useMemo(() => {
-    const costoUnidad = Math.max(0, numberValue(costo));
-    const precioVenta = Math.max(0, numberValue(precio));
-    const unidades = Math.max(1, parseInt(cantidad, 10) || 1);
+    const costoUnidad  = Math.max(0, numberValue(costo));
+    const precioVenta  = Math.max(0, numberValue(precio));
+    const unidades     = Math.max(1, parseInt(cantidad, 10) || 1);
 
-    const precioMinimo = costoUnidad * 1.2;
-    const totalVenta = precioVenta * unidades;
-    const margenUnidad = precioVenta - costoUnidad;
-    const margenTotal = margenUnidad * unidades;
-    const pctComision = calcPct(totalVenta);
-    const ganancia = Math.max(0, margenTotal * (pctComision / 100));
-    const gananciaUnidad = ganancia / unidades;
+    // El precio mínimo es el costo mostrado — no se puede vender por debajo
+    const precioMinimo    = costoUnidad;
+    const totalVenta      = precioVenta * unidades;
+    const gananciaUnidad  = Math.max(0, precioVenta - costoUnidad);
+    const ganancia        = gananciaUnidad * unidades;
+    const margenPct       = costoUnidad > 0 && precioVenta > costoUnidad
+      ? ((precioVenta - costoUnidad) / costoUnidad * 100)
+      : 0;
+
     const precioValido = costoUnidad > 0 && precioVenta >= precioMinimo;
-    const faltaPrecio = costoUnidad > 0 && precioVenta <= 0;
-    const porDebajo = costoUnidad > 0 && precioVenta > 0 && precioVenta < precioMinimo;
+    const faltaPrecio  = costoUnidad > 0 && precioVenta <= 0;
+    const porDebajo    = costoUnidad > 0 && precioVenta > 0 && precioVenta < precioMinimo;
 
     return {
-      costoUnidad,
-      precioVenta,
-      unidades,
-      precioMinimo,
-      totalVenta,
-      margenUnidad,
-      margenTotal,
-      pctComision,
-      ganancia,
-      gananciaUnidad,
-      precioValido,
-      faltaPrecio,
-      porDebajo,
+      costoUnidad, precioVenta, unidades,
+      precioMinimo, totalVenta, gananciaUnidad, ganancia, margenPct,
+      precioValido, faltaPrecio, porDebajo,
     };
   }, [costo, precio, cantidad]);
 
   function setQuickPrice(pct) {
     if (!data.costoUnidad) return;
-    const min = data.precioMinimo;
-    const next = Math.round(min * (1 + pct / 100));
+    const next = Math.round(data.precioMinimo * (1 + pct / 100));
     setPrecio(String(next));
   }
 
   function fillExample() {
-    setCosto("5000");
+    setCosto("15600");
     setCantidad(3);
-    setPrecio("12000");
+    setPrecio("23000");
   }
 
-  const ready = data.costoUnidad > 0 && data.precioVenta > 0;
+  const ready   = data.costoUnidad > 0 && data.precioVenta > 0;
   const message = !data.costoUnidad
     ? "Primero cargá el costo del producto."
     : data.faltaPrecio
       ? "Ahora cargá el precio al que querés vender."
       : data.porDebajo
-        ? `Ese precio está por debajo del mínimo sugerido: ${money(data.precioMinimo)}.`
-        : "Precio válido para simular tu ganancia.";
+        ? `Ese precio está por debajo de tu costo: ${money(data.precioMinimo)}.`
+        : "Precio válido. Todo lo que vendas por encima del costo es tuyo.";
 
   return (
     <main className="vtz-calc-simple">
@@ -118,7 +91,7 @@ export default function Calculator() {
           </span>
           <h1>Calculá rápido tu ganancia.</h1>
           <p>
-            Cargá costo, precio de venta y cantidad para ver el resultado.
+            Ingresá el costo del producto (el que figura en la plataforma), el precio al que lo vendés y la cantidad.
           </p>
         </div>
 
@@ -142,11 +115,14 @@ export default function Calculator() {
               <input
                 type="number"
                 min="0"
-                placeholder="Ej: 5000"
+                placeholder="Ej: 15600"
                 value={costo}
                 onChange={(e) => setCosto(e.target.value)}
               />
             </div>
+            <small style={{ color: "var(--text-tertiary, #9ca3af)", fontSize: ".78rem" }}>
+              Usá el costo que aparece en la sección de productos.
+            </small>
           </label>
 
           <label className="vtz-calc-field">
@@ -156,7 +132,7 @@ export default function Calculator() {
               <input
                 type="number"
                 min="0"
-                placeholder={data.costoUnidad ? `Mínimo: ${fmt(data.precioMinimo)}` : "Ej: 12000"}
+                placeholder={data.costoUnidad ? `Mínimo: ${fmt(data.precioMinimo)}` : "Ej: 23000"}
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
               />
@@ -203,7 +179,7 @@ export default function Calculator() {
             <Zap size={30} />
           </div>
 
-          <span>Ganancia estimada</span>
+          <span>Tu ganancia estimada</span>
           <h2>{money(data.ganancia)}</h2>
 
           <p>
@@ -231,12 +207,12 @@ export default function Calculator() {
               <strong>{money(data.totalVenta)}</strong>
             </div>
             <div>
-              <span>Margen total</span>
-              <strong>{money(data.margenTotal)}</strong>
+              <span>Ganancia total</span>
+              <strong>{money(data.ganancia)}</strong>
             </div>
             <div>
-              <span>Escala aplicada</span>
-              <strong>{ready ? `${data.pctComision}%` : "—"}</strong>
+              <span>Margen sobre costo</span>
+              <strong>{ready && data.margenPct > 0 ? `${data.margenPct.toFixed(1)}%` : "—"}</strong>
             </div>
           </div>
         </article>
@@ -245,20 +221,20 @@ export default function Calculator() {
       <section className="vtz-calc-guide">
         <div>
           <TrendingUp size={20} />
-          <strong>Cómo usarla</strong>
-          <span>Probá distintos precios hasta encontrar uno que te cierre.</span>
+          <strong>Tu ganancia es el 100%</strong>
+          <span>Todo lo que vendas por encima del costo mostrado es tuyo. Sin comisiones.</span>
         </div>
 
         <div>
-          <Percent size={20} />
-          <strong>Qué mirar</strong>
-          <span>La ganancia estimada y el precio mínimo son lo más importante.</span>
+          <Zap size={20} />
+          <strong>El costo ya incluye todo</strong>
+          <span>El costo que ves en la plataforma ya contempla los márgenes operativos.</span>
         </div>
 
         <div>
           <ArrowRight size={20} />
-          <strong>Después</strong>
-          <span>Cuando estés conforme, usá ese precio al publicar tu producto.</span>
+          <strong>Precio mínimo = costo</strong>
+          <span>No podés vender por debajo del costo. Por encima, lo que quieras.</span>
         </div>
       </section>
     </main>

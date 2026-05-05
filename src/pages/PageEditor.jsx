@@ -832,7 +832,7 @@ function DiscountsTab({ pageId }) {
               </strong>
             </div>
             <p style={{ fontSize: ".82rem", color: "var(--text-secondary)", margin: "0 0 14px" }}>
-              Con un descuento del {maxDiscountPct.toFixed(1)}%, estos productos bajarían de su precio mínimo. Subí sus precios y confirmá cada uno para poder guardar.
+              Con un descuento del {maxDiscountPct.toFixed(1)}%, estos productos quedarían por debajo de su costo. Subí sus precios antes de guardar.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, padding: "0 4px", fontSize: ".75rem", fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".04em" }}>

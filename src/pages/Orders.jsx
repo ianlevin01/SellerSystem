@@ -19,11 +19,11 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const PCT_LEVELS = [
-  { min: 0, max: 100000, pct: 40, label: "hasta $100k" },
-  { min: 100000, max: 500000, pct: 45, label: "$100k a $500k" },
-  { min: 500000, max: 1000000, pct: 50, label: "$500k a $1M" },
-  { min: 1000000, max: Infinity, pct: 60, label: "más de $1M" },
+const MARGIN_LEVELS = [
+  { label: "Nivel 1 — hasta $100k",   pct: 30 },
+  { label: "Nivel 2 — hasta $500k",   pct: 25 },
+  { label: "Nivel 3 — hasta $1M",     pct: 20 },
+  { label: "Nivel 4 — más de $1M",    pct: 15 },
 ];
 
 const FILTERS = [
@@ -100,8 +100,8 @@ function getStatus(order) {
   return map[color] || map.pending;
 }
 
-function calcPct(order) {
-  return Number(order.pct_ganancia || 0) * 100;
+function getPlatformPct(order) {
+  return Number(order.platform_margin_pct || 30);
 }
 
 export default function Orders() {
@@ -229,11 +229,13 @@ export default function Orders() {
 
           <div className="vtz-orders-scale">
             <div className="vtz-orders-scale__head">
-              <span>Escala</span>
-              <strong>Comisiones</strong>
+              <span>Tu nivel</span>
+              <strong>Margen plataforma</strong>
             </div>
-
-            {PCT_LEVELS.map((level) => (
+            <p style={{ fontSize: ".78rem", color: "var(--text-secondary)", margin: "0 0 10px", lineHeight: 1.4 }}>
+              A más ventas, el margen que cobra la plataforma baja — tu ganancia sube.
+            </p>
+            {MARGIN_LEVELS.map((level) => (
               <div key={level.pct} className="vtz-orders-tier">
                 <b>{level.pct}%</b>
                 <span>{level.label}</span>
@@ -274,7 +276,7 @@ export default function Orders() {
                 const isOpen = !!expanded[order.id];
                 const status = getStatus(order);
                 const StatusIcon = status.icon;
-                const pct = calcPct(order);
+                const platformPct = getPlatformPct(order);
 
                 return (
                   <article
@@ -304,7 +306,7 @@ export default function Orders() {
                       <div className="vtz-order__money">
                         <span>Total</span>
                         <strong>{money(order.total)}</strong>
-                        <small>+{money(order.ganancia_vendedor)} de ganancia</small>
+                        <small style={{ color: "var(--success, #16a34a)" }}>+{money(order.ganancia_vendedor)} ganancia</small>
                       </div>
 
                       <ChevronDown className="vtz-order__chevron" size={22} />
@@ -358,18 +360,18 @@ export default function Orders() {
                             )}
 
                             <div>
-                              <span>Diferencia bruta</span>
-                              <strong>{money(order.ganancia_bruta)}</strong>
+                              <span>Total vendido</span>
+                              <strong>{money(order.total)}</strong>
                             </div>
 
                             <div className="is-highlight">
-                              <span>Tu comisión {Number.isFinite(pct) ? `(${pct.toFixed(0)}%)` : ""}</span>
+                              <span>Tu ganancia</span>
                               <strong>{money(order.ganancia_vendedor)}</strong>
                             </div>
 
-                            <p>
-                              {status.description} El detalle te ayuda a entender cuánto ganaste en
-                              esta venta.
+                            <p style={{ fontSize: ".78rem", color: "var(--text-tertiary)", marginTop: 4 }}>
+                              Margen plataforma aplicado: {platformPct}%.{" "}
+                              {status.description}
                             </p>
                           </div>
                         </div>
