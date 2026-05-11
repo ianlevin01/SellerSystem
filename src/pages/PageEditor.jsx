@@ -5,7 +5,7 @@ import {
   AlertTriangle, Building2, ChevronDown, ChevronLeft,
   ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
   Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
-  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Zap,
+  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Upload, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
@@ -86,10 +86,14 @@ const CONFIG_SECTIONS = [
 // ── ConfigTab ─────────────────────────────────────────────────
 
 function ConfigTab({ pageId }) {
-  const iframeRef = useRef(null);
-  const [previewMode, setPreviewMode] = useState("desktop");
-  const [iframeSrc,   setIframeSrc]   = useState("");
-  const [iframeKey,   setIframeKey]   = useState(0);
+  const iframeRef  = useRef(null);
+  const logoRef    = useRef(null);
+  const heroRef    = useRef(null);
+  const [previewMode,    setPreviewMode]    = useState("desktop");
+  const [iframeSrc,      setIframeSrc]      = useState("");
+  const [iframeKey,      setIframeKey]      = useState(0);
+  const [uploadingLogo,  setUploadingLogo]  = useState(false);
+  const [uploadingHero,  setUploadingHero]  = useState(false);
 
   const DEFAULT_THEME = {
     hero_bg_type: "color", hero_overlay_opacity: 50,
@@ -175,6 +179,28 @@ function ConfigTab({ pageId }) {
       return { ...p, featured_categories: cats.includes(id) ? cats.filter(c => c !== id) : [...cats, id] };
     });
   }
+
+  function handleAssetUpload(endpoint, formField, setUploading, ref) {
+    return async function (e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append("image", file);
+        const res = await client.post(endpoint, fd, { headers: { "Content-Type": "multipart/form-data" } });
+        set(formField, res.data.url);
+      } catch (err) {
+        setError(err.response?.data?.message || "Error al subir la imagen");
+      } finally {
+        setUploading(false);
+        if (ref.current) ref.current.value = "";
+      }
+    };
+  }
+
+  const handleLogoUpload = handleAssetUpload("/seller/images/logo",         "logo_url",       setUploadingLogo, logoRef);
+  const handleHeroUpload = handleAssetUpload("/seller/images/asset/hero",   "hero_image_url", setUploadingHero, heroRef);
 
   async function handleSave() {
     setError(""); setSaving(true); setSaved(false);
@@ -263,15 +289,37 @@ function ConfigTab({ pageId }) {
                 onChange={e => set("tagline", e.target.value)}
                 placeholder="Todo lo que necesitás" maxLength={160} />
             </Field>
-            <Field label="Logo (URL de imagen)">
-              <input className="form-input" value={form.logo_url}
-                onChange={e => set("logo_url", e.target.value)}
-                placeholder="https://..." />
+            <Field label="Logo de la tienda" hint="PNG, JPG, SVG o WEBP · máx. 2 MB">
               {form.logo_url && (
                 <img src={form.logo_url} alt="logo"
-                  style={{ marginTop: 6, height: 48, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
+                  style={{ marginBottom: 8, height: 52, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
                   onError={e => { e.target.style.display = "none"; }} />
               )}
+              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                <button type="button" className="btn btn--ghost btn--sm"
+                  onClick={() => logoRef.current?.click()}
+                  disabled={uploadingLogo}
+                  style={{ flexShrink: 0 }}
+                >
+                  {uploadingLogo ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
+                  {uploadingLogo ? "Subiendo..." : "Subir archivo"}
+                </button>
+                {form.logo_url && (
+                  <button type="button" className="btn btn--ghost btn--sm"
+                    onClick={() => set("logo_url", "")}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <Trash2 size={13} /> Quitar
+                  </button>
+                )}
+              </div>
+              <input className="form-input" value={form.logo_url}
+                onChange={e => set("logo_url", e.target.value)}
+                placeholder="O pegá una URL: https://..." />
+              <input ref={logoRef} type="file"
+                accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                style={{ display: "none" }}
+                onChange={handleLogoUpload} />
             </Field>
             <Field label="Tipografía">
               <select className="form-input" value={form.font_family}
@@ -317,10 +365,37 @@ function ConfigTab({ pageId }) {
             </Field>
 
             {tc.hero_bg_type === "image" ? (<>
-              <Field label="URL de la imagen de fondo">
+              <Field label="Imagen de fondo" hint="PNG, JPG o WEBP · máx. 2 MB">
+                {form.hero_image_url && (
+                  <img src={form.hero_image_url} alt="hero preview"
+                    style={{ marginBottom: 8, width: "100%", maxHeight: 80, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
+                    onError={e => { e.target.style.display = "none"; }} />
+                )}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+                  <button type="button" className="btn btn--ghost btn--sm"
+                    onClick={() => heroRef.current?.click()}
+                    disabled={uploadingHero}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {uploadingHero ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
+                    {uploadingHero ? "Subiendo..." : "Subir archivo"}
+                  </button>
+                  {form.hero_image_url && (
+                    <button type="button" className="btn btn--ghost btn--sm"
+                      onClick={() => set("hero_image_url", "")}
+                      style={{ flexShrink: 0 }}
+                    >
+                      <Trash2 size={13} /> Quitar
+                    </button>
+                  )}
+                </div>
                 <input className="form-input" value={form.hero_image_url}
                   onChange={e => set("hero_image_url", e.target.value)}
-                  placeholder="https://..." />
+                  placeholder="O pegá una URL: https://..." />
+                <input ref={heroRef} type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  style={{ display: "none" }}
+                  onChange={handleHeroUpload} />
               </Field>
               <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
                 <input type="range" min={0} max={90} step={5}

@@ -719,15 +719,27 @@ export default function PageProducts({ pageId }) {
                           {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Save size={16} />}
                           {info.changed ? "Guardar precio" : "Precio guardado"}
                         </button>
-                        <button
-                          type="button"
-                          className="seller-product-btn seller-product-btn--remove"
-                          onClick={() => removeProduct(product)}
-                          disabled={saving}
-                        >
-                          {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Trash2 size={16} />}
-                          Quitar
-                        </button>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button
+                            type="button"
+                            className="seller-product-btn seller-product-btn--ghost"
+                            onClick={() => navigate(`/pages/${pageId}/products/${product.id}/edit`)}
+                            style={{ padding: "0 10px" }}
+                            title="Editar nombre, descripción e imágenes"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="seller-product-btn seller-product-btn--remove"
+                            onClick={() => removeProduct(product)}
+                            disabled={saving}
+                            style={{ padding: "0 10px" }}
+                            title="Quitar de mi tienda"
+                          >
+                            {saving ? <Loader2 size={15} className="seller-products-spin" /> : <Trash2 size={15} />}
+                          </button>
+                        </div>
                         <button
                           type="button"
                           className={`seller-product-btn seller-product-btn--sm ${product.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
