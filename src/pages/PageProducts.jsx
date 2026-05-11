@@ -137,15 +137,6 @@ function ProductImage({ product }) {
 
 const PAGE_SIZE = 20;
 
-function fmt(n) {
-  return Number(Math.round(Number(n || 0))).toLocaleString("es-AR", { maximumFractionDigits: 0 });
-}
-function money(n) {
-  const v = Math.round(Number(n || 0));
-  if (!Number.isFinite(v) || v <= 0) return "—";
-  return `$${fmt(v)}`;
-}
-
 export default function PageProducts({ pageId }) {
   const navigate = useNavigate();
   const [products,      setProducts]      = useState([]);
@@ -739,12 +730,12 @@ export default function PageProducts({ pageId }) {
                         </button>
                         <button
                           type="button"
-                          className={`seller-product-btn ${product.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
+                          className={`seller-product-btn seller-product-btn--sm ${product.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
                           onClick={() => toggleFreeShipping(product)}
-                          style={{ flex: "0 0 100%", justifyContent: "center" }}
+                          style={{ gridColumn: "1 / -1", justifyContent: "center" }}
                           title={product.free_shipping ? "Envío gratis activado — el cliente no paga envío" : "Activar envío gratis para este producto"}
                         >
-                          <Truck size={15} />
+                          <Truck size={13} />
                           {product.free_shipping ? "Envío gratis ✓" : "Envío gratis"}
                         </button>
                       </>

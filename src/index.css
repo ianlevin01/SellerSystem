@@ -3465,6 +3465,13 @@ input[type="color"] {
   border-color: var(--danger-border);
 }
 
+.seller-product-btn--sm {
+  min-height: 30px;
+  font-size: .75rem;
+  padding: 0 10px;
+  gap: 5px;
+}
+
 .seller-product-btn--ghost {
   color: var(--text-secondary);
   background: transparent;
