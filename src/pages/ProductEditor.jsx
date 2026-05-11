@@ -22,19 +22,19 @@ export default function ProductEditor() {
   const [saveMsg, setSaveMsg]           = useState("");
 
   useEffect(() => {
-    const productsFetch = pageId
-      ? client.get(`/seller/store/pages/${pageId}/products`, { params: { only_mine: "true", limit: 200 } })
-      : client.get("/seller/products", { params: { only_mine: "true", limit: 200 } });
+    const productFetch = pageId
+      ? client.get(`/seller/store/pages/${pageId}/products/${productId}`)
+      : client.get(`/seller/products/${productId}`);
     const imagesFetch = client.get(`/seller/images/${productId}`, pageId ? { params: { pageId } } : {});
 
-    Promise.all([productsFetch, imagesFetch]).then(([productsRes, imagesRes]) => {
-      const found = productsRes.data.products.find(p => p.id === productId);
-      setProduct(found);
+    Promise.all([productFetch, imagesFetch]).then(([productRes, imagesRes]) => {
+      const found = productRes.data;
+      setProduct(found || null);
       setSystemImages(found?.system_images || []);
       setSellerImages(imagesRes.data);
       setCustomName(found?.custom_name || "");
       setCustomDesc(found?.custom_desc || "");
-    }).finally(() => setLoading(false));
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [productId, pageId]);
 
   async function handleSaveCustom() {

@@ -5,7 +5,7 @@ import {
   AlertTriangle, Building2, ChevronDown, ChevronLeft,
   ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
   Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
-  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Zap,
+  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
@@ -109,6 +109,7 @@ function ConfigTab({ pageId }) {
     card_border_radius: 12, card_show_shadow: true,
     hero_headline: "", hero_image_url: "",
     promo_text: "", show_promo_bar: true,
+    costo_envio: 0,
     theme_config: { ...DEFAULT_THEME },
   });
   const [categories, setCategories] = useState([]);
@@ -141,6 +142,7 @@ function ConfigTab({ pageId }) {
       hero_image_url:      d.hero_image_url       || "",
       promo_text:          d.promo_text           || "",
       show_promo_bar:      d.show_promo_bar       != null ? Boolean(d.show_promo_bar) : true,
+      costo_envio:         d.costo_envio          != null ? Number(d.costo_envio) : 0,
       theme_config:        { ...DEFAULT_THEME, ...(d.theme_config || {}) },
     });
   }
@@ -282,6 +284,15 @@ function ConfigTab({ pageId }) {
                   The quick brown fox jumps
                 </p>
               )}
+            </Field>
+            <Field label="Costo de envío" hint="Lo paga el cliente salvo que el producto/combo tenga envío gratis">
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)", pointerEvents: "none" }}>$</span>
+                <input type="number" min={0} step={100} className="form-input"
+                  value={form.costo_envio}
+                  onChange={e => set("costo_envio", Number(e.target.value))}
+                  style={{ paddingLeft: 22 }} />
+              </div>
             </Field>
           </>}
 

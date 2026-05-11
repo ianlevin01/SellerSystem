@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import client from "../api/client";
 import {
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
   Image as ImageIcon,
+  Layers,
   Loader2,
   PackagePlus,
+  Pencil,
   Plus,
+  Power,
   Save,
   Search,
   ShoppingCart,
   Sparkles,
   Trash2,
   TrendingUp,
+  Truck,
+  X,
 } from "lucide-react";
 
 function fmt(n) {
@@ -75,21 +81,8 @@ function resellerCost(product) {
   ));
 }
 
-// FIX: agrega seller_product_id e in_my_store que son los campos reales del backend
 function isProductInStore(product) {
-  return Boolean(
-    product.in_my_store === true ||
-    product.seller_product_id ||
-    product.in_store === true ||
-    product.in_page === true ||
-    product.is_in_page === true ||
-    product.selected === true ||
-    product.is_selected === true ||
-    product.page_product_id ||
-    product.store_product_id ||
-    product.pageProductId ||
-    product.storeProductId,
-  );
+  return product.in_my_store === true;
 }
 
 function backendPagePrice(product) {
@@ -142,47 +135,65 @@ function ProductImage({ product }) {
   );
 }
 
+const PAGE_SIZE = 20;
+
+function fmt(n) {
+  return Number(Math.round(Number(n || 0))).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+function money(n) {
+  const v = Math.round(Number(n || 0));
+  if (!Number.isFinite(v) || v <= 0) return "—";
+  return `$${fmt(v)}`;
+}
+
 export default function PageProducts({ pageId }) {
-  const [products,   setProducts]   = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [prices,     setPrices]     = useState({});
-  const [query,      setQuery]      = useState("");
-  const [category,   setCategory]   = useState("all");
-  const [onlyMine,   setOnlyMine]   = useState(false);
-  const [loading,    setLoading]    = useState(true);
-  const [total,      setTotal]      = useState(0);
-  const [savingId,   setSavingId]   = useState(null);
-  const [bulkSaving, setBulkSaving] = useState(false);
-  const [message,    setMessage]    = useState("");
+  const navigate = useNavigate();
+  const [products,      setProducts]      = useState([]);
+  const [combos,        setCombos]        = useState([]);
+  const [categories,    setCategories]    = useState([]);
+  const [prices,        setPrices]        = useState({});
+  const [query,         setQuery]         = useState("");
+  const [category,      setCategory]      = useState("all");
+  const [onlyMine,      setOnlyMine]      = useState(false);
+  const [loading,       setLoading]       = useState(true);
+  const [loadingMore,   setLoadingMore]   = useState(false);
+  const [hasMore,       setHasMore]       = useState(false);
+  const [total,         setTotal]         = useState(0);
+  const [savingId,      setSavingId]      = useState(null);
+  const [bulkSaving,    setBulkSaving]    = useState(false);
+  const [message,       setMessage]       = useState("");
+  // Combo mode
+  const [comboMode,     setComboMode]     = useState(false);
+  const [comboSelected, setComboSelected] = useState(new Set());
+  const [creatingCombo, setCreatingCombo] = useState(false);
   const debounceRef = useRef(null);
   const abortRef    = useRef(null);
 
-  // Cargar categorías una sola vez
+  // Cargar categorías y combos
   useEffect(() => {
     client.get("/seller/store/categories").then(res => {
       const raw = res.data;
       setCategories(Array.isArray(raw) ? raw : raw?.categories || []);
     }).catch(() => {});
-  }, []);
+    client.get(`/seller/store/pages/${pageId}/combos`).then(res => {
+      setCombos(res.data || []);
+    }).catch(() => {});
+  }, [pageId]);
 
   // Re-fetch cuando cambian los filtros (búsqueda con debounce)
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(fetchProducts, query ? 350 : 0);
+    debounceRef.current = setTimeout(() => fetchProducts(0), query ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
   }, [pageId, query, category, onlyMine]);
 
-  async function fetchProducts() {
-    // Cancel any in-flight request to avoid stale results overwriting newer ones
+  async function fetchProducts(offset = 0) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-
-    // Don't call setLoading(true) here — loading starts as true and only clears once.
-    // This keeps the search input mounted on subsequent fetches (no focus loss).
     setMessage("");
 
-    const params = { limit: 50 };
+    const params = { limit: PAGE_SIZE, offset };
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
     if (onlyMine)           params.only_mine   = "true";
@@ -190,19 +201,39 @@ export default function PageProducts({ pageId }) {
     try {
       const res  = await client.get(`/seller/store/pages/${pageId}/products`, { params, signal: controller.signal });
       const list = normalizeProducts(res.data);
-      setProducts(list);
+      if (offset === 0) {
+        setProducts(list);
+        setPrices(prev => {
+          const next = {};
+          list.forEach(p => { next[p.id] = prev[p.id] ?? initialPriceFor(p); });
+          return next;
+        });
+      } else {
+        setProducts(prev => {
+          const ids = new Set(prev.map(p => p.id));
+          return [...prev, ...list.filter(p => !ids.has(p.id))];
+        });
+        setPrices(prev => {
+          const next = { ...prev };
+          list.forEach(p => { if (!(p.id in next)) next[p.id] = initialPriceFor(p); });
+          return next;
+        });
+      }
       setTotal(res.data?.total ?? list.length);
-      setPrices(prev => {
-        const next = {};
-        list.forEach(p => { next[p.id] = prev[p.id] ?? initialPriceFor(p); });
-        return next;
-      });
+      setHasMore(res.data?.hasMore ?? false);
       setLoading(false);
     } catch (err) {
       if (err.name === "CanceledError" || err.code === "ERR_CANCELED") return;
       setLoading(false);
       setMessage(err.response?.data?.message || "No se pudieron cargar los productos.");
+    } finally {
+      setLoadingMore(false);
     }
+  }
+
+  async function loadMore() {
+    setLoadingMore(true);
+    await fetchProducts(products.length);
   }
 
   const categoryOptions = useMemo(() => {
@@ -325,6 +356,31 @@ export default function PageProducts({ pageId }) {
     }
   }
 
+  async function toggleFreeShipping(product) {
+    const newVal = !product.free_shipping;
+    try {
+      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/customize`, { free_shipping: newVal });
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, free_shipping: newVal } : p));
+    } catch (err) {
+      setMessage(err.response?.data?.message || "No se pudo actualizar el envío.");
+    }
+  }
+
+  async function toggleCombo(combo) {
+    try {
+      await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, { active: !combo.active });
+      setCombos(prev => prev.map(c => c.id === combo.id ? { ...c, active: !c.active } : c));
+    } catch { /* silent */ }
+  }
+
+  async function deleteCombo(combo) {
+    if (!confirm(`¿Eliminar el combo "${combo.name}"?`)) return;
+    try {
+      await client.delete(`/seller/store/pages/${pageId}/combos/${combo.id}`);
+      setCombos(prev => prev.filter(c => c.id !== combo.id));
+    } catch { /* silent */ }
+  }
+
   async function addVisibleProducts() {
     const candidates = products.filter(p => !isProductInStore(p));
     if (candidates.length === 0) { setMessage("No hay productos visibles para agregar."); return; }
@@ -333,6 +389,41 @@ export default function PageProducts({ pageId }) {
     for (const product of candidates) { const done = await addProduct(product); if (done) ok++; }
     setBulkSaving(false);
     setMessage(`${ok} producto${ok !== 1 ? "s" : ""} agregado${ok !== 1 ? "s" : ""} a tu tienda.`);
+  }
+
+  function enterComboMode() {
+    setComboSelected(new Set());
+    setComboMode(true);
+    setOnlyMine(false);
+  }
+
+  function cancelComboMode() {
+    setComboMode(false);
+    setComboSelected(new Set());
+  }
+
+  function toggleComboProduct(productId) {
+    setComboSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId); else next.add(productId);
+      return next;
+    });
+  }
+
+  async function finalizeCombo() {
+    if (comboSelected.size === 0) return;
+    setCreatingCombo(true);
+    try {
+      const res = await client.post(`/seller/store/pages/${pageId}/combos`, {
+        name: "Nuevo combo",
+        products: Array.from(comboSelected).map(id => ({ product_id: id, quantity: 1 })),
+        custom_price: 0,
+      });
+      navigate(`/pages/${pageId}/combos/${res.data.id}/edit`);
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Error al crear el combo.");
+      setCreatingCombo(false);
+    }
   }
 
   if (loading) {
@@ -347,20 +438,54 @@ export default function PageProducts({ pageId }) {
 
   return (
     <div className="seller-products">
-      <section className="seller-products-intro">
-        <div>
-          <span><Sparkles size={15} />Productos</span>
-          <h2>Elegí productos y definí tu precio de venta</h2>
-          <p>
-            El <strong>costo revendedor</strong> es tu base. El <strong>precio sugerido</strong> es una referencia.
-            Tu ganancia se calcula con el precio que cargues.
-          </p>
-        </div>
-        <button type="button" onClick={addVisibleProducts} disabled={bulkSaving}>
-          {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
-          {bulkSaving ? "Agregando..." : "Agregar visibles"}
-        </button>
-      </section>
+      {comboMode ? (
+        <section className="combo-mode-banner">
+          <div className="combo-mode-banner__info">
+            <Layers size={17} />
+            <div>
+              <strong>Modo combo</strong>
+              <span>Seleccioná los productos que quieras incluir</span>
+            </div>
+          </div>
+          <div className="combo-mode-banner__actions">
+            <span className="combo-mode-banner__count">
+              {comboSelected.size} {comboSelected.size === 1 ? "producto" : "productos"}
+            </span>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={cancelComboMode}>
+              <X size={14} /> Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={finalizeCombo}
+              disabled={comboSelected.size === 0 || creatingCombo}
+            >
+              {creatingCombo ? <Loader2 size={14} className="seller-products-spin" /> : <CheckCircle2 size={14} />}
+              {creatingCombo ? "Creando..." : "Finalizar combo"}
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="seller-products-intro">
+          <div>
+            <span><Sparkles size={15} />Productos</span>
+            <h2>Elegí productos y definí tu precio de venta</h2>
+            <p>
+              El <strong>costo revendedor</strong> es tu base. El <strong>precio sugerido</strong> es una referencia.
+              Tu ganancia se calcula con el precio que cargues.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={enterComboMode}>
+              <Layers size={15} /> Crear combo
+            </button>
+            <button type="button" onClick={addVisibleProducts} disabled={bulkSaving}>
+              {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
+              {bulkSaving ? "Agregando..." : "Agregar visibles"}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="seller-products-toolbar">
         <div className="seller-products-search">
@@ -407,14 +532,89 @@ export default function PageProducts({ pageId }) {
         </div>
       )}
 
-      {products.length === 0 ? (
+      {products.length === 0 && combos.length === 0 ? (
         <div className="seller-products-empty">
           <ShoppingCart size={34} />
           <h3>No encontramos productos</h3>
           <p>Probá con otra búsqueda, otra categoría o cambiá el filtro.</p>
         </div>
       ) : (
+        <>
         <section className="seller-products-grid">
+          {/* Combos — always shown first, not affected by search/filter */}
+          {!comboMode && combos.map(combo => (
+            <article
+              key={`combo-${combo.id}`}
+              className={`seller-product-card ${combo.active ? "is-in-store" : ""}`}
+            >
+              <div className="seller-product-card__media">
+                {combo.images?.[0] ? (
+                  <div className="seller-product-card__image">
+                    <img src={combo.images[0]} alt={combo.name} loading="lazy" />
+                  </div>
+                ) : (
+                  <div className="seller-product-card__image seller-product-card__image--empty">
+                    <Layers size={28} />
+                  </div>
+                )}
+                <span className="seller-product-card__badge" style={{ background: "var(--brand-secondary, #6366f1)" }}>
+                  <Layers size={11} /> Combo
+                </span>
+                {!combo.active && (
+                  <div className="seller-product-card__stock-warn">
+                    <AlertTriangle size={11} />
+                    <span>Inactivo · No visible en tu tienda</span>
+                  </div>
+                )}
+              </div>
+              <div className="seller-product-card__body">
+                <div>
+                  <h3 title={combo.name}>{combo.name}</h3>
+                  <p className="seller-product-card__meta">
+                    {(combo.products || []).length} producto{(combo.products || []).length !== 1 ? "s" : ""}
+                    {combo.products?.length > 0 && (
+                      <> · {combo.products.map(p => p.name).join(", ").slice(0, 60)}{combo.products.map(p => p.name).join(", ").length > 60 ? "…" : ""}</>
+                    )}
+                  </p>
+                </div>
+                <div className="seller-product-prices">
+                  <div className="seller-product-price seller-product-price--cost">
+                    <span>Precio del combo</span>
+                    <strong>{money(combo.custom_price)}</strong>
+                  </div>
+                </div>
+                <div className="seller-product-actions" style={{ marginTop: "auto" }}>
+                  <button
+                    type="button"
+                    className={`seller-product-btn ${combo.active ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
+                    onClick={() => toggleCombo(combo)}
+                    style={{ flex: 1 }}
+                  >
+                    <Power size={15} />
+                    {combo.active ? "Activo" : "Inactivo"}
+                  </button>
+                  <button
+                    type="button"
+                    className="seller-product-btn seller-product-btn--ghost"
+                    onClick={() => navigate(`/pages/${pageId}/combos/${combo.id}/edit`)}
+                    style={{ flex: 1 }}
+                  >
+                    <Pencil size={15} />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="seller-product-btn seller-product-btn--remove"
+                    onClick={() => deleteCombo(combo)}
+                    style={{ flex: "0 0 auto", padding: "0 12px" }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+
           {products.map((product, index) => {
             const info       = getInfo(product);
             const saving     = savingId === product.id;
@@ -497,7 +697,17 @@ export default function PageProducts({ pageId }) {
                   )}
 
                   <div className="seller-product-actions">
-                    {!info.inStore ? (
+                    {comboMode ? (
+                      <button
+                        type="button"
+                        className={`seller-product-btn ${comboSelected.has(product.id) ? "seller-product-btn--save" : "seller-product-btn--add"}`}
+                        onClick={() => toggleComboProduct(product.id)}
+                        style={{ flex: 1 }}
+                      >
+                        {comboSelected.has(product.id) ? <CheckCircle2 size={16} /> : <Plus size={16} />}
+                        {comboSelected.has(product.id) ? "En el combo ✓" : "Agregar al combo"}
+                      </button>
+                    ) : !info.inStore ? (
                       <button
                         type="button"
                         className="seller-product-btn seller-product-btn--add"
@@ -527,6 +737,16 @@ export default function PageProducts({ pageId }) {
                           {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Trash2 size={16} />}
                           Quitar
                         </button>
+                        <button
+                          type="button"
+                          className={`seller-product-btn ${product.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
+                          onClick={() => toggleFreeShipping(product)}
+                          style={{ flex: "0 0 100%", justifyContent: "center" }}
+                          title={product.free_shipping ? "Envío gratis activado — el cliente no paga envío" : "Activar envío gratis para este producto"}
+                        >
+                          <Truck size={15} />
+                          {product.free_shipping ? "Envío gratis ✓" : "Envío gratis"}
+                        </button>
                       </>
                     )}
                   </div>
@@ -535,7 +755,23 @@ export default function PageProducts({ pageId }) {
             );
           })}
         </section>
+        {hasMore && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
+            <button
+              type="button"
+              className="seller-product-btn seller-product-btn--add"
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={{ minWidth: 220 }}
+            >
+              {loadingMore ? <Loader2 size={16} className="seller-products-spin" /> : <Plus size={16} />}
+              {loadingMore ? "Cargando..." : "Cargar más productos"}
+            </button>
+          </div>
+        )}
+        </>
       )}
+
     </div>
   );
 }

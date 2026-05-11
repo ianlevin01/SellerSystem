@@ -19,13 +19,6 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-const MARGIN_LEVELS = [
-  { label: "Nivel 1 — hasta $100k",   pct: 30 },
-  { label: "Nivel 2 — hasta $500k",   pct: 25 },
-  { label: "Nivel 3 — hasta $1M",     pct: 20 },
-  { label: "Nivel 4 — más de $1M",    pct: 15 },
-];
-
 const FILTERS = [
   { key: "all", label: "Todos" },
   { key: "pending", label: "Pendientes" },
@@ -98,10 +91,6 @@ function getStatus(order) {
   };
 
   return map[color] || map.pending;
-}
-
-function getPlatformPct(order) {
-  return Number(order.platform_margin_pct || 30);
 }
 
 export default function Orders() {
@@ -229,18 +218,16 @@ export default function Orders() {
 
           <div className="vtz-orders-scale">
             <div className="vtz-orders-scale__head">
-              <span>Tu nivel</span>
-              <strong>Margen plataforma</strong>
+              <TrendingUp size={15} />
+              <strong>Costos por volumen</strong>
             </div>
             <p style={{ fontSize: ".78rem", color: "var(--text-secondary)", margin: "0 0 10px", lineHeight: 1.4 }}>
-              A más ventas, el margen que cobra la plataforma baja — tu ganancia sube.
+              Cuanto más vendés, más bajo es el costo de los productos — y mayor tu ganancia.
             </p>
-            {MARGIN_LEVELS.map((level) => (
-              <div key={level.pct} className="vtz-orders-tier">
-                <b>{level.pct}%</b>
-                <span>{level.label}</span>
-              </div>
-            ))}
+            <div className="vtz-orders-tier"><span>Hasta $100.000 vendidos</span><b>Costo base</b></div>
+            <div className="vtz-orders-tier"><span>+$100.000 vendidos</span><b>Costo reducido</b></div>
+            <div className="vtz-orders-tier"><span>+$250.000 vendidos</span><b>Costo muy reducido</b></div>
+            <div className="vtz-orders-tier"><span>+$500.000 vendidos</span><b>Costo mínimo</b></div>
           </div>
         </aside>
 
@@ -276,7 +263,6 @@ export default function Orders() {
                 const isOpen = !!expanded[order.id];
                 const status = getStatus(order);
                 const StatusIcon = status.icon;
-                const platformPct = getPlatformPct(order);
 
                 return (
                   <article
@@ -369,8 +355,14 @@ export default function Orders() {
                               <strong>{money(order.ganancia_vendedor)}</strong>
                             </div>
 
+                            {Number(order.ahorro_vendedor) > 0 && (
+                              <div style={{ color: "var(--success, #16a34a)", fontSize: ".8rem", marginTop: 4, display: "flex", gap: 4 }}>
+                                <TrendingUp size={13} style={{ marginTop: 1, flexShrink: 0 }} />
+                                <span>Ahorraste {money(order.ahorro_vendedor)} en esta venta por tu nivel de ventas.</span>
+                              </div>
+                            )}
+
                             <p style={{ fontSize: ".78rem", color: "var(--text-tertiary)", marginTop: 4 }}>
-                              Margen plataforma aplicado: {platformPct}%.{" "}
                               {status.description}
                             </p>
                           </div>

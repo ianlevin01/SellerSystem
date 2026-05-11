@@ -1,0 +1,201 @@
+/* ── Combo mode banner (inside PageProducts) ───────────────── */
+
+.combo-mode-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: #ede9fe;
+  border: 1.5px solid #c4b5fd;
+  border-radius: var(--radius-lg, 12px);
+}
+
+.combo-mode-banner__info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #5b21b6;
+}
+.combo-mode-banner__info strong {
+  display: block;
+  font-size: .9rem;
+  color: #4c1d95;
+}
+.combo-mode-banner__info span {
+  display: block;
+  font-size: .8rem;
+  color: #7c3aed;
+  margin-top: 1px;
+}
+
+.combo-mode-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.combo-mode-banner__count {
+  font-size: .85rem;
+  font-weight: 700;
+  color: #5b21b6;
+  background: #fff;
+  border: 1px solid #c4b5fd;
+  border-radius: 99px;
+  padding: 3px 12px;
+}
+
+/* ── Combos section (list embedded in PageProducts) ────────── */
+
+.combos-section-wrap {
+  margin-top: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.combos-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.combos-section-head__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--color-text-secondary);
+}
+.combos-section-head__left h3 {
+  margin: 0 0 2px;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+.combos-section-head__left p {
+  margin: 0;
+  font-size: .83rem;
+  color: var(--color-text-secondary);
+}
+
+/* Loading skeleton */
+.combos-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Empty inline state */
+.combos-empty-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--color-surface-alt, #f9fafb);
+  border: 1px dashed var(--color-border, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  color: var(--color-text-secondary);
+  font-size: .875rem;
+  line-height: 1.5;
+}
+
+/* ── Combo list ────────────────────────────────────────────── */
+
+.combos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.combos-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-lg, 12px);
+  padding: 10px 14px;
+  transition: opacity .2s;
+}
+.combos-card.is-inactive { opacity: .5; }
+
+.combos-card__thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-surface-alt, #f3f4f6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.combos-card__thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.combos-card__thumb-ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary, #9ca3af);
+}
+
+.combos-card__body {
+  flex: 1;
+  min-width: 0;
+}
+.combos-card__name {
+  font-weight: 600;
+  font-size: .93rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.combos-card__meta {
+  font-size: .8rem;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.combos-badge-off {
+  display: inline-block;
+  padding: 1px 7px;
+  background: var(--color-surface-alt, #f3f4f6);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 99px;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.combos-card__actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.combos-card__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--color-border, #e5e7eb);
+  background: var(--color-surface-alt, #f9fafb);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background .1s, color .1s, border-color .1s;
+}
+.combos-card__action:hover { background: var(--color-border); color: var(--color-text); }
+.combos-card__action.is-on { color: #16a34a; border-color: #bbf7d0; background: #f0fdf4; }
+.combos-card__action--del:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; }

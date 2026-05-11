@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../styles/Calculator.css";
+import client from "../api/client";
 import {
   AlertTriangle,
   ArrowRight,
@@ -34,6 +35,11 @@ export default function Calculator() {
   const [costo,    setCosto]    = useState("");
   const [precio,   setPrecio]   = useState("");
   const [cantidad, setCantidad] = useState(1);
+  const [tier,     setTier]     = useState(null);
+
+  useEffect(() => {
+    client.get("/seller/store/my-tier").then(r => setTier(r.data)).catch(() => {});
+  }, []);
 
   const data = useMemo(() => {
     const costoUnidad  = Math.max(0, numberValue(costo));
@@ -237,6 +243,43 @@ export default function Calculator() {
           <span>No podés vender por debajo del costo. Por encima, lo que quieras.</span>
         </div>
       </section>
+
+      {tier && !tier.isMaxTier && (
+        <section className="vtz-calc-tier-card">
+          <div className="vtz-calc-tier-card__head">
+            <TrendingUp size={18} />
+            <strong>Bajá tu costo vendiendo más</strong>
+          </div>
+          <p>
+            Llevas <strong>{money(tier.totalSales)}</strong> en ventas.
+            {" "}Te faltan <strong>{money(tier.remaining)}</strong> para alcanzar el siguiente nivel y pagar menos por cada producto.
+          </p>
+          {data.costoUnidad > 0 && tier.currentFactor && tier.nextFactor && (() => {
+            const costoSiguiente = Math.round(data.costoUnidad * (tier.nextFactor / tier.currentFactor));
+            const ahorroPorUnidad = data.costoUnidad - costoSiguiente;
+            return ahorroPorUnidad > 0 ? (
+              <p style={{ marginTop: 8 }}>
+                Con ese nivel, este producto te costaría <strong>{money(costoSiguiente)}</strong>{" "}
+                — <strong style={{ color: "var(--success, #16a34a)" }}>ahorrás {money(ahorroPorUnidad)} por unidad</strong>.
+              </p>
+            ) : null;
+          })()}
+          <div className="vtz-calc-tier-progress">
+            <div
+              className="vtz-calc-tier-progress__bar"
+              style={{ width: `${Math.min(100, (tier.totalSales / tier.threshold) * 100).toFixed(1)}%` }}
+            />
+          </div>
+          <small>{money(tier.totalSales)} / {money(tier.threshold)}</small>
+        </section>
+      )}
+
+      {tier?.isMaxTier && (
+        <section className="vtz-calc-tier-card vtz-calc-tier-card--max">
+          <TrendingUp size={18} />
+          <strong>Estás en el nivel máximo — tenés el costo más bajo posible.</strong>
+        </section>
+      )}
     </main>
   );
 }

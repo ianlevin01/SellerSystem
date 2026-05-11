@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import LoadingScreen from "./components/LoadingScreen";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
@@ -18,6 +20,7 @@ import Profile      from "./pages/Profile";
 import Chat         from "./pages/Chat";
 import Payouts      from "./pages/Payouts";
 import Integrations from "./pages/Integrations";
+import ComboEditor  from "./pages/ComboEditor";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -25,6 +28,10 @@ function HomeRoute() {
 }
 
 export default function App() {
+  const [ready, setReady] = useState(false);
+
+  if (!ready) return <LoadingScreen onDone={() => setReady(true)} />;
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -43,6 +50,7 @@ export default function App() {
               <Route path="/products"                      element={<Navigate to="/pages" replace />} />
               <Route path="/products/:productId/edit"                        element={<ProductEditor />} />
               <Route path="/pages/:pageId/products/:productId/edit"        element={<ProductEditor />} />
+              <Route path="/pages/:pageId/combos/:comboId/edit"          element={<ComboEditor />} />
               <Route path="/pages"                         element={<Pages />} />
               <Route path="/pages/:pageId"                 element={<PageEditor tab="config" />} />
               <Route path="/pages/:pageId/products"        element={<PageEditor tab="products" />} />
