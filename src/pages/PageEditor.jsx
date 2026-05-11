@@ -419,8 +419,9 @@ function ConfigTab({ pageId }) {
 
       if (!url && !key) throw new Error("La API no devolvió imagen");
 
-      // Guardamos la key estable. La vista previa y SellerPage la resuelven vía /seller/store/media.
-      set(fieldName, key || url);
+      // Guardamos la URL que devuelve la API para que se vea inmediatamente.
+      // Al tocar Guardar, SellerApi la normaliza internamente a key estable de S3.
+      set(fieldName, url || key);
       setIframeKey(k => k + 1);
     } catch (err) {
       setError(err.response?.data?.message || err.message || "No se pudo subir la imagen");
@@ -568,7 +569,7 @@ function ConfigTab({ pageId }) {
               {form.logo_url ? (
                 <div className="pe-upload-card pe-upload-card--logo">
                   <div className="pe-logo-preview pe-logo-preview--clean">
-                    <img src={assetPreviewSrc(form.logo_url)} alt="Logo de la tienda"
+                    <img src={form.logo_url} alt="Logo de la tienda"
                       onError={e => { e.currentTarget.style.display = "none"; }} />
                   </div>
                   <div className="pe-upload-card__body">
@@ -689,7 +690,7 @@ function ConfigTab({ pageId }) {
 
                 {form.hero_image_url ? (
                   <div className="pe-hero-upload-preview">
-                    <img src={assetPreviewSrc(form.hero_image_url)} alt="Fondo del hero" />
+                    <img src={form.hero_image_url} alt="Fondo del hero" />
                   </div>
                 ) : (
                   <div className="pe-hero-upload-empty">
@@ -714,7 +715,7 @@ function ConfigTab({ pageId }) {
             <div style={{
               borderRadius: 10, overflow: "hidden", position: "relative", minHeight: 120,
               ...(tc.hero_bg_type === "image" && form.hero_image_url
-                ? { backgroundImage: `url(${assetPreviewSrc(form.hero_image_url)})`, backgroundSize: "cover", backgroundPosition: "center" }
+                ? { backgroundImage: `url(${form.hero_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
                 : { background: form.banner_color || "#5b52f0" }),
             }}>
               {tc.hero_bg_type === "image" && form.hero_image_url && (
