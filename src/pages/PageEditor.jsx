@@ -44,9 +44,22 @@ function Field({ label, hint, children }) {
 }
 
 function ColorRow({ value, onChange, onClear }) {
+  const current = value || "#ffffff";
+
+  function update(next) {
+    onChange(next);
+  }
+
   return (
-    <div className="pe-color-row">
-      <input type="color" value={value || "#ffffff"} onChange={e => onChange(e.target.value)} />
+    <div className="pe-color-row pe-color-row--live">
+      <input
+        type="color"
+        value={current}
+        onInput={e => update(e.currentTarget.value)}
+        onChange={e => update(e.currentTarget.value)}
+        aria-label="Elegir color"
+      />
+      <span className="pe-color-row__swatch" style={{ background: current }} />
       <span className="pe-color-row__hex">{value || "—"}</span>
       {onClear && value && (
         <button type="button" className="btn btn--ghost btn--sm" onClick={onClear}>
@@ -88,6 +101,7 @@ const CONFIG_SECTIONS = [
 function ConfigTab({ pageId }) {
   const iframeRef = useRef(null);
   const logoInputRef = useRef(null);
+  const heroInputRef = useRef(null);
   const [previewMode, setPreviewMode] = useState("desktop");
   const [iframeSrc,   setIframeSrc]   = useState("");
   const [iframeKey,   setIframeKey]   = useState(0);
@@ -117,6 +131,7 @@ function ConfigTab({ pageId }) {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
   const [section,  setSection]  = useState("tienda");
@@ -165,11 +180,210 @@ function ConfigTab({ pageId }) {
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow || !iframeSrc) return;
-    iframe.contentWindow.postMessage({ type: "ventaz_preview", payload: form }, "*");
+    iframe.contentWindow.postMessage({ type: "ventaz_preview", payload: { ...form, __preview_section: section } }, "*");
   }, [form, iframeSrc]);
 
-  function set(key, val) { setForm(p => ({ ...p, [key]: val })); }
-  function setTheme(key, val) { setForm(p => ({ ...p, theme_config: { ...(p.theme_config || {}), [key]: val } })); }
+  function inferPreviewTarget(key, scope = "field") {
+    if (scope === "theme") {
+      if (String(key).startsWith("footer_")) return "footer";
+      if (String(key).startsWith("hero_") || key === "show_trust_badges") return "hero";
+      if (["card_style", "card_density", "products_cols", "show_search_bar", "button_style", "btn_radius"].includes(key)) return "products";
+      return section === "colores" ? "products" : section;
+    }
+
+    if (["hero_headline", "hero_image_url", "tagline", "banner_color"].includes(key)) return "hero";
+    if (["color_bg", "color_text", "card_border_radius", "card_show_shadow"].includes(key)) return "products";
+    if (["store_name", "logo_url"].includes(key)) return "header";
+    return section === "colores" ? "products" : section;
+  }
+
+  function sendPreview(nextForm, target) {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow) return;
+
+    iframe.contentWindow.postMessage({
+      type: "ventaz_preview",
+      payload: {
+        ...nextForm,
+        __preview_section: section,
+        ...(target ? { __preview_target: target } : {}),
+      },
+    }, "*");
+  }
+
+  function set(key, val) {
+    setForm(p => {
+      const next = { ...p, [key]: val };
+      const target = inferPreviewTarget(key, "field");
+      requestAnimationFrame(() => sendPreview(next, target));
+      return next;
+    });
+  }
+
+  function setTheme(key, val) {
+    setForm(p => {
+      const next = { ...p, theme_config: { ...(p.theme_config || {}), [key]: val } };
+      const target = inferPreviewTarget(key, "theme");
+      requestAnimationFrame(() => sendPreview(next, target));
+      return next;
+    });
+  }
+
+  const STYLE_PRESETS = [
+    {
+      id: "ventaz",
+      name: "Ventaz",
+      desc: "Verde, moderno y confiable.",
+      banner_color: "#4db81a",
+      color_bg: "#f6f9f5",
+      color_text: "#18181b",
+      theme_config: {
+        card_style: "floating",
+        card_density: "normal",
+        btn_radius: 14,
+        hero_btn_radius: 99,
+        hero_layout: "center",
+        products_cols: 3,
+        footer_bg: "#0f1a0d",
+        footer_text_color: "#ffffff",
+      },
+    },
+    {
+      id: "minimal",
+      name: "Minimal",
+      desc: "Limpio, simple y elegante.",
+      banner_color: "#111827",
+      color_bg: "#fafafa",
+      color_text: "#111111",
+      theme_config: {
+        card_style: "minimal",
+        card_density: "compact",
+        btn_radius: 8,
+        hero_btn_radius: 12,
+        hero_layout: "left",
+        products_cols: 3,
+        footer_bg: "#111827",
+        footer_text_color: "#ffffff",
+      },
+    },
+    {
+      id: "premium",
+      name: "Premium",
+      desc: "Oscuro, fuerte y más marca.",
+      banner_color: "#2f6bff",
+      color_bg: "#f3f6ff",
+      color_text: "#111827",
+      theme_config: {
+        card_style: "floating",
+        card_density: "wide",
+        btn_radius: 16,
+        hero_btn_radius: 18,
+        hero_layout: "left",
+        products_cols: 3,
+        footer_bg: "#08111f",
+        footer_text_color: "#ffffff",
+      },
+    },
+    {
+      id: "calido",
+      name: "Cálido",
+      desc: "Cercano, suave y comercial.",
+      banner_color: "#f97316",
+      color_bg: "#fff7ed",
+      color_text: "#1f1308",
+      theme_config: {
+        card_style: "bordered",
+        card_density: "normal",
+        btn_radius: 18,
+        hero_btn_radius: 99,
+        hero_layout: "center",
+        products_cols: 3,
+        footer_bg: "#1f1308",
+        footer_text_color: "#fff7ed",
+      },
+    },
+  ];
+
+  function applyStylePreset(preset) {
+    setForm(prev => {
+      const next = {
+        ...prev,
+        banner_color: preset.banner_color,
+        color_bg: preset.color_bg,
+        color_text: preset.color_text,
+        theme_config: {
+          ...(prev.theme_config || {}),
+          ...preset.theme_config,
+        },
+      };
+      requestAnimationFrame(() => sendPreview(next));
+      return next;
+    });
+  }
+
+  function setDensity(value) {
+    const densityMap = {
+      compact: { card_border_radius: 10, card_show_shadow: false },
+      normal:  { card_border_radius: 16, card_show_shadow: true },
+      wide:    { card_border_radius: 24, card_show_shadow: true },
+    };
+
+    setForm(prev => {
+      const next = {
+        ...prev,
+        ...(densityMap[value] || densityMap.normal),
+        theme_config: {
+          ...(prev.theme_config || {}),
+          card_density: value,
+        },
+      };
+      requestAnimationFrame(() => sendPreview(next));
+      return next;
+    });
+  }
+
+  function setButtonStyle(value) {
+    const radiusMap = {
+      square: 6,
+      soft: 14,
+      round: 99,
+    };
+
+    const radius = radiusMap[value] ?? 14;
+
+    setForm(prev => {
+      const next = {
+        ...prev,
+        theme_config: {
+          ...(prev.theme_config || {}),
+          button_style: value,
+          btn_radius: radius,
+          hero_btn_radius: radius,
+        },
+      };
+      requestAnimationFrame(() => sendPreview(next));
+      return next;
+    });
+  }
+
+  function setCardRadius(val) {
+    const next = Number(val);
+    setForm(p => ({
+      ...p,
+      card_border_radius: next,
+      theme_config: { ...(p.theme_config || {}), card_radius: next },
+    }));
+  }
+  function setButtonRadius(val) {
+    const next = Number(val);
+    setForm(p => ({
+      ...p,
+      theme_config: { ...(p.theme_config || {}), btn_radius: next, button_radius: next },
+    }));
+  }
+  function optionClass(active) {
+    return `pe-option-card ${active ? "is-active" : ""}`;
+  }
 
   function toggleCategory(id) {
     setForm(p => {
@@ -178,38 +392,60 @@ function ConfigTab({ pageId }) {
     });
   }
 
-  async function handleLogoUpload(e) {
-    const file = e.target.files?.[0];
+  async function uploadStoreAssetFile({ file, assetType, fieldName, setUploading, inputRef, fallbackLogo = false }) {
     if (!file) return;
 
     setError("");
-    setUploadingLogo(true);
+    setUploading(true);
 
     try {
       const data = new FormData();
       data.append("image", file);
 
-      const res = await tryUploadStoreAsset(data);
+      const res = await tryUploadStoreAsset(data, assetType, fallbackLogo);
       const url = res.data?.url;
 
       if (!url) throw new Error("La API no devolvió URL de imagen");
 
-      set("logo_url", url);
+      set(fieldName, url);
       setIframeKey(k => k + 1);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || "No se pudo subir el logo");
+      setError(err.response?.data?.message || err.message || "No se pudo subir la imagen");
     } finally {
-      setUploadingLogo(false);
-      if (logoInputRef.current) logoInputRef.current.value = "";
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
-  async function tryUploadStoreAsset(data) {
+  async function handleLogoUpload(e) {
+    await uploadStoreAssetFile({
+      file: e.target.files?.[0],
+      assetType: "logo",
+      fieldName: "logo_url",
+      setUploading: setUploadingLogo,
+      inputRef: logoInputRef,
+      fallbackLogo: true,
+    });
+  }
+
+  async function handleHeroUpload(e) {
+    await uploadStoreAssetFile({
+      file: e.target.files?.[0],
+      assetType: "hero",
+      fieldName: "hero_image_url",
+      setUploading: setUploadingHero,
+      inputRef: heroInputRef,
+    });
+  }
+
+  async function tryUploadStoreAsset(data, assetType = "logo", fallbackLogo = false) {
     try {
-      return await client.post("/seller/images/asset/logo", data, {
+      return await client.post(`/seller/images/asset/${assetType}`, data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
     } catch (firstError) {
+      if (!fallbackLogo) throw firstError;
+
       try {
         return await client.post("/seller/images/logo", data, {
           headers: { "Content-Type": "multipart/form-data" },
@@ -247,9 +483,9 @@ function ConfigTab({ pageId }) {
 
   const SECTIONS = [
     { id: "tienda",   label: "Tienda"   },
-    { id: "hero",     label: "Hero"     },
-    { id: "catalogo", label: "Catálogo" },
-    { id: "colores",  label: "Colores"  },
+    { id: "hero",     label: "Portada"  },
+    { id: "catalogo", label: "Productos" },
+    { id: "colores",  label: "Estilo"   },
     { id: "contacto", label: "Contacto" },
   ];
 
@@ -307,42 +543,59 @@ function ConfigTab({ pageId }) {
                 onChange={e => set("tagline", e.target.value)}
                 placeholder="Todo lo que necesitás" maxLength={160} />
             </Field>
-            <Field label="Logo">
-              <div className="pe-upload-field">
-                <input className="form-input" value={form.logo_url}
-                  onChange={e => set("logo_url", e.target.value)}
-                  placeholder="https://..." />
-                {form.logo_url && (
-                  <button type="button" className="pe-upload-clear" onClick={() => set("logo_url", "")} title="Quitar logo">
-                    <X size={14} />
+            <Field label="Logo de la tienda" hint="Subilo desde tu PC. No hace falta pegar enlaces.">
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                onChange={handleLogoUpload}
+                style={{ display: "none" }}
+              />
+
+              {form.logo_url ? (
+                <div className="pe-upload-card pe-upload-card--logo">
+                  <div className="pe-logo-preview pe-logo-preview--clean">
+                    <img src={form.logo_url} alt="Logo de la tienda"
+                      onError={e => { e.currentTarget.style.display = "none"; }} />
+                  </div>
+                  <div className="pe-upload-card__body">
+                    <strong>Logo cargado</strong>
+                    <span>Va a aparecer en tu tienda y en la vista previa.</span>
+                    <div className="pe-upload-card__actions">
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--sm"
+                        onClick={() => logoInputRef.current?.click()}
+                        disabled={uploadingLogo}
+                      >
+                        {uploadingLogo ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                        {uploadingLogo ? "Subiendo..." : "Cambiar logo"}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--sm"
+                        onClick={() => set("logo_url", "")}
+                      >
+                        <X size={14} />
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="pe-upload-empty">
+                  <ImageIcon size={20} />
+                  <strong>Subí el logo de tu tienda</strong>
+                  <span>PNG, JPG, SVG o WEBP. Recomendado: fondo transparente.</span>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => logoInputRef.current?.click()}
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                    {uploadingLogo ? "Subiendo..." : "Subir desde la PC"}
                   </button>
-                )}
-              </div>
-
-              <div className="pe-upload-row">
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                  onChange={handleLogoUpload}
-                  style={{ display: "none" }}
-                />
-                <button
-                  type="button"
-                  className="btn btn--ghost btn--sm"
-                  onClick={() => logoInputRef.current?.click()}
-                  disabled={uploadingLogo}
-                >
-                  {uploadingLogo ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-                  {uploadingLogo ? "Subiendo..." : "Subir desde la PC"}
-                </button>
-                <span className="pe-upload-hint">Máx. 2 MB · PNG, JPG, SVG, WEBP</span>
-              </div>
-
-              {form.logo_url && (
-                <div className="pe-logo-preview">
-                  <img src={form.logo_url} alt="logo"
-                    onError={e => { e.currentTarget.style.display = "none"; }} />
                 </div>
               )}
             </Field>
@@ -371,29 +624,65 @@ function ConfigTab({ pageId }) {
 
           {/* ── Hero ───────────────────────────────────── */}
           {section === "hero" && <>
-            <Field label="Fondo del hero">
-              <div style={{ display: "flex", gap: 6 }}>
-                {[{ val: "color", label: "Color sólido" }, { val: "image", label: "Imagen" }].map(({ val, label }) => (
-                  <button key={val} type="button"
+            <Field label="Tipo de portada" hint="Elegí si la primera pantalla usa color o una imagen.">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { val: "color", label: "Color sólido", desc: "Usa el color principal de la pestaña Estilo." },
+                  { val: "image", label: "Imagen", desc: "Subís una foto de fondo para la portada." },
+                ].map(({ val, label, desc }) => (
+                  <button
+                    key={val}
+                    type="button"
+                    className={optionClass((tc.hero_bg_type || "color") === val)}
                     onClick={() => setTheme("hero_bg_type", val)}
-                    style={{
-                      flex: 1, padding: "9px 0", fontSize: ".82rem", fontWeight: 600,
-                      borderRadius: 8, cursor: "pointer",
-                      border: `1.5px solid ${(tc.hero_bg_type || "color") === val ? "var(--brand)" : "var(--border)"}`,
-                      background: (tc.hero_bg_type || "color") === val ? "var(--brand)" : "transparent",
-                      color: (tc.hero_bg_type || "color") === val ? "#fff" : "var(--text-secondary)",
-                    }}>
-                    {label}
+                  >
+                    <strong>{label}</strong>
+                    <span>{desc}</span>
                   </button>
                 ))}
               </div>
             </Field>
 
             {tc.hero_bg_type === "image" ? (<>
-              <Field label="URL de la imagen de fondo">
-                <input className="form-input" value={form.hero_image_url}
-                  onChange={e => set("hero_image_url", e.target.value)}
-                  placeholder="https://..." />
+              <Field label="Imagen del hero">
+                <div className="pe-upload-row pe-upload-row--hero">
+                  <input
+                    ref={heroInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                    onChange={handleHeroUpload}
+                    style={{ display: "none" }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    onClick={() => heroInputRef.current?.click()}
+                    disabled={uploadingHero}
+                  >
+                    {uploadingHero ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                    {uploadingHero ? "Subiendo..." : form.hero_image_url ? "Cambiar imagen" : "Subir desde la PC"}
+                  </button>
+                  {form.hero_image_url && (
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => set("hero_image_url", "")}
+                    >
+                      <X size={14} />
+                      Quitar
+                    </button>
+                  )}
+                </div>
+
+                {form.hero_image_url ? (
+                  <div className="pe-hero-upload-preview">
+                    <img src={form.hero_image_url} alt="Fondo del hero" />
+                  </div>
+                ) : (
+                  <div className="pe-hero-upload-empty">
+                    Subí una imagen horizontal para usar como fondo principal de tu tienda.
+                  </div>
+                )}
               </Field>
               <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
                 <input type="range" min={0} max={90} step={5}
@@ -402,9 +691,10 @@ function ConfigTab({ pageId }) {
                   style={{ width: "100%", accentColor: "var(--brand)" }} />
               </Field>
             </>) : (
-              <Field label="Color principal / hero">
-                <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
-              </Field>
+              <div className="pe-info-box">
+                <strong>La portada usa el color principal.</strong>
+                <span>Para cambiarlo, entrá en la pestaña Estilo. Así evitamos editar el mismo color en dos lugares distintos.</span>
+              </div>
             )}
 
             {/* Mini hero preview */}
@@ -474,66 +764,81 @@ function ConfigTab({ pageId }) {
 
           {/* ── Catálogo ────────────────────────────────── */}
           {section === "catalogo" && <>
-            <Field label="Columnas de productos">
-              <div style={{ display: "flex", gap: 6 }}>
+            <div className="pe-section-note">
+              <strong>Cómo se ven los productos</strong>
+              <span>Estos controles cambian la grilla, las tarjetas y los botones del catálogo.</span>
+            </div>
+
+            <Field label="Columnas de productos" hint="En celular siempre se acomoda automáticamente.">
+              <div className="pe-option-grid pe-option-grid--3">
                 {[2, 3, 4].map(n => (
-                  <button key={n} type="button"
+                  <button
+                    key={n}
+                    type="button"
+                    className={optionClass((tc.products_cols ?? 3) === n)}
                     onClick={() => setTheme("products_cols", n)}
-                    style={{
-                      flex: 1, padding: "9px 0", fontSize: ".82rem", fontWeight: 600,
-                      borderRadius: 8, cursor: "pointer",
-                      border: `1.5px solid ${(tc.products_cols ?? 3) === n ? "var(--brand)" : "var(--border)"}`,
-                      background: (tc.products_cols ?? 3) === n ? "var(--brand)" : "transparent",
-                      color: (tc.products_cols ?? 3) === n ? "#fff" : "var(--text-secondary)",
-                    }}>
-                    {n} col.
+                  >
+                    <strong>{n} columnas</strong>
+                    <span>{n === 2 ? "Más grande" : n === 3 ? "Equilibrado" : "Más productos visibles"}</span>
                   </button>
                 ))}
               </div>
-              <div style={{ marginTop: 8, display: "grid", gridTemplateColumns: `repeat(${tc.products_cols ?? 3}, 1fr)`, gap: 4 }}>
+              <div className="pe-grid-preview" style={{ gridTemplateColumns: `repeat(${tc.products_cols ?? 3}, 1fr)` }}>
                 {Array.from({ length: tc.products_cols ?? 3 }, (_, i) => (
-                  <div key={i} style={{ height: 40, borderRadius: 5, background: "var(--border)", overflow: "hidden" }}>
-                    <div style={{ height: "55%", background: "var(--border-subtle)" }} />
-                  </div>
+                  <span key={i} />
                 ))}
               </div>
             </Field>
 
             <Field label="Estilo de tarjetas">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+              <div className="pe-option-grid pe-option-grid--2">
                 {[
-                  { value: "default",  label: "Clásico",    desc: "Sombra suave"  },
-                  { value: "minimal",  label: "Mínimo",     desc: "Sin bordes"    },
-                  { value: "bordered", label: "Con borde",  desc: "Borde visible" },
-                  { value: "floating", label: "Flotante",   desc: "Sombra fuerte" },
+                  { value: "default",  label: "Clásico",    desc: "Tarjeta limpia con sombra suave." },
+                  { value: "minimal",  label: "Mínimo",     desc: "Más simple y liviano." },
+                  { value: "bordered", label: "Con borde",  desc: "Separa mejor cada producto." },
+                  { value: "floating", label: "Flotante",   desc: "Más profundidad visual." },
                 ].map(({ value, label, desc }) => (
-                  <button key={value} type="button"
+                  <button
+                    key={value}
+                    type="button"
+                    className={optionClass((tc.card_style || "default") === value)}
                     onClick={() => setTheme("card_style", value)}
-                    style={{
-                      padding: "10px", borderRadius: 8, cursor: "pointer", textAlign: "left",
-                      border: `1.5px solid ${(tc.card_style || "default") === value ? "var(--brand)" : "var(--border)"}`,
-                      background: (tc.card_style || "default") === value ? "rgba(var(--brand-rgb),.08)" : "transparent",
-                    }}>
-                    <div style={{ fontWeight: 600, fontSize: ".8rem", color: "var(--text-primary)" }}>{label}</div>
-                    <div style={{ fontSize: ".72rem", color: "var(--text-secondary)", marginTop: 1 }}>{desc}</div>
+                  >
+                    <strong>{label}</strong>
+                    <span>{desc}</span>
                   </button>
                 ))}
               </div>
             </Field>
 
-            <Field label="Redondeo de tarjetas" hint={`${form.card_border_radius}px`}>
-              <input type="range" min={0} max={32} step={2}
-                value={form.card_border_radius}
-                onChange={e => set("card_border_radius", Number(e.target.value))}
-                style={{ width: "100%", accentColor: "var(--brand)" }} />
-              <div style={{ display: "flex", gap: 5, marginTop: 6 }}>
-                {[0, 8, 16, 24, 32].map(r => (
-                  <div key={r} style={{
-                    flex: 1, height: 28, borderRadius: r,
-                    background: form.card_border_radius === r ? "var(--brand)" : "var(--border)",
-                    transition: "all .15s",
-                  }} />
+            <Field label="Redondeo de tarjetas" hint={`${form.card_border_radius ?? 12}px`}>
+              <div className="pe-range-row">
+                <input
+                  type="range"
+                  min={0}
+                  max={32}
+                  step={1}
+                  value={form.card_border_radius ?? 12}
+                  onChange={e => setCardRadius(e.target.value)}
+                />
+                <span>{form.card_border_radius ?? 12}px</span>
+              </div>
+              <div className="pe-radius-presets">
+                {[0, 8, 12, 18, 24, 32].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    className={Number(form.card_border_radius ?? 12) === r ? "is-active" : ""}
+                    onClick={() => setCardRadius(r)}
+                  >
+                    {r}px
+                  </button>
                 ))}
+              </div>
+              <div className="pe-card-preview" style={{ borderRadius: `${form.card_border_radius ?? 12}px` }}>
+                <span />
+                <strong>Vista de tarjeta</strong>
+                <small>Producto · precio · botón</small>
               </div>
             </Field>
 
@@ -542,19 +847,39 @@ function ConfigTab({ pageId }) {
                 onChange={v => set("card_show_shadow", v)}
                 label={form.card_show_shadow ? "Con sombra" : "Sin sombra"} />
             </Field>
-            <Field label="Barra de búsqueda">
+
+            <Field label="Búsqueda del catálogo">
               <Toggle checked={tc.show_search_bar !== false}
                 onChange={v => setTheme("show_search_bar", v)}
-                label={tc.show_search_bar !== false ? "Visible" : "Oculta"} />
+                label={tc.show_search_bar !== false ? "Mostrar buscador" : "Ocultar buscador"} />
             </Field>
-            <Field label="Título de la sección">
+
+            <Field label="Título de la sección de productos">
               <input className="form-input" value={tc.products_section_title || ""}
                 onChange={e => setTheme("products_section_title", e.target.value)}
                 placeholder="Todos los productos" />
             </Field>
 
+            <Field label="Redondeo de botones" hint={`${tc.btn_radius ?? 8}px`}>
+              <div className="pe-range-row">
+                <input
+                  type="range"
+                  min={0}
+                  max={28}
+                  step={1}
+                  value={tc.btn_radius ?? 8}
+                  onChange={e => setButtonRadius(e.target.value)}
+                />
+                <span>{tc.btn_radius ?? 8}px</span>
+              </div>
+              <div className="pe-button-preview">
+                <button type="button" style={{ borderRadius: `${tc.btn_radius ?? 8}px` }}>Agregar</button>
+                <button type="button" style={{ borderRadius: `${tc.btn_radius ?? 8}px` }}>Ver más</button>
+              </div>
+            </Field>
+
             {categories.length > 0 && (
-              <Field label="Categorías visibles" hint="Vacío = todas">
+              <Field label="Categorías visibles" hint="Si no elegís ninguna, se muestran todas.">
                 <div className="pe-cat-grid">
                   {categories.map(cat => (
                     <button key={cat.id} type="button"
@@ -574,70 +899,264 @@ function ConfigTab({ pageId }) {
             )}
           </>}
 
-          {/* ── Colores ─────────────────────────────────── */}
+                    {/* ── Colores ─────────────────────────────────── */}
           {section === "colores" && <>
-            <Field label="Color principal" hint="Hero, botones, links, acentos">
-              <ColorRow value={form.banner_color} onChange={v => set("banner_color", v)} />
-            </Field>
-            <Field label="Color secundario">
-              <ColorRow value={form.color_secondary || "#000000"}
-                onChange={v => set("color_secondary", v)}
-                onClear={() => set("color_secondary", "")} />
-            </Field>
-            <Field label="Fondo de la tienda">
+            <div className="pe-section-note">
+              <strong>Diseño de la tienda</strong>
+              <span>Elegí un estilo base y ajustá lo importante. Todo impacta en la vista previa al instante.</span>
+            </div>
+
+            <div className="pe-divider-title">Estilo rápido</div>
+
+            <div className="pe-style-presets">
+              {STYLE_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  className="pe-style-preset"
+                  onClick={() => applyStylePreset(preset)}
+                  title={`Aplicar estilo ${preset.name}`}
+                >
+                  <span className="pe-style-preset__colors">
+                    <i style={{ background: preset.banner_color }} />
+                    <i style={{ background: preset.color_bg }} />
+                    <i style={{ background: preset.theme_config.footer_bg }} />
+                  </span>
+                  <strong>{preset.name}</strong>
+                  <small>{preset.desc}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="pe-live-style-preview" aria-label="Vista previa de diseño">
+              <div
+                className={`pe-live-style-preview__hero is-${tc.hero_layout || "center"}`}
+                style={{
+                  background: form.banner_color || "#5b52f0",
+                  color: "#ffffff",
+                }}
+              >
+                <span className="pe-preview-label">Portada + botones</span>
+                <strong>{form.hero_headline || form.store_name || "Tu tienda"}</strong>
+                <p>{form.tagline || "Tu subtítulo aparece acá"}</p>
+                <button
+                  type="button"
+                  style={{
+                    background: form.banner_color || "#5b52f0",
+                    borderRadius: `${tc.hero_btn_radius ?? 99}px`,
+                  }}
+                >
+                  {tc.hero_btn_text || "Ver productos"}
+                </button>
+              </div>
+
+              <div
+                className={`pe-live-style-preview__body is-${tc.card_style || "default"} is-${tc.card_density || "normal"}`}
+                style={{
+                  background: form.color_bg || "#fafafa",
+                  color: form.color_text || "#111111",
+                }}
+              >
+                <span className="pe-preview-label">Productos</span>
+                <div
+                  className="pe-preview-product-card"
+                  style={{
+                    borderRadius: `${form.card_border_radius ?? 16}px`,
+                    boxShadow: form.card_show_shadow ? "0 14px 32px rgba(15,23,42,.12)" : "none",
+                  }}
+                >
+                  <div className="pe-preview-product-card__image" />
+                  <strong>Producto de ejemplo</strong>
+                  <p>Así se ve una tarjeta en tu tienda.</p>
+                  <small style={{ color: form.banner_color || "#5b52f0" }}>$24.900</small>
+                  <button
+                    type="button"
+                    style={{
+                      background: form.banner_color || "#5b52f0",
+                      borderRadius: `${tc.btn_radius ?? 14}px`,
+                    }}
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className="pe-live-style-preview__footer"
+                style={{
+                  background: tc.footer_bg || "#0a0f09",
+                  color: tc.footer_text_color || "#ffffff",
+                }}
+              >
+                <span className="pe-preview-label">Footer</span>
+                <strong>{tc.footer_tagline || "Envíos a todo el país · Atención personalizada"}</strong>
+              </div>
+            </div>
+
+            <div className="pe-divider-title">Colores</div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color de marca</strong>
+                <span>Cambia portada, botones, links, precios destacados y acentos.</span>
+              </div>
+              <ColorRow value={form.banner_color || "#5b52f0"} onChange={v => set("banner_color", v)} />
+            </div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Fondo general</strong>
+                <span>Cambia el fondo de la tienda, detrás de productos y secciones.</span>
+              </div>
               <ColorRow value={form.color_bg || "#fafafa"}
                 onChange={v => set("color_bg", v)}
                 onClear={() => set("color_bg", "")} />
-            </Field>
-            <Field label="Texto principal">
+            </div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Texto principal</strong>
+                <span>Cambia títulos, descripciones y textos principales.</span>
+              </div>
               <ColorRow value={form.color_text || "#111111"}
                 onChange={v => set("color_text", v)}
                 onClear={() => set("color_text", "")} />
-            </Field>
-
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-              <p style={{ fontSize: ".74rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Footer</p>
-              <Field label="Fondo del footer">
-                <ColorRow value={tc.footer_bg || "#0a0f09"}
-                  onChange={v => setTheme("footer_bg", v)}
-                  onClear={() => setTheme("footer_bg", "")} />
-              </Field>
-              <Field label="Texto del footer" hint="Aplica también a íconos de redes">
-                <ColorRow value={tc.footer_text_color || "#ffffff"}
-                  onChange={v => setTheme("footer_text_color", v)}
-                  onClear={() => setTheme("footer_text_color", "")} />
-              </Field>
-              <Field label="Tagline del footer">
-                <input className="form-input" value={tc.footer_tagline || ""}
-                  onChange={e => setTheme("footer_tagline", e.target.value)}
-                  placeholder="Envíos a todo el país · Atención personalizada" />
-              </Field>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 14 }}>
-              <p style={{ fontSize: ".74rem", fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".07em", marginBottom: 12 }}>Botones del catálogo</p>
-              <Field label="Redondeo" hint={`${tc.btn_radius ?? 8}px`}>
-                <input type="range" min={0} max={24} step={2}
-                  value={tc.btn_radius ?? 8}
-                  onChange={e => setTheme("btn_radius", Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "var(--brand)" }} />
-                <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-                  <button type="button" style={{
-                    padding: "7px 14px", background: form.banner_color || "#5b52f0", color: "#fff",
-                    borderRadius: `${tc.btn_radius ?? 8}px`, fontWeight: 600, fontSize: ".78rem", border: "none", cursor: "default",
-                  }}>Agregar</button>
-                  <button type="button" style={{
-                    padding: "7px 14px", background: "transparent",
-                    color: form.banner_color || "#5b52f0",
-                    borderRadius: `${tc.btn_radius ?? 8}px`, fontWeight: 600, fontSize: ".78rem",
-                    border: `1.5px solid ${form.banner_color || "#5b52f0"}`, cursor: "default",
-                  }}>Ver más</button>
-                </div>
-              </Field>
+            <div className="pe-divider-title">Forma y estructura</div>
+
+            <Field label="Estilo de portada" hint="Define cómo se acomoda el texto principal.">
+              <div className="pe-choice-grid pe-choice-grid--2">
+                {[
+                  { value: "center", label: "Centrada", desc: "Más simple y directa" },
+                  { value: "left", label: "Izquierda", desc: "Más tipo marca premium" },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`pe-choice-card ${(tc.hero_layout || "center") === item.value ? "is-active" : ""}`}
+                    onClick={() => setTheme("hero_layout", item.value)}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Estilo de botones" hint="Cambia botones de portada y catálogo.">
+              <div className="pe-choice-grid pe-choice-grid--3">
+                {[
+                  { value: "square", label: "Rectos" },
+                  { value: "soft", label: "Suaves" },
+                  { value: "round", label: "Redondos" },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`pe-choice-card ${(tc.button_style || "soft") === item.value ? "is-active" : ""}`}
+                    onClick={() => setButtonStyle(item.value)}
+                  >
+                    <strong>{item.label}</strong>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Tarjetas de producto" hint="Cambia la estética de las cards del catálogo.">
+              <div className="pe-choice-grid pe-choice-grid--2">
+                {[
+                  { value: "default", label: "Clásicas", desc: "Equilibradas" },
+                  { value: "minimal", label: "Minimal", desc: "Más limpias" },
+                  { value: "bordered", label: "Con borde", desc: "Más ordenadas" },
+                  { value: "floating", label: "Flotantes", desc: "Más premium" },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`pe-choice-card ${(tc.card_style || "default") === item.value ? "is-active" : ""}`}
+                    onClick={() => setTheme("card_style", item.value)}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Espaciado" hint="Define si la tienda se siente compacta o más aireada.">
+              <div className="pe-choice-grid pe-choice-grid--3">
+                {[
+                  { value: "compact", label: "Compacto" },
+                  { value: "normal", label: "Normal" },
+                  { value: "wide", label: "Amplio" },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    className={`pe-choice-card ${(tc.card_density || "normal") === item.value ? "is-active" : ""}`}
+                    onClick={() => setDensity(item.value)}
+                  >
+                    <strong>{item.label}</strong>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <div className="pe-divider-title">Footer</div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Fondo del footer</strong>
+                <span>Cambia el bloque final de la tienda.</span>
+              </div>
+              <ColorRow value={tc.footer_bg || "#0a0f09"}
+                onChange={v => setTheme("footer_bg", v)}
+                onClear={() => setTheme("footer_bg", "")} />
+            </div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Texto del footer</strong>
+                <span>Cambia la frase y los textos del pie de página.</span>
+              </div>
+              <ColorRow value={tc.footer_text_color || "#ffffff"}
+                onChange={v => setTheme("footer_text_color", v)}
+                onClear={() => setTheme("footer_text_color", "")} />
+            </div>
+
+            <Field label="Frase del footer">
+              <input className="form-input" value={tc.footer_tagline || ""}
+                onChange={e => setTheme("footer_tagline", e.target.value)}
+                placeholder="Envíos a todo el país · Atención personalizada" />
+            </Field>
+
+            <div className="pe-divider-title">Ayudas visuales</div>
+
+            <Field label="Badges de confianza">
+              <Toggle checked={tc.show_trust_badges !== false}
+                onChange={v => setTheme("show_trust_badges", v)}
+                label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
+            </Field>
+
+            <Field label="Barra de búsqueda">
+              <Toggle checked={tc.show_search_bar !== false}
+                onChange={v => setTheme("show_search_bar", v)}
+                label={tc.show_search_bar !== false ? "Visible" : "Oculta"} />
+            </Field>
+
+            <div className="pe-reset-design">
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => applyStylePreset(STYLE_PRESETS[0])}
+              >
+                Volver al estilo recomendado
+              </button>
             </div>
           </>}
 
-          {/* ── Contacto ────────────────────────────────── */}
+                    {/* ── Contacto ────────────────────────────────── */}
           {section === "contacto" && <>
             <Field label="WhatsApp" hint="Con código de país, sin +">
               <div style={{ position: "relative" }}>
@@ -832,6 +1351,7 @@ function DiscountsTab({ pageId }) {
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
 

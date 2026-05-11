@@ -90,7 +90,11 @@ export default function Layout() {
         </div>
 
         <div className="mobile-topbar__avatar">
-          {(seller?.name?.[0] || "V").toUpperCase()}
+          {seller?.avatar_url ? (
+            <img src={seller.avatar_url} alt={seller?.name || "Usuario"} />
+          ) : (
+            (seller?.name?.[0] || "V").toUpperCase()
+          )}
         </div>
       </header>
 
@@ -121,7 +125,11 @@ export default function Layout() {
 
         <div className="sidebar__avatar">
           <div className="sidebar__avatar-img">
-            {(seller?.name?.[0] || "V").toUpperCase()}
+            {seller?.avatar_url ? (
+              <img src={seller.avatar_url} alt={seller?.name || "Usuario"} />
+            ) : (
+              (seller?.name?.[0] || "V").toUpperCase()
+            )}
           </div>
           <div className="sidebar__avatar-info">
             <div className="sidebar__avatar-name">{seller?.name || "Vendedor"}</div>
