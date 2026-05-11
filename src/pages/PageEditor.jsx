@@ -556,9 +556,6 @@ function ConfigTab({ pageId }) {
                   </button>
                 )}
               </div>
-              <input className="form-input" value={form.logo_url}
-                onChange={e => set("logo_url", e.target.value)}
-                placeholder="O pegá una URL: https://..." />
               <input ref={logoRef} type="file"
                 accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
                 style={{ display: "none" }}
@@ -633,9 +630,6 @@ function ConfigTab({ pageId }) {
                     </button>
                   )}
                 </div>
-                <input className="form-input" value={form.hero_image_url}
-                  onChange={e => set("hero_image_url", e.target.value)}
-                  placeholder="O pegá una URL: https://..." />
                 <input ref={heroRef} type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   style={{ display: "none" }}
@@ -653,35 +647,6 @@ function ConfigTab({ pageId }) {
                 <span>Para cambiarlo, entrá en la pestaña Estilo. Así evitamos editar el mismo color en dos lugares distintos.</span>
               </div>
             )}
-
-            {/* Mini hero preview */}
-            <div style={{
-              borderRadius: 10, overflow: "hidden", position: "relative", minHeight: 120,
-              ...(tc.hero_bg_type === "image" && form.hero_image_url
-                ? { backgroundImage: `url(${assetPreviewSrc(form.hero_image_url)})`, backgroundSize: "cover", backgroundPosition: "center" }
-                : { background: form.banner_color || "#5b52f0" }),
-            }}>
-              {tc.hero_bg_type === "image" && form.hero_image_url && (
-                <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${(tc.hero_overlay_opacity ?? 50) / 100})` }} />
-              )}
-              <div style={{ position: "relative", zIndex: 1, padding: "18px 16px" }}>
-                <div style={{ fontSize: "1rem", fontWeight: 800, color: "#fff", marginBottom: 3 }}>
-                  {form.hero_headline || form.store_name || "Mi tienda"}
-                </div>
-                <div style={{ fontSize: ".74rem", color: "rgba(255,255,255,.75)", marginBottom: 10 }}>
-                  {form.tagline || "Tu subtítulo aquí"}
-                </div>
-                <span style={{
-                  display: "inline-block", padding: "5px 14px",
-                  borderRadius: `${tc.hero_btn_radius ?? 99}px`,
-                  background: "rgba(255,255,255,.2)", color: "#fff",
-                  fontSize: ".72rem", fontWeight: 600,
-                  border: "1px solid rgba(255,255,255,.35)",
-                }}>
-                  {tc.hero_btn_text || "Ver productos"}
-                </span>
-              </div>
-            </div>
 
             <Field label="Título principal">
               <input className="form-input" value={form.hero_headline}
@@ -780,23 +745,6 @@ function ConfigTab({ pageId }) {
                 />
                 <span>{form.card_border_radius ?? 12}px</span>
               </div>
-              <div className="pe-radius-presets">
-                {[0, 8, 12, 18, 24, 32].map(r => (
-                  <button
-                    key={r}
-                    type="button"
-                    className={Number(form.card_border_radius ?? 12) === r ? "is-active" : ""}
-                    onClick={() => setCardRadius(r)}
-                  >
-                    {r}px
-                  </button>
-                ))}
-              </div>
-              <div className="pe-card-preview" style={{ borderRadius: `${form.card_border_radius ?? 12}px` }}>
-                <span />
-                <strong>Vista de tarjeta</strong>
-                <small>Producto · precio · botón</small>
-              </div>
             </Field>
 
             <Field label="Sombra en tarjetas">
@@ -828,10 +776,6 @@ function ConfigTab({ pageId }) {
                   onChange={e => setButtonRadius(e.target.value)}
                 />
                 <span>{tc.btn_radius ?? 8}px</span>
-              </div>
-              <div className="pe-button-preview">
-                <button type="button" style={{ borderRadius: `${tc.btn_radius ?? 8}px` }}>Agregar</button>
-                <button type="button" style={{ borderRadius: `${tc.btn_radius ?? 8}px` }}>Ver más</button>
               </div>
             </Field>
 
@@ -883,71 +827,6 @@ function ConfigTab({ pageId }) {
                   <small>{preset.desc}</small>
                 </button>
               ))}
-            </div>
-
-            <div className="pe-live-style-preview" aria-label="Vista previa de diseño">
-              <div
-                className={`pe-live-style-preview__hero is-${tc.hero_layout || "center"}`}
-                style={{
-                  background: form.banner_color || "#5b52f0",
-                  color: "#ffffff",
-                }}
-              >
-                <span className="pe-preview-label">Portada + botones</span>
-                <strong>{form.hero_headline || form.store_name || "Tu tienda"}</strong>
-                <p>{form.tagline || "Tu subtítulo aparece acá"}</p>
-                <button
-                  type="button"
-                  style={{
-                    background: form.banner_color || "#5b52f0",
-                    borderRadius: `${tc.hero_btn_radius ?? 99}px`,
-                  }}
-                >
-                  {tc.hero_btn_text || "Ver productos"}
-                </button>
-              </div>
-
-              <div
-                className={`pe-live-style-preview__body is-${tc.card_style || "default"} is-${tc.card_density || "normal"}`}
-                style={{
-                  background: form.color_bg || "#fafafa",
-                  color: form.color_text || "#111111",
-                }}
-              >
-                <span className="pe-preview-label">Productos</span>
-                <div
-                  className="pe-preview-product-card"
-                  style={{
-                    borderRadius: `${form.card_border_radius ?? 16}px`,
-                    boxShadow: form.card_show_shadow ? "0 14px 32px rgba(15,23,42,.12)" : "none",
-                  }}
-                >
-                  <div className="pe-preview-product-card__image" />
-                  <strong>Producto de ejemplo</strong>
-                  <p>Así se ve una tarjeta en tu tienda.</p>
-                  <small style={{ color: form.banner_color || "#5b52f0" }}>$24.900</small>
-                  <button
-                    type="button"
-                    style={{
-                      background: form.banner_color || "#5b52f0",
-                      borderRadius: `${tc.btn_radius ?? 14}px`,
-                    }}
-                  >
-                    Agregar
-                  </button>
-                </div>
-              </div>
-
-              <div
-                className="pe-live-style-preview__footer"
-                style={{
-                  background: tc.footer_bg || "#0a0f09",
-                  color: tc.footer_text_color || "#ffffff",
-                }}
-              >
-                <span className="pe-preview-label">Footer</span>
-                <strong>{tc.footer_tagline || "Envíos a todo el país · Atención personalizada"}</strong>
-              </div>
             </div>
 
             <div className="pe-divider-title">Colores</div>

@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Truck,
   X,
+  Zap,
 } from "lucide-react";
 
 function fmt(n) {
@@ -169,6 +170,7 @@ export default function PageProducts({ pageId }) {
   const [loadingMore,   setLoadingMore]   = useState(false);
   const [hasMore,       setHasMore]       = useState(false);
   const [total,         setTotal]         = useState(0);
+  const [promos,        setPromos]        = useState({});
   const [savingId,      setSavingId]      = useState(null);
   const [bulkSaving,    setBulkSaving]    = useState(false);
   const [message,       setMessage]       = useState("");
@@ -218,6 +220,11 @@ export default function PageProducts({ pageId }) {
           list.forEach(p => { next[p.id] = prev[p.id] ?? initialPriceFor(p); });
           return next;
         });
+        setPromos(() => {
+          const next = {};
+          list.forEach(p => { next[p.id] = { promoEnabled: p.promo_enabled || false, promoPrice: p.promo_price ? String(p.promo_price) : "" }; });
+          return next;
+        });
       } else {
         setProducts(prev => {
           const ids = new Set(prev.map(p => p.id));
@@ -226,6 +233,11 @@ export default function PageProducts({ pageId }) {
         setPrices(prev => {
           const next = { ...prev };
           list.forEach(p => { if (!(p.id in next)) next[p.id] = initialPriceFor(p); });
+          return next;
+        });
+        setPromos(prev => {
+          const next = { ...prev };
+          list.forEach(p => { if (!(p.id in next)) next[p.id] = { promoEnabled: p.promo_enabled || false, promoPrice: p.promo_price ? String(p.promo_price) : "" }; });
           return next;
         });
       }
@@ -413,6 +425,36 @@ export default function PageProducts({ pageId }) {
     } catch (err) {
       setMessage(err.response?.data?.message || "No se pudo actualizar el envío.");
     }
+  }
+
+  async function savePromo(product, overrideEnabled) {
+    const promo = promos[product.id] || {};
+    const promoEnabled = overrideEnabled !== undefined ? overrideEnabled : (promo.promoEnabled || false);
+    const promoPrice = promoEnabled ? Number(promo.promoPrice) : null;
+    if (promoEnabled && (!promoPrice || promoPrice <= 0)) {
+      setMessage("El precio promocional debe ser mayor a 0.");
+      return;
+    }
+    setSavingId(`promo-${product.id}`);
+    setMessage("");
+    try {
+      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/promo`, { promo_price: promoPrice, promo_enabled: promoEnabled });
+      setProducts(prev => prev.map(p => sameProductId(p.id, product.id) ? { ...p, promo_price: promoPrice, promo_enabled: promoEnabled } : p));
+      setPromos(prev => ({ ...prev, [product.id]: { ...prev[product.id], promoEnabled } }));
+      setMessage(promoEnabled ? "Precio promo guardado." : "Promo desactivada.");
+    } catch (err) {
+      setMessage(err.response?.data?.message || "No se pudo guardar la promoción.");
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function toggleComboFreeShipping(combo) {
+    const newVal = !combo.free_shipping;
+    try {
+      await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, { free_shipping: newVal });
+      setCombos(prev => prev.map(c => c.id === combo.id ? { ...c, free_shipping: newVal } : c));
+    } catch { /* silent */ }
   }
 
   async function toggleCombo(combo) {
@@ -659,6 +701,16 @@ export default function PageProducts({ pageId }) {
                   >
                     <Trash2 size={15} />
                   </button>
+                  <button
+                    type="button"
+                    className={`seller-product-btn seller-product-btn--sm ${combo.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
+                    onClick={() => toggleComboFreeShipping(combo)}
+                    style={{ gridColumn: "1 / -1", justifyContent: "center" }}
+                    title={combo.free_shipping ? "Envío gratis activado" : "Activar envío gratis para este combo"}
+                  >
+                    <Truck size={13} />
+                    {combo.free_shipping ? "Envío gratis ✓" : "Envío gratis"}
+                  </button>
                 </div>
               </div>
             </article>
@@ -814,6 +866,47 @@ export default function PageProducts({ pageId }) {
                           <Truck size={13} />
                           {product.free_shipping ? "Envío gratis ✓" : "Envío gratis"}
                         </button>
+                        <button
+                          type="button"
+                          className={`seller-product-btn seller-product-btn--sm ${promos[product.id]?.promoEnabled ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
+                          onClick={() => {
+                            const newEnabled = !promos[product.id]?.promoEnabled;
+                            setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoEnabled: newEnabled } }));
+                            if (!newEnabled) savePromo(product, false);
+                          }}
+                          style={{ gridColumn: "1 / -1", justifyContent: "center" }}
+                          title="Muestra el precio original tachado y el precio promo en la tienda"
+                        >
+                          <Zap size={13} />
+                          {promos[product.id]?.promoEnabled ? "Promo activa" : "Precio promo"}
+                        </button>
+                        {promos[product.id]?.promoEnabled && (
+                          <div className="seller-product-promo-row">
+                            <label className="seller-product-sale" style={{ marginBottom: 0, flex: 1 }}>
+                              <span>Precio promo</span>
+                              <div>
+                                <b>$</b>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  step="1"
+                                  value={promos[product.id]?.promoPrice ?? ""}
+                                  onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
+                                />
+                              </div>
+                            </label>
+                            <button
+                              type="button"
+                              className="seller-product-btn seller-product-btn--sm seller-product-btn--save"
+                              onClick={() => savePromo(product)}
+                              disabled={savingId === `promo-${product.id}`}
+                              title="Guardar precio promo"
+                              style={{ flex: "0 0 auto", alignSelf: "flex-end" }}
+                            >
+                              {savingId === `promo-${product.id}` ? <Loader2 size={13} className="seller-products-spin" /> : <Save size={13} />}
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

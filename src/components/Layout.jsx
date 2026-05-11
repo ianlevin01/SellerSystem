@@ -38,13 +38,25 @@ export default function Layout() {
   const { seller, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [pages, setPages]         = useState([]);
-  const [storeOpen, setStoreOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const storeRef                  = useRef(null);
+  const [pages, setPages]               = useState([]);
+  const [storeOpen, setStoreOpen]       = useState(false);
+  const [mobileOpen, setMobileOpen]     = useState(false);
+  const [adminUnread, setAdminUnread]   = useState(0);
+  const storeRef                        = useRef(null);
 
   useEffect(() => {
     client.get("/seller/store/pages").then(r => setPages(r.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function fetchUnread() {
+      client.get("/seller/chat/admin/unread").then(r => {
+        setAdminUnread(typeof r.data === "number" ? r.data : (r.data?.unread || 0));
+      }).catch(() => {});
+    }
+    fetchUnread();
+    const id = setInterval(fetchUnread, 15000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -195,9 +207,12 @@ export default function Layout() {
               <Info size={15} />
               Quiénes somos
             </NavLink>
-            <NavLink to="/contact" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+            <NavLink to="/contact" onClick={() => { setMobileOpen(false); setAdminUnread(0); }} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
               <Mail size={15} />
               Contacto
+              {adminUnread > 0 && (
+                <span className="sidebar__link-badge">{adminUnread}</span>
+              )}
             </NavLink>
             <NavLink to="/legal" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
               <FileText size={15} />
