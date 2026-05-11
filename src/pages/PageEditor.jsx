@@ -5,7 +5,7 @@ import {
   AlertTriangle, Building2, ChevronDown, ChevronLeft,
   ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
   Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
-  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Zap,
+  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Upload, X, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
@@ -87,6 +87,7 @@ const CONFIG_SECTIONS = [
 
 function ConfigTab({ pageId }) {
   const iframeRef = useRef(null);
+  const logoInputRef = useRef(null);
   const [previewMode, setPreviewMode] = useState("desktop");
   const [iframeSrc,   setIframeSrc]   = useState("");
   const [iframeKey,   setIframeKey]   = useState(0);
@@ -115,6 +116,7 @@ function ConfigTab({ pageId }) {
   const [categories, setCategories] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
   const [section,  setSection]  = useState("tienda");
@@ -174,6 +176,48 @@ function ConfigTab({ pageId }) {
       const cats = Array.isArray(p.featured_categories) ? p.featured_categories : [];
       return { ...p, featured_categories: cats.includes(id) ? cats.filter(c => c !== id) : [...cats, id] };
     });
+  }
+
+  async function handleLogoUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setError("");
+    setUploadingLogo(true);
+
+    try {
+      const data = new FormData();
+      data.append("image", file);
+
+      const res = await tryUploadStoreAsset(data);
+      const url = res.data?.url;
+
+      if (!url) throw new Error("La API no devolvió URL de imagen");
+
+      set("logo_url", url);
+      setIframeKey(k => k + 1);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "No se pudo subir el logo");
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = "";
+    }
+  }
+
+  async function tryUploadStoreAsset(data) {
+    try {
+      return await client.post("/seller/images/asset/logo", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } catch (firstError) {
+      try {
+        return await client.post("/seller/images/logo", data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } catch {
+        throw firstError;
+      }
+    }
   }
 
   async function handleSave() {
@@ -263,14 +307,43 @@ function ConfigTab({ pageId }) {
                 onChange={e => set("tagline", e.target.value)}
                 placeholder="Todo lo que necesitás" maxLength={160} />
             </Field>
-            <Field label="Logo (URL de imagen)">
-              <input className="form-input" value={form.logo_url}
-                onChange={e => set("logo_url", e.target.value)}
-                placeholder="https://..." />
+            <Field label="Logo">
+              <div className="pe-upload-field">
+                <input className="form-input" value={form.logo_url}
+                  onChange={e => set("logo_url", e.target.value)}
+                  placeholder="https://..." />
+                {form.logo_url && (
+                  <button type="button" className="pe-upload-clear" onClick={() => set("logo_url", "")} title="Quitar logo">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div className="pe-upload-row">
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
+                  onChange={handleLogoUpload}
+                  style={{ display: "none" }}
+                />
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                >
+                  {uploadingLogo ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                  {uploadingLogo ? "Subiendo..." : "Subir desde la PC"}
+                </button>
+                <span className="pe-upload-hint">Máx. 2 MB · PNG, JPG, SVG, WEBP</span>
+              </div>
+
               {form.logo_url && (
-                <img src={form.logo_url} alt="logo"
-                  style={{ marginTop: 6, height: 48, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
-                  onError={e => { e.target.style.display = "none"; }} />
+                <div className="pe-logo-preview">
+                  <img src={form.logo_url} alt="logo"
+                    onError={e => { e.currentTarget.style.display = "none"; }} />
+                </div>
               )}
             </Field>
             <Field label="Tipografía">
@@ -758,6 +831,7 @@ function DiscountsTab({ pageId }) {
   const [draftAdj, setDraftAdj] = useState({});
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
 

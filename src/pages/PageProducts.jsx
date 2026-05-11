@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import {
   AlertTriangle,
@@ -45,6 +45,14 @@ function firstDefined(...values) {
   return values.find((v) => v !== undefined && v !== null && v !== "");
 }
 
+function productKey(id) {
+  return String(id ?? "");
+}
+
+function sameProductId(a, b) {
+  return productKey(a) === productKey(b);
+}
+
 // FIX: check system_images / seller_images que son los campos reales del backend
 function firstImage(product) {
   if (Array.isArray(product.seller_images) && product.seller_images.length > 0 && product.seller_images[0]) {
@@ -82,7 +90,17 @@ function resellerCost(product) {
 }
 
 function isProductInStore(product) {
-  return product.in_my_store === true;
+  return Boolean(
+    product.in_my_store === true ||
+    product.in_store === true ||
+    product.in_page === true ||
+    product.is_in_page === true ||
+    product.selected === true ||
+    product.is_selected === true ||
+    product.seller_product_id ||
+    product.page_product_id ||
+    product.store_product_id
+  );
 }
 
 function backendPagePrice(product) {
@@ -140,6 +158,7 @@ const PAGE_SIZE = 20;
 export default function PageProducts({ pageId }) {
   const navigate = useNavigate();
   const [products,      setProducts]      = useState([]);
+  const [locallyAdded,  setLocallyAdded]  = useState({});
   const [combos,        setCombos]        = useState([]);
   const [categories,    setCategories]    = useState([]);
   const [prices,        setPrices]        = useState({});
@@ -259,7 +278,7 @@ export default function PageProducts({ pageId }) {
     const suggested = suggestedPrice(product);
     const sale      = roundPrice(prices[product.id]);
     const saved     = backendPagePrice(product);
-    const inStore   = isProductInStore(product);
+    const inStore   = isProductInStore(product) || Boolean(locallyAdded[productKey(product.id)]);
     const profit    = sale - cost;
     const valid     = cost > 0 && sale >= cost;
     const changed   = inStore && Math.round(sale) !== Math.round(saved || suggested);
@@ -282,13 +301,33 @@ export default function PageProducts({ pageId }) {
         () => client.post(`/seller/store/pages/${pageId}/products`, { product_id: product.id, custom_price: info.sale }),
         () => client.patch(`/seller/store/pages/${pageId}/products/${product.id}`, { in_store: true, custom_price: info.sale }),
       ]);
+      const responseData = res.data?.product || res.data?.item || res.data || {};
+      setLocallyAdded(prev => ({ ...prev, [productKey(product.id)]: true }));
       setProducts(prev => prev.map(item =>
-        item.id === product.id
-          ? { ...item, ...(res.data || {}), in_my_store: true, seller_product_id: item.seller_product_id || "pending", in_store: true, in_page: true, selected: true, custom_price: info.sale }
+        sameProductId(item.id, product.id)
+          ? {
+              ...item,
+              ...responseData,
+              id: item.id,
+              in_my_store: true,
+              seller_product_id:
+                responseData.seller_product_id ||
+                responseData.page_product_id ||
+                responseData.store_product_id ||
+                item.seller_product_id ||
+                "local-added",
+              in_store: true,
+              in_page: true,
+              is_in_page: true,
+              selected: true,
+              is_selected: true,
+              custom_price: info.sale,
+              precio_venta: info.sale,
+            }
           : item,
       ));
       setPrices(prev => ({ ...prev, [product.id]: String(info.sale) }));
-      setMessage("Producto agregado a tu tienda.");
+      setMessage("Producto agregado a tu tienda. Ya podés editar imagen y descripción.");
       return true;
     } catch (err) {
       setMessage(err.response?.data?.message || "No se pudo agregar el producto.");
@@ -308,9 +347,23 @@ export default function PageProducts({ pageId }) {
     setMessage("");
     try {
       const res = await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, { custom_price: info.sale });
+      const responseData = res.data?.product || res.data?.item || res.data || {};
+      setLocallyAdded(prev => ({ ...prev, [productKey(product.id)]: true }));
       setProducts(prev => prev.map(item =>
-        item.id === product.id
-          ? { ...item, ...(res.data || {}), custom_price: info.sale, in_my_store: true, in_store: true, in_page: true, selected: true }
+        sameProductId(item.id, product.id)
+          ? {
+              ...item,
+              ...responseData,
+              id: item.id,
+              custom_price: info.sale,
+              precio_venta: info.sale,
+              in_my_store: true,
+              in_store: true,
+              in_page: true,
+              is_in_page: true,
+              selected: true,
+              is_selected: true,
+            }
           : item,
       ));
       setMessage("Precio guardado.");
@@ -331,9 +384,14 @@ export default function PageProducts({ pageId }) {
         () => client.delete(`/seller/store/pages/${pageId}/products/${product.id}`),
         () => client.patch(`/seller/store/pages/${pageId}/products/${product.id}`, { in_store: false, enabled: false }),
       ]);
+      setLocallyAdded(prev => {
+        const next = { ...prev };
+        delete next[productKey(product.id)];
+        return next;
+      });
       setProducts(prev => prev.map(item =>
-        item.id === product.id
-          ? { ...item, in_my_store: false, seller_product_id: null, in_store: false, in_page: false, is_in_page: false, selected: false, is_selected: false, page_product_id: null, store_product_id: null, custom_price: null }
+        sameProductId(item.id, product.id)
+          ? { ...item, in_my_store: false, seller_product_id: null, in_store: false, in_page: false, is_in_page: false, selected: false, is_selected: false, page_product_id: null, store_product_id: null, custom_price: null, precio_venta: null }
           : item,
       ));
       setPrices(prev => ({ ...prev, [product.id]: String(suggestedPrice(product)) }));
@@ -351,7 +409,7 @@ export default function PageProducts({ pageId }) {
     const newVal = !product.free_shipping;
     try {
       await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/customize`, { free_shipping: newVal });
-      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, free_shipping: newVal } : p));
+      setProducts(prev => prev.map(p => sameProductId(p.id, product.id) ? { ...p, free_shipping: newVal } : p));
     } catch (err) {
       setMessage(err.response?.data?.message || "No se pudo actualizar el envío.");
     }
@@ -630,6 +688,17 @@ export default function PageProducts({ pageId }) {
                       <span>Sin stock · No visible en tu tienda</span>
                     </div>
                   )}
+
+                  {info.inStore && (
+                    <Link
+                      to={`/pages/${pageId}/products/${product.id}/edit`}
+                      className="seller-product-card__edit-media"
+                      title="Editar imagen y descripción"
+                    >
+                      <Pencil size={13} />
+                      Editar
+                    </Link>
+                  )}
                 </div>
 
                 <div className="seller-product-card__body">
@@ -645,7 +714,7 @@ export default function PageProducts({ pageId }) {
 
                   <div className="seller-product-prices">
                     <div className="seller-product-price seller-product-price--cost">
-                      <span>Costo revendedor</span>
+                      <span>Costo</span>
                       <strong>{money(info.cost)}</strong>
                     </div>
                     <button
@@ -719,6 +788,13 @@ export default function PageProducts({ pageId }) {
                           {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Save size={16} />}
                           {info.changed ? "Guardar precio" : "Precio guardado"}
                         </button>
+                        <Link
+                          to={`/pages/${pageId}/products/${product.id}/edit`}
+                          className="seller-product-btn seller-product-btn--edit"
+                        >
+                          <Pencil size={16} />
+                          Editar
+                        </Link>
                         <button
                           type="button"
                           className="seller-product-btn seller-product-btn--remove"

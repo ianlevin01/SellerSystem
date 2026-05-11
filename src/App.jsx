@@ -21,6 +21,9 @@ import Chat         from "./pages/Chat";
 import Payouts      from "./pages/Payouts";
 import Integrations from "./pages/Integrations";
 import ComboEditor  from "./pages/ComboEditor";
+import About        from "./pages/About";
+import Contact      from "./pages/Contact";
+import Legal        from "./pages/Legal";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -62,6 +65,9 @@ export default function App() {
               <Route path="/chat"                          element={<Chat />} />
               <Route path="/cobros"                        element={<Payouts />} />
               <Route path="/integrations"                  element={<Integrations />} />
+              <Route path="/about"                         element={<About />} />
+              <Route path="/contact"                       element={<Contact />} />
+              <Route path="/legal"                         element={<Legal />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
