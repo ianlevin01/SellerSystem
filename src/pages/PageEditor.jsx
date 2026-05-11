@@ -26,12 +26,26 @@ function storeUrl(slug) {
 function assetPreviewSrc(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
+
+  // Mostrar solo URLs reales. Si quedó un valor viejo como "177.jpg",
+  // no lo renderizamos porque el navegador lo busca local y tira 404.
   if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
 
-  const apiBase = client.defaults.baseURL || (import.meta.env.DEV ? "http://localhost:3000" : "");
-  if (raw.startsWith("/")) return apiBase ? `${apiBase}${raw}` : raw;
+  return "";
+}
 
-  return `${apiBase}/seller/store/media?key=${encodeURIComponent(raw)}`;
+function cleanAssetForSave(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  // URLs firmadas o externas: se mandan a la API, que las normaliza a key.
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  // Si ya fuese una key estable de S3 tipo sellers/... la conservamos.
+  if (raw.includes("/")) return raw;
+
+  // Valores viejos/rotos tipo 1778527996737.jpg se limpian sin tocar BD manualmente.
+  return "";
 }
 
 // ── Shared helpers ────────────────────────────────────────────
@@ -473,7 +487,13 @@ function ConfigTab({ pageId }) {
   async function handleSave() {
     setError(""); setSaving(true); setSaved(false);
     try {
-      const res = await client.put(`/seller/store/pages/${pageId}`, form);
+      const payload = {
+        ...form,
+        logo_url: cleanAssetForSave(form.logo_url),
+        hero_image_url: cleanAssetForSave(form.hero_image_url),
+      };
+
+      const res = await client.put(`/seller/store/pages/${pageId}`, payload);
       formFromData(res.data);
       if (res.data.slug) setIframeSrc(storeUrl(res.data.slug));
       setSaved(true);
@@ -569,7 +589,7 @@ function ConfigTab({ pageId }) {
               {form.logo_url ? (
                 <div className="pe-upload-card pe-upload-card--logo">
                   <div className="pe-logo-preview pe-logo-preview--clean">
-                    <img src={form.logo_url} alt="Logo de la tienda"
+                    <img src={assetPreviewSrc(form.logo_url)} alt="Logo de la tienda"
                       onError={e => { e.currentTarget.style.display = "none"; }} />
                   </div>
                   <div className="pe-upload-card__body">
@@ -690,7 +710,7 @@ function ConfigTab({ pageId }) {
 
                 {form.hero_image_url ? (
                   <div className="pe-hero-upload-preview">
-                    <img src={form.hero_image_url} alt="Fondo del hero" />
+                    <img src={assetPreviewSrc(form.hero_image_url)} alt="Fondo del hero" />
                   </div>
                 ) : (
                   <div className="pe-hero-upload-empty">
@@ -715,7 +735,7 @@ function ConfigTab({ pageId }) {
             <div style={{
               borderRadius: 10, overflow: "hidden", position: "relative", minHeight: 120,
               ...(tc.hero_bg_type === "image" && form.hero_image_url
-                ? { backgroundImage: `url(${form.hero_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+                ? { backgroundImage: `url(${assetPreviewSrc(form.hero_image_url)})`, backgroundSize: "cover", backgroundPosition: "center" }
                 : { background: form.banner_color || "#5b52f0" }),
             }}>
               {tc.hero_bg_type === "image" && form.hero_image_url && (
