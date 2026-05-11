@@ -2,11 +2,12 @@
 // Perfil premium de Ventaz
 // cambio hecho por Yolo
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import "../styles/Profile.css";
 import {
+  Camera,
   CheckCircle2,
   CircleAlert,
   Loader2,
@@ -15,6 +16,7 @@ import {
   Phone,
   Save,
   ShieldCheck,
+  Upload,
   User,
 } from "lucide-react";
 
@@ -55,6 +57,7 @@ function calculateAge(birthDate) {
 
 export default function Profile() {
   const { updateSeller, refreshSeller } = useAuth();
+  const avatarInputRef = useRef(null);
 
   const [form, setForm] = useState({
     first_name: "",
@@ -63,11 +66,14 @@ export default function Profile() {
     phone: "",
     city: "",
     birth_date: "",
+    avatar_url: "",
   });
 
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState("");
 
   const [saveMsg, setSaveMsg] = useState("");
   const [otpMode, setOtpMode] = useState(false);
@@ -89,6 +95,7 @@ export default function Profile() {
           phone: d.phone || "",
           city: d.city || "",
           birth_date: d.birth_date || d.birthDate || "",
+          avatar_url: d.avatar_url || "",
         });
 
         setPhoneVerified(!!d.phone_verified);
@@ -151,6 +158,34 @@ export default function Profile() {
     }
 
     if (saveMsg) setSaveMsg("");
+  }
+
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarUploading(true);
+    setAvatarMsg("");
+
+    try {
+      const data = new FormData();
+      data.append("image", file);
+
+      const res = await client.post("/seller/auth/avatar", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const nextAvatar = res.data?.avatar_url || "";
+      setForm((f) => ({ ...f, avatar_url: nextAvatar }));
+      updateSeller?.(res.data || { avatar_url: nextAvatar });
+      setAvatarMsg("Foto actualizada");
+      setTimeout(() => setAvatarMsg(""), 3000);
+    } catch (err) {
+      setAvatarMsg(err.response?.data?.message || "No se pudo subir la foto");
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
   }
 
   async function handleSave(e) {
@@ -371,6 +406,48 @@ export default function Profile() {
         </section>
 
         <aside className="vtz-profile-side">
+          <section className="vtz-profile-card vtz-profile-card--avatar">
+            <div className="vtz-profile-avatar-box">
+              <div className="vtz-profile-avatar-preview">
+                {form.avatar_url ? (
+                  <img src={form.avatar_url} alt={fullName || "Foto de perfil"} />
+                ) : (
+                  <User size={36} />
+                )}
+              </div>
+
+              <div>
+                <span className="vtz-profile-avatar-kicker">Mi foto</span>
+                <h2>Imagen de usuario</h2>
+                <p>Esta foto se muestra en tu panel, en el menú y en tu usuario.</p>
+              </div>
+            </div>
+
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              onChange={handleAvatarUpload}
+              style={{ display: "none" }}
+            />
+
+            <button
+              type="button"
+              className="vtz-profile-btn vtz-profile-btn--secondary"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarUploading}
+            >
+              {avatarUploading ? <Loader2 className="vtz-profile-spin" size={18} /> : <Camera size={18} />}
+              {avatarUploading ? "Subiendo..." : form.avatar_url ? "Cambiar foto" : "Subir foto"}
+            </button>
+
+            {avatarMsg && (
+              <p className={`vtz-profile-message ${isSuccessMessage(avatarMsg) ? "is-success" : "is-error"}`}>
+                {avatarMsg}
+              </p>
+            )}
+          </section>
+
           <section className="vtz-profile-card">
             <div className="vtz-profile-card__head">
               <div>

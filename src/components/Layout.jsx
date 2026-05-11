@@ -6,7 +6,8 @@ import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet, Menu, X, Puzzle
+  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet, Menu, X, Puzzle,
+  Info, Mail, FileText
 } from "lucide-react";
 
 const nav = [
@@ -89,7 +90,11 @@ export default function Layout() {
         </div>
 
         <div className="mobile-topbar__avatar">
-          {(seller?.name?.[0] || "V").toUpperCase()}
+          {seller?.avatar_url ? (
+            <img src={seller.avatar_url} alt={seller?.name || "Usuario"} />
+          ) : (
+            (seller?.name?.[0] || "V").toUpperCase()
+          )}
         </div>
       </header>
 
@@ -120,7 +125,11 @@ export default function Layout() {
 
         <div className="sidebar__avatar">
           <div className="sidebar__avatar-img">
-            {(seller?.name?.[0] || "V").toUpperCase()}
+            {seller?.avatar_url ? (
+              <img src={seller.avatar_url} alt={seller?.name || "Usuario"} />
+            ) : (
+              (seller?.name?.[0] || "V").toUpperCase()
+            )}
           </div>
           <div className="sidebar__avatar-info">
             <div className="sidebar__avatar-name">{seller?.name || "Vendedor"}</div>
@@ -181,6 +190,21 @@ export default function Layout() {
               </button>
             </div>
           )}
+          <div className="sidebar__info-links">
+            <NavLink to="/about" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+              <Info size={15} />
+              Quiénes somos
+            </NavLink>
+            <NavLink to="/contact" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+              <Mail size={15} />
+              Contacto
+            </NavLink>
+            <NavLink to="/legal" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+              <FileText size={15} />
+              Legal y privacidad
+            </NavLink>
+          </div>
+
           <button type="button" className="sidebar__footer-btn" onClick={handleLogout}>
             <LogOut size={15} />
             Cerrar sesión
