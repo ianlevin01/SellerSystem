@@ -427,19 +427,21 @@ export default function PageProducts({ pageId }) {
     }
   }
 
-  async function savePromo(product, overrideEnabled) {
+  async function savePromo(product) {
     const promo = promos[product.id] || {};
-    const promoEnabled = overrideEnabled !== undefined ? overrideEnabled : (promo.promoEnabled || false);
-    const promoPrice = promoEnabled ? Number(promo.promoPrice) : null;
-    if (promoEnabled && (!promoPrice || promoPrice <= 0)) {
-      setMessage("El precio promocional debe ser mayor a 0.");
-      return;
-    }
+    const promoPrice = Number(promo.promoPrice);
+    const promoEnabled = promoPrice > 0;
     setSavingId(`promo-${product.id}`);
     setMessage("");
     try {
-      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/promo`, { promo_price: promoPrice, promo_enabled: promoEnabled });
-      setProducts(prev => prev.map(p => sameProductId(p.id, product.id) ? { ...p, promo_price: promoPrice, promo_enabled: promoEnabled } : p));
+      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/promo`, {
+        promo_price: promoEnabled ? promoPrice : null,
+        promo_enabled: promoEnabled,
+      });
+      setProducts(prev => prev.map(p => sameProductId(p.id, product.id)
+        ? { ...p, promo_price: promoEnabled ? promoPrice : null, promo_enabled: promoEnabled }
+        : p
+      ));
       setPromos(prev => ({ ...prev, [product.id]: { ...prev[product.id], promoEnabled } }));
       setMessage(promoEnabled ? "Precio promo guardado." : "Promo desactivada.");
     } catch (err) {
@@ -651,6 +653,15 @@ export default function PageProducts({ pageId }) {
                 <span className="seller-product-card__badge" style={{ background: "var(--brand-secondary, #6366f1)" }}>
                   <Layers size={11} /> Combo
                 </span>
+                <button
+                  type="button"
+                  className={`seller-product-card__shipping-badge ${combo.free_shipping ? "is-active" : ""}`}
+                  onClick={() => toggleComboFreeShipping(combo)}
+                  title={combo.free_shipping ? "Envío gratis activo — clic para desactivar" : "Activar envío gratis"}
+                >
+                  <Truck size={11} />
+                  Envío gratis
+                </button>
                 {!combo.active && (
                   <div className="seller-product-card__stock-warn">
                     <AlertTriangle size={11} />
@@ -701,16 +712,6 @@ export default function PageProducts({ pageId }) {
                   >
                     <Trash2 size={15} />
                   </button>
-                  <button
-                    type="button"
-                    className={`seller-product-btn seller-product-btn--sm ${combo.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
-                    onClick={() => toggleComboFreeShipping(combo)}
-                    style={{ gridColumn: "1 / -1", justifyContent: "center" }}
-                    title={combo.free_shipping ? "Envío gratis activado" : "Activar envío gratis para este combo"}
-                  >
-                    <Truck size={13} />
-                    {combo.free_shipping ? "Envío gratis ✓" : "Envío gratis"}
-                  </button>
                 </div>
               </div>
             </article>
@@ -723,7 +724,7 @@ export default function PageProducts({ pageId }) {
             return (
               <article
                 key={product.id}
-                className={`seller-product-card ${info.inStore ? "is-in-store" : ""} ${!info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
+                className={`seller-product-card ${info.inStore ? "is-in-store" : "is-not-in-store"} ${!info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
                 style={{ animationDelay: `${index * 22}ms` }}
               >
                 <div className="seller-product-card__media">
@@ -734,11 +735,27 @@ export default function PageProducts({ pageId }) {
                       En tienda
                     </span>
                   )}
+                  {info.inStore && (
+                    <button
+                      type="button"
+                      className={`seller-product-card__shipping-badge ${product.free_shipping ? "is-active" : ""}`}
+                      onClick={() => toggleFreeShipping(product)}
+                      title={product.free_shipping ? "Envío gratis activo — clic para desactivar" : "Activar envío gratis"}
+                    >
+                      <Truck size={11} />
+                      Envío gratis
+                    </button>
+                  )}
                   {isLowStock && info.inStore && (
                     <div className="seller-product-card__stock-warn">
                       <AlertTriangle size={11} />
                       <span>Sin stock · No visible en tu tienda</span>
                     </div>
+                  )}
+                  {!info.inStore && (
+                    <span className="seller-product-card__not-added">
+                      Sin agregar
+                    </span>
                   )}
 
                   {info.inStore && (
@@ -781,19 +798,46 @@ export default function PageProducts({ pageId }) {
                     </button>
                   </div>
 
-                  <label className="seller-product-sale">
-                    <span>Tu precio de venta</span>
-                    <div>
-                      <b>$</b>
-                      <input
-                        type="number"
-                        min={info.cost || 0}
-                        step="1"
-                        value={prices[product.id] ?? ""}
-                        onChange={e => setPrice(product.id, e.target.value)}
-                      />
-                    </div>
-                  </label>
+                  <div className="seller-product-sale-wrap">
+                    <label className="seller-product-sale">
+                      <span>Tu precio de venta</span>
+                      <div>
+                        <b>$</b>
+                        <input
+                          type="number"
+                          min={info.cost || 0}
+                          step="1"
+                          value={prices[product.id] ?? ""}
+                          onChange={e => setPrice(product.id, e.target.value)}
+                        />
+                      </div>
+                    </label>
+                    {info.inStore && (
+                      <label className={`seller-product-sale seller-product-sale--promo ${promos[product.id]?.promoEnabled ? "is-active" : ""}`}>
+                        <span>Precio promo <Zap size={10} /></span>
+                        <div>
+                          <b>$</b>
+                          <input
+                            type="number"
+                            min={0}
+                            step="1"
+                            placeholder="—"
+                            value={promos[product.id]?.promoPrice ?? ""}
+                            onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
+                          />
+                          <button
+                            type="button"
+                            className="seller-product-sale__save-btn"
+                            onClick={() => savePromo(product)}
+                            disabled={savingId === `promo-${product.id}`}
+                            title="Guardar precio promo"
+                          >
+                            {savingId === `promo-${product.id}` ? <Loader2 size={13} className="seller-products-spin" /> : <Save size={13} />}
+                          </button>
+                        </div>
+                      </label>
+                    )}
+                  </div>
 
                   <div className={`seller-product-profit ${info.profit > 0 ? "is-positive" : ""}`}>
                     <TrendingUp size={16} />
@@ -856,57 +900,6 @@ export default function PageProducts({ pageId }) {
                           {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Trash2 size={16} />}
                           Quitar
                         </button>
-                        <button
-                          type="button"
-                          className={`seller-product-btn seller-product-btn--sm ${product.free_shipping ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
-                          onClick={() => toggleFreeShipping(product)}
-                          style={{ gridColumn: "1 / -1", justifyContent: "center" }}
-                          title={product.free_shipping ? "Envío gratis activado — el cliente no paga envío" : "Activar envío gratis para este producto"}
-                        >
-                          <Truck size={13} />
-                          {product.free_shipping ? "Envío gratis ✓" : "Envío gratis"}
-                        </button>
-                        <button
-                          type="button"
-                          className={`seller-product-btn seller-product-btn--sm ${promos[product.id]?.promoEnabled ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
-                          onClick={() => {
-                            const newEnabled = !promos[product.id]?.promoEnabled;
-                            setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoEnabled: newEnabled } }));
-                            if (!newEnabled) savePromo(product, false);
-                          }}
-                          style={{ gridColumn: "1 / -1", justifyContent: "center" }}
-                          title="Muestra el precio original tachado y el precio promo en la tienda"
-                        >
-                          <Zap size={13} />
-                          {promos[product.id]?.promoEnabled ? "Promo activa" : "Precio promo"}
-                        </button>
-                        {promos[product.id]?.promoEnabled && (
-                          <div className="seller-product-promo-row">
-                            <label className="seller-product-sale" style={{ marginBottom: 0, flex: 1 }}>
-                              <span>Precio promo</span>
-                              <div>
-                                <b>$</b>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  step="1"
-                                  value={promos[product.id]?.promoPrice ?? ""}
-                                  onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
-                                />
-                              </div>
-                            </label>
-                            <button
-                              type="button"
-                              className="seller-product-btn seller-product-btn--sm seller-product-btn--save"
-                              onClick={() => savePromo(product)}
-                              disabled={savingId === `promo-${product.id}`}
-                              title="Guardar precio promo"
-                              style={{ flex: "0 0 auto", alignSelf: "flex-end" }}
-                            >
-                              {savingId === `promo-${product.id}` ? <Loader2 size={13} className="seller-products-spin" /> : <Save size={13} />}
-                            </button>
-                          </div>
-                        )}
                       </>
                     )}
                   </div>
