@@ -23,6 +23,17 @@ function storeUrl(slug) {
   return `https://${slug}.${domain}`;
 }
 
+function assetPreviewSrc(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+
+  const apiBase = client.defaults.baseURL || (import.meta.env.DEV ? "http://localhost:3000" : "");
+  if (raw.startsWith("/")) return apiBase ? `${apiBase}${raw}` : raw;
+
+  return `${apiBase}/seller/store/media?key=${encodeURIComponent(raw)}`;
+}
+
 // ── Shared helpers ────────────────────────────────────────────
 
 const GOOGLE_FONTS = [
@@ -404,10 +415,12 @@ function ConfigTab({ pageId }) {
 
       const res = await tryUploadStoreAsset(data, assetType, fallbackLogo);
       const url = res.data?.url;
+      const key = res.data?.key;
 
-      if (!url) throw new Error("La API no devolvió URL de imagen");
+      if (!url && !key) throw new Error("La API no devolvió imagen");
 
-      set(fieldName, url);
+      // Guardamos la key estable. La vista previa y SellerPage la resuelven vía /seller/store/media.
+      set(fieldName, key || url);
       setIframeKey(k => k + 1);
     } catch (err) {
       setError(err.response?.data?.message || err.message || "No se pudo subir la imagen");
@@ -555,7 +568,7 @@ function ConfigTab({ pageId }) {
               {form.logo_url ? (
                 <div className="pe-upload-card pe-upload-card--logo">
                   <div className="pe-logo-preview pe-logo-preview--clean">
-                    <img src={form.logo_url} alt="Logo de la tienda"
+                    <img src={assetPreviewSrc(form.logo_url)} alt="Logo de la tienda"
                       onError={e => { e.currentTarget.style.display = "none"; }} />
                   </div>
                   <div className="pe-upload-card__body">
@@ -676,7 +689,7 @@ function ConfigTab({ pageId }) {
 
                 {form.hero_image_url ? (
                   <div className="pe-hero-upload-preview">
-                    <img src={form.hero_image_url} alt="Fondo del hero" />
+                    <img src={assetPreviewSrc(form.hero_image_url)} alt="Fondo del hero" />
                   </div>
                 ) : (
                   <div className="pe-hero-upload-empty">
@@ -701,7 +714,7 @@ function ConfigTab({ pageId }) {
             <div style={{
               borderRadius: 10, overflow: "hidden", position: "relative", minHeight: 120,
               ...(tc.hero_bg_type === "image" && form.hero_image_url
-                ? { backgroundImage: `url(${form.hero_image_url})`, backgroundSize: "cover", backgroundPosition: "center" }
+                ? { backgroundImage: `url(${assetPreviewSrc(form.hero_image_url)})`, backgroundSize: "cover", backgroundPosition: "center" }
                 : { background: form.banner_color || "#5b52f0" }),
             }}>
               {tc.hero_bg_type === "image" && form.hero_image_url && (
