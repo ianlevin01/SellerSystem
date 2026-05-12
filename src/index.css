@@ -2320,6 +2320,7 @@ input[type="color"] {
   width: 34px;
   height: 34px;
   border-radius: 50%;
+  overflow: hidden;
   background: linear-gradient(135deg, var(--brand), #2ea014);
   color: #fff;
   display: flex;
@@ -3351,7 +3352,7 @@ input[type="color"] {
 
 .seller-product-price strong {
   color: var(--text-primary);
-  font-size: 1.05rem;
+  font-size: .82rem;
   line-height: 1;
   letter-spacing: -.04em;
 }
@@ -3750,6 +3751,7 @@ input[type="color"] {
     display: grid;
     place-items: center;
     border-radius: 50%;
+    overflow: hidden;
     color: #fff;
     background: linear-gradient(135deg, var(--brand), #2ea014);
     font-weight: 900;
@@ -4406,7 +4408,7 @@ button:active:not(:disabled),
   }
 
   .seller-product-price strong {
-    font-size: .98rem !important;
+    font-size: .78rem !important;
   }
 
   .seller-product-price small {

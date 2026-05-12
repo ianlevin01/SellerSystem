@@ -1,5 +1,5 @@
 // src/auth/AuthContext.jsx
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { signInWithPopup } from "firebase/auth";
 import { firebaseAuth, googleProvider } from "../firebase";
 import client from "../api/client";
@@ -15,6 +15,17 @@ export function AuthProvider({ children }) {
       return null;
     }
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem("seller_token");
+    if (!token) return;
+    client.get("/seller/auth/me").then(res => {
+      if (res.data && typeof res.data === "object") {
+        localStorage.setItem("seller_user", JSON.stringify(res.data));
+        setSeller(res.data);
+      }
+    }).catch(() => {});
+  }, []);
 
   const login = useCallback(async (email, password) => {
     const res = await client.post("/seller/auth/login", { email, password });

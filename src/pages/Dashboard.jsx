@@ -106,9 +106,9 @@ export default function Dashboard() {
               <div>
                 <div className="order-preview-row__title">
                   Pedido #{order.numero}
-                  <span className={`badge badge--${order.color === "green" ? "green" : order.color === "red" ? "red" : "pending"}`}
+                  <span className={`badge badge--${order.color === "paid" ? "green" : order.color === "rejected" || order.color === "cancelled" ? "red" : "pending"}`}
                     style={{ marginLeft: 8 }}>
-                    {order.color}
+                    {order.color === "paid" ? "Pagado" : order.color === "pending" ? "Pendiente" : order.color === "rejected" ? "Rechazado" : order.color === "cancelled" ? "Cancelado" : order.color}
                   </span>
                 </div>
                 <div className="order-preview-row__sub">

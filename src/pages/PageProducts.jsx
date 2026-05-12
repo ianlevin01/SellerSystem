@@ -572,9 +572,9 @@ export default function PageProducts({ pageId }) {
             <button type="button" className="btn btn--ghost btn--sm" onClick={enterComboMode}>
               <Layers size={15} /> Crear combo
             </button>
-            <button type="button" onClick={addVisibleProducts} disabled={bulkSaving}>
+            <button type="button" className="btn btn--primary btn--sm" onClick={addVisibleProducts} disabled={bulkSaving}>
               {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
-              {bulkSaving ? "Agregando..." : "Agregar visibles"}
+              {bulkSaving ? "Agregando..." : "Agregar todos los productos visibles"}
             </button>
           </div>
         </section>
@@ -813,7 +813,7 @@ export default function PageProducts({ pageId }) {
                       </div>
                     </label>
                     {info.inStore && (
-                      <label className={`seller-product-sale seller-product-sale--promo ${promos[product.id]?.promoEnabled ? "is-active" : ""}`}>
+                      <div className={`seller-product-sale seller-product-sale--promo ${promos[product.id]?.promoEnabled ? "is-active" : ""}`}>
                         <span>Precio promo <Zap size={10} /></span>
                         <div>
                           <b>$</b>
@@ -835,7 +835,7 @@ export default function PageProducts({ pageId }) {
                             {savingId === `promo-${product.id}` ? <Loader2 size={13} className="seller-products-spin" /> : <Save size={13} />}
                           </button>
                         </div>
-                      </label>
+                      </div>
                     )}
                   </div>
 
