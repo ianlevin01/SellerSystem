@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import {
@@ -174,12 +175,20 @@ export default function PageProducts({ pageId }) {
   const [savingId,      setSavingId]      = useState(null);
   const [bulkSaving,    setBulkSaving]    = useState(false);
   const [message,       setMessage]       = useState("");
+  const [toast,         setToast]         = useState(null);
+  const toastTimerRef = useRef(null);
   // Combo mode
   const [comboMode,     setComboMode]     = useState(false);
   const [comboSelected, setComboSelected] = useState(new Set());
   const [creatingCombo, setCreatingCombo] = useState(false);
   const debounceRef = useRef(null);
   const abortRef    = useRef(null);
+
+  function showToast(name) {
+    clearTimeout(toastTimerRef.current);
+    setToast(name);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }
 
   // Cargar categorías y combos
   useEffect(() => {
@@ -209,6 +218,7 @@ export default function PageProducts({ pageId }) {
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
     if (onlyMine)           params.only_mine   = "true";
+    else                    params.not_mine    = "true";
 
     try {
       const res  = await client.get(`/seller/store/pages/${pageId}/products`, { params, signal: controller.signal });
@@ -293,7 +303,13 @@ export default function PageProducts({ pageId }) {
     const inStore   = isProductInStore(product) || Boolean(locallyAdded[productKey(product.id)]);
     const profit    = sale - cost;
     const valid     = cost > 0 && sale >= cost;
-    const changed   = inStore && Math.round(sale) !== Math.round(saved || suggested);
+    const priceChanged = inStore && Math.round(sale) !== Math.round(saved || suggested);
+    const promoState   = promos[product.id] || {};
+    const promoChanged = inStore && (
+      String(promoState.promoPrice ?? "") !== String(product.promo_price ?? "") ||
+      Boolean(promoState.promoEnabled) !== Boolean(product.promo_enabled)
+    );
+    const changed = priceChanged || promoChanged;
     return { cost, suggested, sale, saved, profit, valid, changed, inStore, profitPct: cost > 0 ? Math.round((profit / cost) * 100) : 0 };
   }
 
@@ -308,38 +324,15 @@ export default function PageProducts({ pageId }) {
     setSavingId(product.id);
     setMessage("");
     try {
-      const res = await tryMany([
+      await tryMany([
         () => client.post(`/seller/store/pages/${pageId}/products/${product.id}`, { custom_price: info.sale }),
         () => client.post(`/seller/store/pages/${pageId}/products`, { product_id: product.id, custom_price: info.sale }),
         () => client.patch(`/seller/store/pages/${pageId}/products/${product.id}`, { in_store: true, custom_price: info.sale }),
       ]);
-      const responseData = res.data?.product || res.data?.item || res.data || {};
-      setLocallyAdded(prev => ({ ...prev, [productKey(product.id)]: true }));
-      setProducts(prev => prev.map(item =>
-        sameProductId(item.id, product.id)
-          ? {
-              ...item,
-              ...responseData,
-              id: item.id,
-              in_my_store: true,
-              seller_product_id:
-                responseData.seller_product_id ||
-                responseData.page_product_id ||
-                responseData.store_product_id ||
-                item.seller_product_id ||
-                "local-added",
-              in_store: true,
-              in_page: true,
-              is_in_page: true,
-              selected: true,
-              is_selected: true,
-              custom_price: info.sale,
-              precio_venta: info.sale,
-            }
-          : item,
-      ));
-      setPrices(prev => ({ ...prev, [product.id]: String(info.sale) }));
-      setMessage("Producto agregado a tu tienda. Ya podés editar imagen y descripción.");
+      // Remove from "Todos" list (Todos only shows not-in-store products)
+      setProducts(prev => prev.filter(item => !sameProductId(item.id, product.id)));
+      setTotal(prev => Math.max(0, prev - 1));
+      showToast(productName(product));
       return true;
     } catch (err) {
       setMessage(err.response?.data?.message || "No se pudo agregar el producto.");
@@ -358,26 +351,37 @@ export default function PageProducts({ pageId }) {
     setSavingId(product.id);
     setMessage("");
     try {
-      const res = await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, { custom_price: info.sale });
-      const responseData = res.data?.product || res.data?.item || res.data || {};
+      const promo      = promos[product.id] || {};
+      const promoPrice = Number(promo.promoPrice) || 0;
+      const promoEnabled = promoPrice > 0;
+
+      await Promise.all([
+        client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, { custom_price: info.sale }),
+        client.patch(`/seller/store/pages/${pageId}/products/${product.id}/promo`, {
+          promo_price:   promoEnabled ? promoPrice : null,
+          promo_enabled: promoEnabled,
+        }),
+      ]);
       setLocallyAdded(prev => ({ ...prev, [productKey(product.id)]: true }));
       setProducts(prev => prev.map(item =>
         sameProductId(item.id, product.id)
           ? {
               ...item,
-              ...responseData,
               id: item.id,
-              custom_price: info.sale,
-              precio_venta: info.sale,
-              in_my_store: true,
-              in_store: true,
-              in_page: true,
-              is_in_page: true,
-              selected: true,
-              is_selected: true,
+              custom_price:  info.sale,
+              precio_venta:  info.sale,
+              promo_price:   promoEnabled ? promoPrice : null,
+              promo_enabled: promoEnabled,
+              in_my_store:   true,
+              in_store:      true,
+              in_page:       true,
+              is_in_page:    true,
+              selected:      true,
+              is_selected:   true,
             }
           : item,
       ));
+      setPromos(prev => ({ ...prev, [product.id]: { ...prev[product.id], promoEnabled } }));
       setMessage("Precio guardado.");
       return true;
     } catch (err) {
@@ -531,6 +535,16 @@ export default function PageProducts({ pageId }) {
 
   return (
     <div className="seller-products">
+
+      {/* Toast de producto agregado — renderizado en body para evitar clipping por overflow */}
+      {toast && createPortal(
+        <div className="pp-toast">
+          <CheckCircle2 size={18} />
+          <span><strong>{toast}</strong> agregado a tu tienda</span>
+        </div>,
+        document.body
+      )}
+
       {comboMode ? (
         <section className="combo-mode-banner">
           <div className="combo-mode-banner__info">
@@ -825,15 +839,6 @@ export default function PageProducts({ pageId }) {
                             value={promos[product.id]?.promoPrice ?? ""}
                             onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
                           />
-                          <button
-                            type="button"
-                            className="seller-product-sale__save-btn"
-                            onClick={() => savePromo(product)}
-                            disabled={savingId === `promo-${product.id}`}
-                            title="Guardar precio promo"
-                          >
-                            {savingId === `promo-${product.id}` ? <Loader2 size={13} className="seller-products-spin" /> : <Save size={13} />}
-                          </button>
                         </div>
                       </div>
                     )}
@@ -882,7 +887,7 @@ export default function PageProducts({ pageId }) {
                           disabled={saving || !info.valid || !info.changed}
                         >
                           {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Save size={16} />}
-                          {info.changed ? "Guardar precio" : "Precio guardado"}
+                          Guardar precio
                         </button>
                         <Link
                           to={`/pages/${pageId}/products/${product.id}/edit`}
