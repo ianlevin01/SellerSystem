@@ -6710,3 +6710,96 @@ body,
   overflow: hidden;
   border-radius: 999px;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ──────────────────────────────────────────────────────────────
+   Barra visible mientras scrolleás: buscador + Todos / En mi tienda
+   ────────────────────────────────────────────────────────────── */
+
+.seller-products-toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(260px, 1fr) auto !important;
+  gap: 10px !important;
+  align-items: center !important;
+  margin: 0 0 12px !important;
+  padding: 8px !important;
+  border-radius: 18px !important;
+  background: rgba(246,249,245,.96) !important;
+  border: 1px solid rgba(227,234,223,.95) !important;
+  box-shadow: 0 10px 24px rgba(15,23,42,.08) !important;
+}
+
+.seller-products-toolbar--fixed {
+  position: fixed !important;
+  z-index: 5000 !important;
+  margin: 0 !important;
+  animation: sellerProductsToolbarIn .14s ease-out both;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+
+@keyframes sellerProductsToolbarIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.seller-products-search {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.seller-products-tabs {
+  position: static !important;
+  inset: auto !important;
+  display: inline-flex !important;
+  width: auto !important;
+  gap: 5px !important;
+  padding: 5px !important;
+  border-radius: 16px !important;
+  background: rgba(0,0,0,.055) !important;
+  border: 1.5px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+.seller-products-tabs button {
+  min-height: 40px !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+  white-space: nowrap !important;
+  font-size: .86rem !important;
+}
+
+@media (max-width: 640px) {
+  .seller-products-toolbar,
+  .seller-products-toolbar--fixed {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .seller-products-tabs {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .seller-products-tabs button {
+    width: 100% !important;
+    min-height: 38px !important;
+    padding: 0 8px !important;
+    font-size: .78rem !important;
+  }
+}

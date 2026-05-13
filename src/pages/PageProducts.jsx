@@ -177,6 +177,8 @@ export default function PageProducts({ pageId }) {
   const [message,       setMessage]       = useState("");
   const [toast,         setToast]         = useState(null);
   const toastTimerRef = useRef(null);
+  const toolbarRef = useRef(null);
+  const [fixedToolbar, setFixedToolbar] = useState({ show: false, left: 0, width: 0, top: 0 });
   // Combo mode
   const [comboMode,     setComboMode]     = useState(false);
   const [comboSelected, setComboSelected] = useState(new Set());
@@ -189,6 +191,51 @@ export default function PageProducts({ pageId }) {
     setToast(name);
     toastTimerRef.current = setTimeout(() => setToast(null), 3500);
   }
+
+  useEffect(() => {
+    function updateFixedToolbar() {
+      const el = toolbarRef.current;
+      if (!el) return;
+
+      const rect = el.getBoundingClientRect();
+      const mobile = window.matchMedia("(max-width: 920px)").matches;
+      const top = mobile ? 62 : 10;
+      const shouldShow = rect.bottom <= top;
+
+      setFixedToolbar(prev => {
+        const next = {
+          show: shouldShow,
+          left: Math.max(8, Math.round(rect.left)),
+          width: Math.round(rect.width),
+          top,
+        };
+
+        if (
+          prev.show === next.show &&
+          prev.left === next.left &&
+          prev.width === next.width &&
+          prev.top === next.top
+        ) {
+          return prev;
+        }
+
+        return next;
+      });
+    }
+
+    updateFixedToolbar();
+
+    const main = document.querySelector(".layout__main");
+    window.addEventListener("scroll", updateFixedToolbar, { passive: true });
+    window.addEventListener("resize", updateFixedToolbar);
+    main?.addEventListener("scroll", updateFixedToolbar, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateFixedToolbar);
+      window.removeEventListener("resize", updateFixedToolbar);
+      main?.removeEventListener("scroll", updateFixedToolbar);
+    };
+  }, []);
 
   // Cargar categorías y combos
   useEffect(() => {
@@ -523,6 +570,28 @@ export default function PageProducts({ pageId }) {
     }
   }
 
+  function renderToolbar(extraClass = "", extraProps = {}) {
+    return (
+      <section
+        className={`seller-products-toolbar ${extraClass}`.trim()}
+        {...extraProps}
+      >
+        <div className="seller-products-search">
+          <Search size={16} />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Buscar por nombre o código..."
+          />
+        </div>
+        <div className="seller-products-tabs">
+          <button type="button" className={!onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(false)}>Todos</button>
+          <button type="button" className={onlyMine  ? "is-active" : ""} onClick={() => setOnlyMine(true)}>En mi tienda</button>
+        </div>
+      </section>
+    );
+  }
+
   if (loading) {
     return (
       <div className="seller-products">
@@ -578,8 +647,8 @@ export default function PageProducts({ pageId }) {
             <span><Sparkles size={15} />Productos</span>
             <h2>Elegí productos y definí tu precio de venta</h2>
             <p>
-              El <strong>costo revendedor</strong> es tu base. El <strong>precio sugerido</strong> es una referencia.
-              Tu ganancia se calcula con el precio que cargues.
+              El <strong>costo</strong> es tu base. <strong>Tu precio</strong> es el precio normal.
+              Si cargás un <strong>precio promo menor</strong>, la tienda muestra automáticamente el porcentaje de descuento.
             </p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -594,20 +663,18 @@ export default function PageProducts({ pageId }) {
         </section>
       )}
 
-      <section className="seller-products-toolbar">
-        <div className="seller-products-search">
-          <Search size={16} />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar por nombre o código..."
-          />
-        </div>
-        <div className="seller-products-tabs">
-          <button type="button" className={!onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(false)}>Todos</button>
-          <button type="button" className={onlyMine  ? "is-active" : ""} onClick={() => setOnlyMine(true)}>En mi tienda</button>
-        </div>
-      </section>
+      {renderToolbar("", { ref: toolbarRef })}
+
+      {fixedToolbar.show && createPortal(
+        renderToolbar("seller-products-toolbar--fixed", {
+          style: {
+            left: `${fixedToolbar.left}px`,
+            width: `${fixedToolbar.width}px`,
+            top: `${fixedToolbar.top}px`,
+          },
+        }),
+        document.body
+      )}
 
       <section className="seller-products-cats">
         <button type="button" className={category === "all" ? "is-active" : ""} onClick={() => setCategory("all")}>
@@ -630,6 +697,11 @@ export default function PageProducts({ pageId }) {
         <span>
           Mostrando {stats.visible} de {stats.total} productos · {stats.inStore} en tu tienda
         </span>
+      </div>
+
+      <div className="seller-products-mini-help">
+        <Zap size={14} />
+        <span><strong>Precio promo:</strong> si es menor a tu precio normal, la tienda lo muestra como descuento automático: <strong>10% OFF</strong>.</span>
       </div>
 
       {message && (
@@ -672,9 +744,11 @@ export default function PageProducts({ pageId }) {
                   className={`seller-product-card__shipping-badge ${combo.free_shipping ? "is-active" : ""}`}
                   onClick={() => toggleComboFreeShipping(combo)}
                   title={combo.free_shipping ? "Envío gratis activo — clic para desactivar" : "Activar envío gratis"}
+                  aria-pressed={combo.free_shipping}
                 >
-                  <Truck size={11} />
-                  Envío gratis
+                  <Truck size={12} />
+                  <span>Envío gratis</span>
+                  <b>{combo.free_shipping ? "Sí" : "No"}</b>
                 </button>
                 {!combo.active && (
                   <div className="seller-product-card__stock-warn">
@@ -735,6 +809,10 @@ export default function PageProducts({ pageId }) {
             const info       = getInfo(product);
             const saving     = savingId === product.id;
             const isLowStock = product.is_low_stock === true;
+            const promoPrice = Number(promos[product.id]?.promoPrice || 0);
+            const promoPct   = promoPrice > 0 && info.sale > promoPrice
+              ? Math.round(((info.sale - promoPrice) / info.sale) * 100)
+              : 0;
             return (
               <article
                 key={product.id}
@@ -755,9 +833,11 @@ export default function PageProducts({ pageId }) {
                       className={`seller-product-card__shipping-badge ${product.free_shipping ? "is-active" : ""}`}
                       onClick={() => toggleFreeShipping(product)}
                       title={product.free_shipping ? "Envío gratis activo — clic para desactivar" : "Activar envío gratis"}
+                      aria-pressed={product.free_shipping}
                     >
-                      <Truck size={11} />
-                      Envío gratis
+                      <Truck size={12} />
+                      <span>Envío gratis</span>
+                      <b>{product.free_shipping ? "Sí" : "No"}</b>
                     </button>
                   )}
                   {isLowStock && info.inStore && (
@@ -814,7 +894,7 @@ export default function PageProducts({ pageId }) {
 
                   <div className="seller-product-sale-wrap">
                     <label className="seller-product-sale">
-                      <span>Tu precio de venta</span>
+                      <span>Tu precio</span>
                       <div>
                         <b>$</b>
                         <input
@@ -827,19 +907,28 @@ export default function PageProducts({ pageId }) {
                       </div>
                     </label>
                     {info.inStore && (
-                      <div className={`seller-product-sale seller-product-sale--promo ${promos[product.id]?.promoEnabled ? "is-active" : ""}`}>
-                        <span>Precio promo <Zap size={10} /></span>
+                      <div className={`seller-product-sale seller-product-sale--promo ${promoPct > 0 ? "is-active" : ""}`}>
+                        <span>
+                          Promo
+                          <small>{promoPct > 0 ? `${promoPct}% OFF` : "Opcional"}</small>
+                        </span>
                         <div>
                           <b>$</b>
                           <input
                             type="number"
                             min={0}
                             step="1"
-                            placeholder="—"
+                            placeholder="Opcional"
+                            aria-label="Precio promo opcional"
                             value={promos[product.id]?.promoPrice ?? ""}
                             onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
                           />
                         </div>
+                        {promoPrice > 0 && (
+                          <small className={`seller-product-promo-hint ${promoPct > 0 ? "is-ok" : "is-warn"}`}>
+                            {promoPct > 0 ? `Se verá ${promoPct}% OFF` : "Debe ser menor"}
+                          </small>
+                        )}
                       </div>
                     )}
                   </div>
