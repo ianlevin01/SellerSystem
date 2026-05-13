@@ -443,6 +443,12 @@
   background: #fffbeb;
 }
 
+.vtz-order-status--consultation {
+  color: #7c3aed;
+  background: #f5f3ff;
+  font-weight: 700;
+}
+
 .vtz-order__money {
   text-align: right;
 }

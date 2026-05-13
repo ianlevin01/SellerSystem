@@ -734,7 +734,7 @@ export default function PageProducts({ pageId }) {
           {products.map((product, index) => {
             const info       = getInfo(product);
             const saving     = savingId === product.id;
-            const isLowStock = product.available_stock != null && Number(product.available_stock) < 10;
+            const isLowStock = product.is_low_stock === true;
             return (
               <article
                 key={product.id}

@@ -20,11 +20,12 @@ import {
 } from "lucide-react";
 
 const FILTERS = [
-  { key: "all", label: "Todos" },
-  { key: "pending", label: "Pendientes" },
-  { key: "green", label: "Confirmados" },
-  { key: "blue", label: "En proceso" },
-  { key: "red", label: "Con problema" },
+  { key: "all",          label: "Todos" },
+  { key: "pending",      label: "Pendientes" },
+  { key: "consultation", label: "A confirmar" },
+  { key: "green",        label: "Confirmados" },
+  { key: "blue",         label: "En proceso" },
+  { key: "red",          label: "Con problema" },
 ];
 
 function fmt(n) {
@@ -88,6 +89,12 @@ function getStatus(order) {
       icon: Clock3,
       description: "Todavía necesita seguimiento.",
     },
+    consultation: {
+      label: "Pendiente de confirmación",
+      tone: "consultation",
+      icon: Clock3,
+      description: "Pago y envío pendientes de coordinación con el comprador.",
+    },
   };
 
   return map[color] || map.pending;
@@ -118,7 +125,7 @@ export default function Orders() {
       0
     );
 
-    const pendientes = orders.filter((order) => (order.color || "pending") === "pending").length;
+    const pendientes = orders.filter((order) => ["pending", "consultation"].includes(order.color || "pending")).length;
 
     return {
       totalGanancia,
