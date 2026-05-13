@@ -1,7 +1,7 @@
 // src/pages/Legal.jsx
 // Página legal y privacidad interna de Ventaz
 
-import { AlertTriangle, FileText, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
+import { FileText, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const sections = [
@@ -55,14 +55,7 @@ export default function Legal() {
           <span className="info-kicker"><ShieldCheck size={16} /> Legal y privacidad</span>
           <h1>Reglas claras para operar con confianza.</h1>
           <p>Esta página resume las condiciones principales de uso, privacidad, soporte y operación dentro de Ventaz.</p>
-        </div>
-
-        <div className="legal-note">
-          <AlertTriangle size={22} />
-          <strong>Documento base</strong>
-          <span>Debe ser revisado por un profesional antes de publicarse como versión legal final.</span>
-        </div>
-      </section>
+        </div>      </section>
 
       <section className="legal-layout">
         <aside className="legal-nav">

@@ -5,6 +5,18 @@ import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import { ShoppingBag, Package, TrendingUp, Clock, ExternalLink, AlertTriangle } from "lucide-react";
 
+function storeUrl(slug) {
+  if (!slug) return "#";
+
+  if (import.meta.env.DEV) {
+    const base = import.meta.env.VITE_STORE_DEV_URL || "http://localhost:5174";
+    return `${base}?shop=${slug}`;
+  }
+
+  const domain = import.meta.env.VITE_STORE_DOMAIN || "ventaz.com.ar";
+  return `https://${slug}.${domain}`;
+}
+
 export default function Dashboard() {
   const { seller } = useAuth();
   const [orders, setOrders]           = useState([]);
@@ -57,7 +69,7 @@ export default function Dashboard() {
           <div className="welcome-banner__greeting">Bienvenido de vuelta</div>
           <h1 className="welcome-banner__name">{seller?.name?.split(" ")[0] || "Vendedor"}</h1>
           {seller?.slug && (
-            <a href={`/store/${seller?.slug}`} target="_blank" rel="noreferrer"
+            <a href={storeUrl(seller.slug)} target="_blank" rel="noreferrer"
                className="welcome-banner__store-link">
               <ExternalLink size={12} />
               Ver tienda pública

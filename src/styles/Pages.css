@@ -1075,3 +1075,40 @@
     font-size: clamp(2rem, 10vw, 3rem) !important;
   }
 }
+
+
+/* Corrección segura: Mis tiendas en 2 columnas cuando entra */
+@media (max-width: 1080px) {
+  .vtz-pages-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .vtz-pages-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .vtz-page-card {
+    min-height: 0 !important;
+    border-radius: 18px !important;
+  }
+
+  .vtz-page-card__desc {
+    display: none !important;
+  }
+
+  .vtz-page-card__body h3 {
+    font-size: .94rem !important;
+    line-height: 1.08 !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .vtz-page-card__actions {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+}

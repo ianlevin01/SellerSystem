@@ -6525,3 +6525,188 @@ body,
   .contact-chat-header__badges { display: none; }
   .contact-chat-bubble-row { max-width: 90%; }
 }
+
+
+/* Correcciones seguras: productos 2 columnas, contacto, avatar e Instagram */
+@media (max-width: 640px) {
+  .seller-products-grid,
+  .seller-products-loading {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  .seller-product-card {
+    min-width: 0 !important;
+    border-radius: 16px !important;
+  }
+
+  .seller-product-card__media {
+    padding: 7px 7px 0 !important;
+  }
+
+  .seller-product-card__image {
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    max-height: none !important;
+    border-radius: 13px !important;
+  }
+
+  .seller-product-card__image img {
+    padding: 6px !important;
+    object-fit: contain !important;
+  }
+
+  .seller-product-card__body {
+    gap: 7px !important;
+    padding: 9px 9px 10px !important;
+  }
+
+  .seller-product-card__body h3 {
+    min-height: 34px !important;
+    font-size: .78rem !important;
+    line-height: 1.13 !important;
+    letter-spacing: -.03em !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .seller-product-card__meta {
+    font-size: .64rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .seller-product-prices {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .seller-product-price {
+    min-height: 46px !important;
+    padding: 6px 7px !important;
+    border-radius: 11px !important;
+  }
+
+  .seller-product-price span {
+    margin-bottom: 2px !important;
+    font-size: .57rem !important;
+    letter-spacing: .04em !important;
+  }
+
+  .seller-product-price strong {
+    font-size: .72rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .seller-product-price small,
+  .seller-product-profit {
+    display: none !important;
+  }
+
+  .seller-product-sale > div {
+    min-height: 36px !important;
+    border-radius: 11px !important;
+  }
+
+  .seller-product-sale input {
+    min-height: 36px !important;
+    font-size: .78rem !important;
+    padding: 0 7px !important;
+  }
+
+  .seller-product-actions {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .seller-product-actions:has(.seller-product-btn--edit) {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .seller-product-btn--edit {
+    grid-column: auto !important;
+  }
+
+  .seller-product-btn {
+    min-height: 35px !important;
+    padding: 0 7px !important;
+    border-radius: 10px !important;
+    font-size: .68rem !important;
+    gap: 4px !important;
+  }
+}
+
+.contact-chat-success {
+  margin-bottom: 8px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.contact-chat-composer__input,
+.contact-chat-composer input,
+.contact-chat-composer textarea {
+  color: var(--text-primary, #18181b) !important;
+  background: #ffffff !important;
+  caret-color: var(--brand, #4db81a);
+}
+
+.contact-chat-composer__input::placeholder,
+.contact-chat-composer input::placeholder,
+.contact-chat-composer textarea::placeholder {
+  color: var(--text-secondary, #71717a) !important;
+  opacity: 1;
+}
+
+.about-social-link {
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 10px 13px;
+  border-radius: 999px;
+  color: #111827;
+  background: #ffffff;
+  border: 1px solid var(--border, #e3eadf);
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(15,23,42,.08);
+}
+
+.about-social-link svg {
+  color: #e1306c;
+}
+
+.about-social-link:hover {
+  color: #111827;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px rgba(15,23,42,.12);
+}
+
+.sidebar__avatar-img,
+.mobile-topbar__avatar {
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.sidebar__avatar-img img,
+.mobile-topbar__avatar img,
+.vtz-profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.vtz-profile-avatar-preview {
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 999px;
+}

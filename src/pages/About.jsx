@@ -41,6 +41,22 @@ export default function About() {
           <p>
             Ventaz es una plataforma pensada para personas que quieren generar ingresos online sin encargarse de la parte más pesada de un negocio: stock, pedidos, logística y soporte.
           </p>
+
+          <a
+            className="about-social-link"
+            href="https://www.instagram.com/ventaz.oficial"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Instagram oficial de Ventaz"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+            </svg>
+            <span>@ventaz.oficial</span>
+          </a>
+
           <div className="info-hero__actions">
             <Link to="/pages" className="info-btn info-btn--primary">Ver mis tiendas <ArrowRight size={16} /></Link>
             <Link to="/contact" className="info-btn info-btn--ghost">Contactar soporte</Link>

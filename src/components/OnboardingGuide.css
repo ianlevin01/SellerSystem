@@ -282,3 +282,12 @@
     flex: 1;
   }
 }
+
+
+
+@media (max-width: 480px) {
+  .og-launcher {
+    right: 16px;
+    bottom: 76px;
+  }
+}

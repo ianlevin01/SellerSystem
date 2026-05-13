@@ -17,6 +17,7 @@ export default function Contact() {
   const [loading,   setLoading]   = useState(true);
   const [sending,   setSending]   = useState(false);
   const [error,     setError]     = useState("");
+  const [sentMsg,   setSentMsg]   = useState("");
   const bottomRef  = useRef(null);
   const inputRef   = useRef(null);
 
@@ -47,9 +48,12 @@ export default function Contact() {
     if (!body || sending) return;
     setSending(true);
     setError("");
+    setSentMsg("");
     try {
       await client.post("/seller/chat/admin/messages", { body });
       setInput("");
+      setSentMsg("Mensaje enviado al equipo Ventaz.");
+      setTimeout(() => setSentMsg(""), 3500);
       await loadMessages(true);
     } catch {
       setError("No se pudo enviar el mensaje. Intentá de nuevo.");
@@ -122,6 +126,7 @@ export default function Contact() {
       {/* ── Composer ── */}
       <form className="contact-chat-composer" onSubmit={handleSend}>
         {error && <div className="contact-chat-error">{error}</div>}
+        {sentMsg && <div className="contact-chat-success">{sentMsg}</div>}
         <div className="contact-chat-composer__row">
           <input
             ref={inputRef}
