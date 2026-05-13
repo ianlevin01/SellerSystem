@@ -3151,8 +3151,22 @@ input[type="color"] {
   font-size: .92rem;
   font-weight: 600;
   white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   box-shadow: 0 8px 28px rgba(22,163,74,.4);
   animation: ppToastIn .28s var(--ease) both;
+}
+
+@media (max-width: 480px) {
+  .pp-toast {
+    white-space: normal;
+    text-align: center;
+    justify-content: center;
+    border-radius: 16px;
+    padding: 12px 18px;
+    font-size: .85rem;
+    bottom: 20px;
+  }
 }
 
 .pp-toast svg { flex-shrink: 0; }
