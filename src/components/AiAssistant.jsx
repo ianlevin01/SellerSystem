@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import client from "../api/client";
 import "../styles/AiAssistant.css";
 import { Bot, Loader2, Send, Sparkles, Trash2, X } from "lucide-react";
@@ -8,7 +9,7 @@ const MAX_STORED  = 40;
 
 const WELCOME = {
   role:    "assistant",
-  content: "¡Hola! Soy el asistente de Ventaz. Podés preguntarme cualquier cosa sobre cómo usar el panel: agregar productos, configurar tu tienda, cobrar tus ganancias, lo que necesites.",
+  content: "¡Hola! Soy Taz, tu asistente de Ventaz. Podés preguntarme cualquier cosa: cómo usar el panel, sobre tus productos, precios, stock, ganancias, lo que necesites.",
 };
 
 function loadHistory() {
@@ -27,6 +28,10 @@ function saveHistory(msgs) {
 }
 
 export default function AiAssistant() {
+  const location   = useLocation();
+  const pageIdMatch = location.pathname.match(/\/pages\/([^/]+)/);
+  const pageId     = pageIdMatch ? pageIdMatch[1] : null;
+
   const [open,     setOpen]     = useState(false);
   const [messages, setMessages] = useState(loadHistory);
   const [input,    setInput]    = useState("");
@@ -61,6 +66,7 @@ export default function AiAssistant() {
     try {
       const { data } = await client.post("/seller/ai-assistant/chat", {
         messages: next.map(m => ({ role: m.role, content: m.content })),
+        pageId:   pageId || undefined,
       });
       setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
     } catch (err) {
@@ -108,8 +114,8 @@ export default function AiAssistant() {
                 <Bot size={16} />
               </div>
               <div>
-                <strong>Asistente Ventaz</strong>
-                <span>Siempre disponible</span>
+                <strong>Taz</strong>
+                <span>Asistente de Ventaz</span>
               </div>
             </div>
             <div className="vtz-ai-panel__head-actions">

@@ -1090,7 +1090,7 @@ export default function PageProducts({ pageId }) {
               style={{ minWidth: 220 }}
             >
               {loadingMore ? <Loader2 size={16} className="seller-products-spin" /> : <Plus size={16} />}
-              {loadingMore ? "Cargando..." : "Cargar más productos"}
+              {loadingMore ? "Cargando..." : "Ver más productos"}
             </button>
           </div>
         )}
