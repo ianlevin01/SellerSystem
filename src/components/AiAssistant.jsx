@@ -101,7 +101,7 @@ export default function AiAssistant() {
         aria-label="Asistente Ventaz"
       >
         {open ? <X size={20} /> : <Sparkles size={20} />}
-        {!open && <span>Ayuda IA</span>}
+        {!open && <span>Taz</span>}
       </button>
 
       {/* Chat panel */}
