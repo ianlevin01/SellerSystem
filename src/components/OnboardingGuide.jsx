@@ -99,6 +99,96 @@ function buildFullProgramSteps(firstStoreId) {
 }
 
 function currentPageExtraSteps(pathname) {
+  // /pages — create first page
+  if (pathname === "/pages") {
+    return [
+      {
+        path: pathname,
+        selector: null,
+        title: "Tus tiendas",
+        body: "Desde acá creás y administrás las tiendas que van a ver tus clientes.",
+      },
+      {
+        path: pathname,
+        selector: ".vtz-pages-hero",
+        title: "Creá tu primera tienda",
+        body: "Hacé click en el botón 'Crear mi primera tienda' para configurar tu tienda online con nombre y diseño.",
+      },
+    ];
+  }
+
+  // /profile — complete profile
+  if (pathname === "/profile") {
+    return [
+      {
+        path: pathname,
+        selector: null,
+        title: "Tu perfil",
+        body: "Completá tus datos para poder operar en la plataforma y recibir cobros correctamente.",
+      },
+      {
+        path: pathname,
+        selector: ".vtz-profile-card--avatar",
+        title: "Foto de perfil",
+        body: "Subí una foto tuya o de tu negocio. Ayuda a generar confianza con tus clientes.",
+      },
+      {
+        path: pathname,
+        selector: ".vtz-profile-section, .vtz-profile-card",
+        title: "Teléfono y datos",
+        body: "Ingresá tu nombre completo, teléfono y ciudad. El teléfono se verifica por código SMS.",
+      },
+      {
+        path: "/cobros",
+        selector: null,
+        title: "CVU para cobros",
+        body: "Para recibir tus ganancias, configurá tu CVU o alias bancario en la sección Cobros.",
+      },
+    ];
+  }
+
+  // /cobros — configure CVU
+  if (pathname === "/cobros") {
+    return [
+      {
+        path: pathname,
+        selector: null,
+        title: "Tus cobros",
+        body: "Desde acá ves tu balance de ganancias y configurás tu CVU para recibir transferencias.",
+      },
+      {
+        path: pathname,
+        selector: ".vtz-payouts-grid, .vtz-payouts-hero, .card",
+        title: "Configurar CVU",
+        body: "Ingresá tu CVU de 22 dígitos o tu alias bancario. Una vez verificado, vas a poder solicitar transferencias.",
+      },
+    ];
+  }
+
+  // /pages/:id/integrations — connect integration
+  if (/^\/pages\/[^/]+\/integrations/.test(pathname)) {
+    return [
+      {
+        path: pathname,
+        selector: null,
+        title: "Integraciones",
+        body: "Conectá tu tienda con herramientas externas para medir y potenciar tus ventas.",
+      },
+      {
+        path: pathname,
+        selector: ".page-tabs",
+        title: "Secciones de la tienda",
+        body: "Usá estas pestañas para navegar entre Configuración, Productos, Descuentos e Integraciones.",
+      },
+      {
+        path: pathname,
+        selector: ".card, .pe-content",
+        title: "Activar Meta Pixel",
+        body: "Activá el Meta Pixel ingresando tu Pixel ID. Esto te permite medir visitas y conversiones desde tus anuncios de Facebook e Instagram.",
+      },
+    ];
+  }
+
   if (/^\/pages\/[^/]+\/products/.test(pathname)) {
     return [
       {
@@ -523,6 +613,25 @@ export default function OnboardingGuide() {
   function prevStep() {
     goToStep(stepIndex - 1);
   }
+
+  // Auto-start when navigated from the onboarding checklist with ?guide=true
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("guide") !== "true") return;
+
+    // Remove the param from the URL without triggering a navigation
+    navigate(location.pathname, { replace: true });
+
+    const timer = window.setTimeout(() => {
+      setOpen(true);
+      setStepIndex(0);
+      setTargetRect(null);
+      setCopyKey((value) => value + 1);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   useEffect(() => {
     if (localStorage.getItem(TOUR_DONE_KEY)) return;

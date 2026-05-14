@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   CheckCircle2,
   Image as ImageIcon,
+  Info,
   Layers,
   Loader2,
   PackagePlus,
@@ -176,6 +177,7 @@ export default function PageProducts({ pageId }) {
   const [bulkSaving,    setBulkSaving]    = useState(false);
   const [message,       setMessage]       = useState("");
   const [toast,         setToast]         = useState(null);
+  const [infoTip,       setInfoTip]       = useState(null);
   const toastTimerRef = useRef(null);
   const toolbarRef = useRef(null);
   const [fixedToolbar, setFixedToolbar] = useState({ show: false, left: 0, width: 0, top: 0 });
@@ -188,8 +190,14 @@ export default function PageProducts({ pageId }) {
 
   function showToast(name) {
     clearTimeout(toastTimerRef.current);
-    setToast(name);
+    setToast({ message: name, isError: false });
     toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }
+
+  function showErrorToast(msg) {
+    clearTimeout(toastTimerRef.current);
+    setToast({ message: msg, isError: true });
+    toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }
 
   useEffect(() => {
@@ -395,13 +403,16 @@ export default function PageProducts({ pageId }) {
       setMessage(`El precio de "${productName(product)}" no puede ser menor a ${money(info.cost)}.`);
       return false;
     }
+    const promo      = promos[product.id] || {};
+    const promoPrice = Number(promo.promoPrice) || 0;
+    const promoEnabled = promoPrice > 0;
+    if (promoEnabled && promoPrice < info.cost) {
+      showErrorToast(`El precio promo no puede ser menor al mínimo permitido (${money(info.cost)}).`);
+      return false;
+    }
     setSavingId(product.id);
     setMessage("");
     try {
-      const promo      = promos[product.id] || {};
-      const promoPrice = Number(promo.promoPrice) || 0;
-      const promoEnabled = promoPrice > 0;
-
       await Promise.all([
         client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, { custom_price: info.sale }),
         client.patch(`/seller/store/pages/${pageId}/products/${product.id}/promo`, {
@@ -482,6 +493,13 @@ export default function PageProducts({ pageId }) {
     const promo = promos[product.id] || {};
     const promoPrice = Number(promo.promoPrice);
     const promoEnabled = promoPrice > 0;
+    if (promoEnabled) {
+      const info = getInfo(product);
+      if (promoPrice < info.cost) {
+        showErrorToast(`El precio promo no puede ser menor al mínimo permitido (${money(info.cost)}).`);
+        return;
+      }
+    }
     setSavingId(`promo-${product.id}`);
     setMessage("");
     try {
@@ -605,11 +623,22 @@ export default function PageProducts({ pageId }) {
   return (
     <div className="seller-products">
 
-      {/* Toast de producto agregado — renderizado en body para evitar clipping por overflow */}
+      {/* Toast — renderizado en body para evitar clipping por overflow */}
       {toast && createPortal(
-        <div className="pp-toast">
-          <CheckCircle2 size={18} />
-          <span><strong>{toast}</strong> agregado a tu tienda</span>
+        <div className={`pp-toast${toast.isError ? " pp-toast--error" : ""}`}>
+          {toast.isError ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+          <span>{toast.isError ? toast.message : <><strong>{toast.message}</strong> agregado a tu tienda</>}</span>
+        </div>,
+        document.body
+      )}
+
+      {/* Tooltip flotante para el ícono de precio promocional */}
+      {infoTip && createPortal(
+        <div
+          className="pp-info-tooltip"
+          style={{ left: infoTip.x, top: infoTip.y }}
+        >
+          {infoTip.text}
         </div>,
         document.body
       )}
@@ -767,40 +796,69 @@ export default function PageProducts({ pageId }) {
                     )}
                   </p>
                 </div>
-                <div className="seller-product-prices">
-                  <div className="seller-product-price seller-product-price--cost">
-                    <span>Precio del combo</span>
-                    <strong>{money(combo.custom_price)}</strong>
-                  </div>
-                </div>
-                <div className="seller-product-actions" style={{ marginTop: "auto" }}>
-                  <button
-                    type="button"
-                    className={`seller-product-btn ${combo.active ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
-                    onClick={() => toggleCombo(combo)}
-                    style={{ flex: 1 }}
-                  >
-                    <Power size={15} />
-                    {combo.active ? "Activo" : "Inactivo"}
-                  </button>
-                  <button
-                    type="button"
-                    className="seller-product-btn seller-product-btn--ghost"
-                    onClick={() => navigate(`/pages/${pageId}/combos/${combo.id}/edit`)}
-                    style={{ flex: 1 }}
-                  >
-                    <Pencil size={15} />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="seller-product-btn seller-product-btn--remove"
-                    onClick={() => deleteCombo(combo)}
-                    style={{ flex: "0 0 auto", padding: "0 12px" }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
+                {(() => {
+                  const comboCost   = Number(combo.combo_cost_min || 0);
+                  const comboPrice  = Number(combo.custom_price   || 0);
+                  const comboProfit = comboPrice > 0 && comboCost > 0 ? comboPrice - comboCost : 0;
+                  const comboPct    = comboCost > 0 && comboProfit > 0 ? Math.round((comboProfit / comboCost) * 100) : 0;
+                  const recommended = comboCost > 0 ? Math.round(comboCost * 1.15) : 0;
+                  return (<>
+                    <div className="seller-product-prices">
+                      <div className="seller-product-price seller-product-price--cost">
+                        <span>Costo total</span>
+                        <strong>{comboCost > 0 ? money(comboCost) : "—"}</strong>
+                      </div>
+                      <div className="seller-product-price seller-product-price--suggested">
+                        <span>Precio recomendado</span>
+                        <strong>{recommended > 0 ? money(recommended) : "—"}</strong>
+                      </div>
+                    </div>
+
+                    <div className="seller-product-sale-wrap">
+                      <div className="seller-product-sale">
+                        <span>Precio del combo</span>
+                        <div className="seller-product-combo-price">
+                          <b>$</b>
+                          <span>{comboPrice > 0 ? money(comboPrice) : <em style={{ color: "var(--text-tertiary)" }}>Sin precio</em>}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`seller-product-profit ${comboProfit > 0 ? "is-positive" : ""}`}>
+                      <TrendingUp size={16} />
+                      <span>Ganancia estimada</span>
+                      <strong>{comboProfit > 0 ? `${money(comboProfit)} (${comboPct}%)` : "—"}</strong>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`seller-product-btn ${combo.active ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
+                      onClick={() => toggleCombo(combo)}
+                    >
+                      <Power size={15} />
+                      {combo.active ? "Activo en tienda" : "Inactivo"}
+                    </button>
+                    <div className="seller-product-actions">
+                      <button
+                        type="button"
+                        className="seller-product-btn seller-product-btn--edit"
+                        onClick={() => navigate(`/pages/${pageId}/combos/${combo.id}/edit`)}
+                        style={{ flex: 1 }}
+                      >
+                        <Pencil size={15} />
+                        Editar combo
+                      </button>
+                      <button
+                        type="button"
+                        className="seller-product-btn seller-product-btn--remove"
+                        onClick={() => deleteCombo(combo)}
+                        style={{ flex: "0 0 auto", padding: "0 12px" }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </>);
+                })()}
               </div>
             </article>
           ))}
@@ -822,7 +880,7 @@ export default function PageProducts({ pageId }) {
                 <div className="seller-product-card__media">
                   <ProductImage product={product} />
                   {info.inStore && (
-                    <span className="seller-product-card__badge">
+                    <span className="seller-product-card__badge seller-product-card__badge--desktop-only">
                       <BadgeCheck size={13} />
                       En tienda
                     </span>
@@ -908,9 +966,24 @@ export default function PageProducts({ pageId }) {
                     </label>
                     {info.inStore && (
                       <div className={`seller-product-sale seller-product-sale--promo ${promoPct > 0 ? "is-active" : ""}`}>
-                        <span>
-                          Promo
-                          <small>{promoPct > 0 ? `${promoPct}% OFF` : "Opcional"}</small>
+                        <span className="seller-product-promo-label">
+                          {promoPct > 0 ? (
+                            <span className="seller-product-promo-off-badge">{promoPct}% OFF</span>
+                          ) : (
+                            <>
+                              Precio promocional
+                              <span
+                                className="seller-product-promo-info"
+                                onMouseEnter={e => {
+                                  const r = e.currentTarget.getBoundingClientRect();
+                                  setInfoTip({ x: r.left + r.width / 2, y: r.top, text: "Precio con descuento. Si es menor a tu precio normal, la tienda muestra el % de ahorro automáticamente (ej: 10% OFF)." });
+                                }}
+                                onMouseLeave={() => setInfoTip(null)}
+                              >
+                                <Info size={11} />
+                              </span>
+                            </>
+                          )}
                         </span>
                         <div>
                           <b>$</b>
@@ -919,14 +992,19 @@ export default function PageProducts({ pageId }) {
                             min={0}
                             step="1"
                             placeholder="Opcional"
-                            aria-label="Precio promo opcional"
+                            aria-label="Precio promocional"
                             value={promos[product.id]?.promoPrice ?? ""}
                             onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
                           />
                         </div>
-                        {promoPrice > 0 && (
-                          <small className={`seller-product-promo-hint ${promoPct > 0 ? "is-ok" : "is-warn"}`}>
-                            {promoPct > 0 ? `Se verá ${promoPct}% OFF` : "Debe ser menor"}
+                        {promoPrice > 0 && promoPrice < info.cost && (
+                          <small className="seller-product-promo-hint is-warn">
+                            Mínimo {money(info.cost)}
+                          </small>
+                        )}
+                        {promoPrice > 0 && promoPrice >= info.cost && promoPct === 0 && (
+                          <small className="seller-product-promo-hint is-warn">
+                            Debe ser menor al precio
                           </small>
                         )}
                       </div>

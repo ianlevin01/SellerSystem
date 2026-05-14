@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import { ShoppingBag, Package, TrendingUp, Clock, ExternalLink, AlertTriangle } from "lucide-react";
+import OnboardingChecklist from "../components/OnboardingChecklist";
 
 function storeUrl(slug) {
   if (!slug) return "#";
@@ -22,6 +23,7 @@ export default function Dashboard() {
   const [orders, setOrders]           = useState([]);
   const [productsCount, setProductsCount] = useState(0);
   const [loading, setLoading]         = useState(true);
+  const [checklistShown, setChecklistShown] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -97,44 +99,50 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Últimos pedidos */}
-      <div className="card">
-        <div className="section-header">
-          <h2>Últimos pedidos</h2>
-          <Link to="/orders" className="btn btn--ghost btn--sm">Ver todos →</Link>
-        </div>
-
-        {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {[1,2,3].map(i => (
-              <div key={i} className="skeleton" style={{ height: 56, borderRadius: "var(--radius-md)" }} />
-            ))}
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="empty-state">Aún no tenés pedidos.</div>
-        ) : (
-          orders.slice(0, 5).map(order => (
-            <div key={order.id} className="order-preview-row">
-              <div>
-                <div className="order-preview-row__title">
-                  Pedido #{order.numero}
-                  <span className={`badge badge--${order.color === "paid" ? "green" : order.color === "rejected" || order.color === "cancelled" ? "red" : "pending"}`}
-                    style={{ marginLeft: 8 }}>
-                    {order.color === "paid" ? "Pagado" : order.color === "pending" ? "Pendiente" : order.color === "rejected" ? "Rechazado" : order.color === "cancelled" ? "Cancelado" : order.color}
-                  </span>
-                </div>
-                <div className="order-preview-row__sub">
-                  {order.customer_name || "Sin nombre"} ·{" "}
-                  {new Date(order.created_at).toLocaleDateString("es-AR")}
-                </div>
-              </div>
-              <div>
-                <div className="order-preview-row__total">${fmt(order.total)}</div>
-                <div className="order-preview-row__ganancia">+${fmt(order.ganancia_vendedor)}</div>
-              </div>
-            </div>
-          ))
+      {/* Checklist + Últimos pedidos */}
+      <div className="dash-bottom-grid" data-checklist={checklistShown ? "true" : "false"}>
+        {checklistShown && (
+          <OnboardingChecklist onHide={() => setChecklistShown(false)} />
         )}
+
+        <div className="card">
+          <div className="section-header">
+            <h2>Últimos pedidos</h2>
+            <Link to="/orders" className="btn btn--ghost btn--sm">Ver todos →</Link>
+          </div>
+
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[1,2,3].map(i => (
+                <div key={i} className="skeleton" style={{ height: 56, borderRadius: "var(--radius-md)" }} />
+              ))}
+            </div>
+          ) : orders.length === 0 ? (
+            <div className="empty-state">Aún no tenés pedidos.</div>
+          ) : (
+            orders.slice(0, 5).map(order => (
+              <div key={order.id} className="order-preview-row">
+                <div>
+                  <div className="order-preview-row__title">
+                    Pedido #{order.numero}
+                    <span className={`badge badge--${order.color === "paid" ? "green" : order.color === "rejected" || order.color === "cancelled" ? "red" : "pending"}`}
+                      style={{ marginLeft: 8 }}>
+                      {order.color === "paid" ? "Pagado" : order.color === "pending" ? "Pendiente" : order.color === "rejected" ? "Rechazado" : order.color === "cancelled" ? "Cancelado" : order.color}
+                    </span>
+                  </div>
+                  <div className="order-preview-row__sub">
+                    {order.customer_name || "Sin nombre"} ·{" "}
+                    {new Date(order.created_at).toLocaleDateString("es-AR")}
+                  </div>
+                </div>
+                <div>
+                  <div className="order-preview-row__total">${fmt(order.total)}</div>
+                  <div className="order-preview-row__ganancia">+${fmt(order.ganancia_vendedor)}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
