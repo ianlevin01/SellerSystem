@@ -478,6 +478,24 @@ input, textarea, select { font-family: var(--font); }
 
 .btn--full { width: 100%; }
 
+.btn--combo-cta {
+  padding: 8px 18px;
+  font-size: .875rem;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--brand-light, #f0edff), var(--brand-soft, #e5e1ff));
+  color: var(--brand);
+  border: 1.5px solid var(--brand);
+  font-weight: 700;
+  gap: 7px;
+  transition: background .18s, box-shadow .18s, transform .15s;
+}
+.btn--combo-cta:hover:not(:disabled) {
+  background: var(--brand);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(91,82,240,.28);
+}
+
 /* ── Form elements ──────────────────────────────────────────── */
 .form-group {
   display: flex;

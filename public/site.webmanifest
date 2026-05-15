@@ -4,13 +4,14 @@
   "description": "Panel de vendedores Ventaz",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#09200d",
   "theme_color": "#57d625",
   "icons": [
     {
-      "src": "/ventaz.png",
+      "src": "/favicon.svg",
       "sizes": "any",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

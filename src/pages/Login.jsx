@@ -261,6 +261,9 @@ export default function Login() {
           )}
 
           <p className="vtz-login-register">
+            <Link to="/forgot-password" style={{ color: "#647067" }}>¿Olvidaste tu contraseña?</Link>
+          </p>
+          <p className="vtz-login-register">
             ¿Todavía no tenés tienda? <Link to="/register">Crear mi tienda</Link>
           </p>
         </div>

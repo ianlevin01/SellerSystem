@@ -680,13 +680,13 @@ export default function PageProducts({ pageId }) {
               Si cargás un <strong>precio promo menor</strong>, la tienda muestra automáticamente el porcentaje de descuento.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={enterComboMode}>
-              <Layers size={15} /> Crear combo
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+            <button type="button" className="btn btn--combo-cta" onClick={enterComboMode}>
+              <Layers size={16} /> Crear combo
             </button>
             <button type="button" className="btn btn--primary btn--sm" onClick={addVisibleProducts} disabled={bulkSaving}>
               {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
-              {bulkSaving ? "Agregando..." : "Agregar todos los productos visibles"}
+              {bulkSaving ? "Agregando..." : "Agregar a mi tienda todos los productos visibles"}
             </button>
           </div>
         </section>

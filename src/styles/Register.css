@@ -9,7 +9,6 @@
   background: #f4f7ef;
   color: #0f172a;
   font-family: var(--font, "Inter", "DM Sans", system-ui, sans-serif);
-  overflow: hidden;
 }
 
 .vtz-register * {
@@ -182,8 +181,9 @@
 .vtz-register-form-section {
   min-height: 100vh;
   display: grid;
-  place-items: center;
-  padding: clamp(22px, 4vw, 56px);
+  align-items: start;
+  justify-items: center;
+  padding: clamp(40px, 5vw, 72px) clamp(22px, 4vw, 56px);
   background:
     radial-gradient(circle at 85% 18%, rgba(77,184,26,.13), transparent 27rem),
     #f4f7ef;
@@ -489,6 +489,50 @@
   font-weight: 1000;
 }
 
+.vtz-login-google {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px solid #dfe8d7;
+  border-radius: 18px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 950;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  margin-bottom: 4px;
+}
+.vtz-login-google:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #fbfdf8;
+  box-shadow: 0 14px 34px rgba(15,23,42,.07);
+}
+.vtz-login-google:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.vtz-register-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+.vtz-register-divider::before,
+.vtz-register-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #dfe8d7;
+}
+.vtz-register-divider span {
+  color: #7b867d;
+  font-size: .84rem;
+  font-weight: 850;
+}
+
 .vtz-register-success {
   min-height: 100vh;
   display: grid;
@@ -672,14 +716,14 @@ body:has(.vtz-register) {
 .vtz-register-form-section {
   height: 100vh;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
   padding: clamp(16px, 3vw, 38px);
 }
 
 .vtz-register-form-wrap {
   width: min(100%, 520px);
-  max-height: calc(100vh - 40px);
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
   padding: clamp(22px, 3vw, 34px);
   border-radius: 30px;
 }
@@ -788,7 +832,7 @@ body:has(.vtz-register) {
   font-size: .9rem;
 }
 
-/* Si alguna notebook tiene altura muy chica, compacta todavía más */
+/* Notebook con pantalla corta */
 @media (max-height: 820px) and (min-width: 981px) {
   .vtz-register-panel h1 {
     font-size: clamp(2.8rem, 5vw, 5rem);
@@ -821,6 +865,44 @@ body:has(.vtz-register) {
 
   .vtz-register-bottom > div {
     display: none;
+  }
+}
+
+/* Pantallas muy cortas — ocultar párrafo del panel para que entren los 4 beneficios */
+@media (max-height: 760px) and (min-width: 981px) {
+  .vtz-register-panel {
+    padding: clamp(16px, 2vw, 26px);
+  }
+
+  .vtz-register-panel h1 {
+    font-size: clamp(2.4rem, 4.2vw, 4.2rem);
+  }
+
+  .vtz-register-panel p {
+    display: none;
+  }
+
+  .vtz-register-pill {
+    margin-bottom: 14px;
+    padding: 7px 12px;
+    font-size: .82rem;
+  }
+
+  .vtz-register-benefits {
+    grid-template-columns: 1fr;
+    margin-top: 16px;
+    gap: 8px;
+  }
+
+  .vtz-register-benefits div {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: .84rem;
+  }
+
+  .vtz-register-proof {
+    padding: 11px 13px;
+    font-size: .84rem;
   }
 }
 

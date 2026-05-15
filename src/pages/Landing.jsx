@@ -51,7 +51,7 @@ const FLOW_STEPS = [
     number: "01",
     title: "Elegís productos",
     subtitle: "Catálogo disponible",
-    text: "El vendedor ve productos disponibles, elige cuáles quiere vender y empieza a armar su propuesta sin comprar mercadería.",
+    text: "Ves los productos disponibles, elegís cuáles querés vender y empezás a armar tu propuesta sin comprar mercadería.",
     icon: Boxes,
   },
   {
@@ -59,7 +59,7 @@ const FLOW_STEPS = [
     number: "02",
     title: "Armás tu tienda",
     subtitle: "Tu marca, tu link, tu precio",
-    text: "Cada vendedor puede publicar productos en una tienda propia, con su identidad y su forma de vender.",
+    text: "Publicás productos en tu tienda propia, con tu identidad, tu nombre y tu forma de vender.",
     icon: Store,
   },
   {
@@ -67,7 +67,7 @@ const FLOW_STEPS = [
     number: "03",
     title: "Conseguís clientes",
     subtitle: "Vos te enfocás en vender",
-    text: "El vendedor se ocupa de mostrar, promocionar y cerrar ventas. La parte pesada queda organizada por la plataforma.",
+    text: "Te ocupás de mostrar, promocionar y cerrar ventas. La parte pesada queda organizada por la plataforma.",
     icon: Users,
   },
   {
@@ -75,7 +75,7 @@ const FLOW_STEPS = [
     number: "04",
     title: "Ventaz opera",
     subtitle: "Stock, pedidos, logística y soporte",
-    text: "Cada venta se registra, el stock se actualiza y Ventaz acompaña la operación hasta que el pedido queda resuelto.",
+    text: "Cada venta que generás se registra, el stock se actualiza y Ventaz acompaña la operación hasta que el pedido queda resuelto.",
     icon: LayoutDashboard,
   },
 ];
@@ -157,16 +157,10 @@ const AUDIENCE = [
 
 const FOUNDERS = [
   {
-    initials: "LD",
-    name: "Lucas Dercye",
-    role: "Operación y visión comercial",
-    text: "Impulsa Ventaz desde la experiencia real de vender, ordenar procesos y transformar una operación tradicional en una plataforma escalable.",
-  },
-  {
-    initials: "IL",
-    name: "Ian Levin",
-    role: "Producto y crecimiento",
-    text: "Acompaña el desarrollo del sistema y la experiencia del vendedor para que la plataforma sea simple, clara y fácil de usar.",
+    initials: "Tz",
+    name: "Taz — Tu asistente de Ventaz",
+    role: "Soporte y consultas 24/7",
+    text: "Taz es el asistente integrado en tu panel. Podés preguntarle sobre tus productos, precios, ganancias, cómo usar cada función y cualquier duda que tengas. Está disponible en todo momento para ayudarte a operar mejor.",
   },
 ];
 
@@ -348,8 +342,8 @@ export default function Landing() {
             </p>
 
             <div className="vtz-hero__buttons">
-              <Link to="/register" className="vtz-btn vtz-btn--primary">
-                Crear mi tienda <ArrowRight size={18} />
+              <Link to="/register" className="vtz-btn vtz-btn--primary vtz-btn--hero">
+                Crear mi tienda <ArrowRight size={20} />
               </Link>
               <button type="button" className="vtz-btn vtz-btn--secondary" onClick={() => goTo("como-funciona")}>
                 Ver cómo funciona
@@ -377,7 +371,7 @@ export default function Landing() {
             <div className="vtz-hero-card__bg" />
             <div className="vtz-hero-card__top">
               <span>Modelo Ventaz</span>
-              <strong>Vos vendés. Nosotros operamos.</strong>
+              <strong>Nosotros operamos. Vos vendés.</strong>
             </div>
 
             <div className="vtz-flow-mini">

@@ -21,9 +21,11 @@ import Chat         from "./pages/Chat";
 import Payouts      from "./pages/Payouts";
 import Integrations from "./pages/Integrations";
 import ComboEditor  from "./pages/ComboEditor";
-import About        from "./pages/About";
-import Contact      from "./pages/Contact";
-import Legal        from "./pages/Legal";
+import About          from "./pages/About";
+import Contact        from "./pages/Contact";
+import Legal          from "./pages/Legal";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword  from "./pages/ResetPassword";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -43,8 +45,10 @@ export default function App() {
           <Route path="/"             element={<HomeRoute />} />
           <Route path="/login"        element={<Login />} />
           <Route path="/register"     element={<Register />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/store/:slug"  element={<PublicStore />} />
+          <Route path="/verify-email"     element={<VerifyEmail />} />
+          <Route path="/forgot-password"  element={<ForgotPassword />} />
+          <Route path="/reset-password"   element={<ResetPassword />} />
+          <Route path="/store/:slug"      element={<PublicStore />} />
 
           {/* Panel del vendedor (requiere auth) */}
           <Route element={<ProtectedRoute />}>

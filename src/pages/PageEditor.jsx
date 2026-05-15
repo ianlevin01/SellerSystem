@@ -573,15 +573,6 @@ function ConfigTab({ pageId }) {
                 </p>
               )}
             </Field>
-            <Field label="Costo de envío" hint="Lo paga el cliente salvo que el producto/combo tenga envío gratis">
-              <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)", pointerEvents: "none" }}>$</span>
-                <input type="number" min={0} step={100} className="form-input"
-                  value={form.costo_envio}
-                  onChange={e => set("costo_envio", Number(e.target.value))}
-                  style={{ paddingLeft: 22 }} />
-              </div>
-            </Field>
           </>}
 
           {/* ── Hero ───────────────────────────────────── */}
