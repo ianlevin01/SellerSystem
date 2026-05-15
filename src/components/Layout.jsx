@@ -1,7 +1,7 @@
 // src/components/Layout.jsx
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import AiAssistant from "./AiAssistant";
-import OnboardingGuide from "./OnboardingGuide";
+import HowToUse from "./HowToUse";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
@@ -233,7 +233,7 @@ export default function Layout() {
       </main>
 
       <AiAssistant />
-      <OnboardingGuide />
+      <HowToUse />
     </div>
   );
 }
