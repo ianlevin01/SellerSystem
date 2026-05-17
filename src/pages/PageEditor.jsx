@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
 import {
-  AlertTriangle, Building2, ChevronDown, ChevronLeft,
+  AlertTriangle, Building2, ChevronLeft,
   ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
-  Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Percent, Plus,
+  Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Pencil, Percent, Plus,
   RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Upload, X, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
@@ -1146,23 +1146,135 @@ function TiersSection({ type, tiers, onChange }) {
   );
 }
 
-// ── DiscountAccordion ─────────────────────────────────────────
+// ── DiscountCard ──────────────────────────────────────────────
 
-function DiscountAccordion({ icon: Icon, title, enabled, onToggle, children }) {
-  const [open, setOpen] = useState(false);
+function DiscountCard({ icon: Icon, title, enabled, onToggle, tiersCount, maxPct, onEdit }) {
   return (
-    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", cursor: "pointer", userSelect: "none" }} onClick={() => setOpen(o => !o)}>
-        <Icon size={16} color="var(--text-secondary)" />
-        <span style={{ fontWeight: 600, fontSize: ".9375rem", flex: 1, color: "var(--text-primary)" }}>{title}</span>
-        <label className="toggle-switch" onClick={e => e.stopPropagation()} style={{ marginRight: 8 }}>
-          <input type="checkbox" checked={enabled} onChange={e => onToggle(e.target.checked)} />
-          <span className="toggle-track"><span className="toggle-thumb" /></span>
-        </label>
-        <ChevronDown size={16} style={{ color: "var(--text-secondary)", transition: "transform .2s", transform: open ? "rotate(180deg)" : "none" }} />
+    <div className="card" style={{ padding: "18px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{
+        width: 38, height: 38, borderRadius: "var(--radius-md)",
+        background: enabled ? "var(--brand-light)" : "var(--bg-subtle,#f4f6f3)",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        transition: "background .2s",
+      }}>
+        <Icon size={17} color={enabled ? "var(--brand)" : "var(--text-secondary)"} />
       </div>
-      {open && <div style={{ padding: "0 20px 20px", borderTop: "1px solid var(--border)" }}><div style={{ height: 16 }} />{children}</div>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: ".9375rem", color: "var(--text-primary)" }}>{title}</div>
+        <div style={{ fontSize: ".8rem", color: "var(--text-secondary)", marginTop: 2 }}>
+          {tiersCount === 0
+            ? "Sin niveles configurados"
+            : `${tiersCount} nivel${tiersCount !== 1 ? "es" : ""} · hasta ${maxPct}% off`}
+        </div>
+      </div>
+      <label className="toggle-switch" style={{ flexShrink: 0 }}>
+        <input type="checkbox" checked={enabled} onChange={e => onToggle(e.target.checked)} />
+        <span className="toggle-track"><span className="toggle-thumb" /></span>
+      </label>
+      <button type="button" className="btn btn--secondary btn--sm" style={{ flexShrink: 0 }} onClick={onEdit}>
+        <Pencil size={13} /> Editar
+      </button>
     </div>
+  );
+}
+
+// ── DiscountDrawer ────────────────────────────────────────────
+
+function DiscountDrawer({ open, isNew, type: initialType, tiers: initialTiers, enabled: initialEnabled, existingTypes, onClose, onSave }) {
+  const [type,    setType]    = useState(initialType || "quantity");
+  const [tiers,   setTiers]   = useState(initialTiers || []);
+  const [enabled, setEnabled] = useState(initialEnabled ?? true);
+
+  useEffect(() => {
+    if (open) {
+      setType(initialType || "quantity");
+      setTiers(initialTiers ? initialTiers.map(t => ({ ...t })) : []);
+      setEnabled(initialEnabled ?? true);
+    }
+  }, [open, initialType, initialTiers, initialEnabled]);
+
+  if (!open) return null;
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.35)", zIndex: 1000, backdropFilter: "blur(2px)" }} />
+      <div style={{
+        position: "fixed", top: 0, right: 0, height: "100dvh", width: "min(480px,100vw)",
+        background: "var(--surface,#fff)", boxShadow: "-4px 0 32px rgba(0,0,0,.18)",
+        zIndex: 1001, display: "flex", flexDirection: "column", overflowY: "auto",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "20px 24px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <span style={{ fontWeight: 700, fontSize: "1.0625rem", flex: 1, color: "var(--text-primary)" }}>
+            {isNew ? "Nuevo descuento" : "Editar descuento"}
+          </span>
+          <button type="button" onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: 6, borderRadius: "var(--radius-sm)", display: "flex" }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column", gap: 24, overflowY: "auto" }}>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: ".875rem", color: "var(--text-primary)", margin: "0 0 12px" }}>Tipo de descuento</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { val: "quantity", label: "Por cantidad",       desc: "Descuento según unidades compradas",   icon: Tag },
+                { val: "price",    label: "Por monto",          desc: "Descuento al superar un total en $",   icon: TrendingDown },
+              ].map(({ val, label, desc, icon }) => {
+                const TypeIcon      = icon;
+                const locked        = !isNew && type !== val;
+                const alreadyExists = isNew && existingTypes.includes(val);
+                const active        = type === val;
+                return (
+                  <button key={val} type="button"
+                    disabled={locked || alreadyExists}
+                    onClick={() => !locked && !alreadyExists && setType(val)}
+                    style={{
+                      textAlign: "left", padding: "14px 16px",
+                      border: `2px solid ${active ? "var(--brand)" : "var(--border)"}`,
+                      borderRadius: "var(--radius-md)",
+                      background: active ? "var(--brand-light)" : "var(--bg,#fff)",
+                      cursor: (locked || alreadyExists) ? "default" : "pointer",
+                      opacity: alreadyExists ? .45 : 1, transition: "border-color .15s, background .15s",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <TypeIcon size={14} color={active ? "var(--brand)" : "var(--text-secondary)"} />
+                      <span style={{ fontWeight: 600, fontSize: ".875rem", color: active ? "var(--brand)" : "var(--text-primary)" }}>{label}</span>
+                    </div>
+                    <span style={{ fontSize: ".78rem", color: "var(--text-secondary)", display: "block" }}>{desc}</span>
+                    {alreadyExists && <span style={{ fontSize: ".72rem", color: "var(--text-tertiary)", marginTop: 4, display: "block" }}>Ya existe uno</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: "var(--bg-subtle,#f4f6f3)", borderRadius: "var(--radius-md)" }}>
+            <div>
+              <p style={{ fontWeight: 600, fontSize: ".875rem", color: "var(--text-primary)", margin: 0 }}>Activo</p>
+              <p style={{ fontSize: ".8rem", color: "var(--text-secondary)", margin: "2px 0 0" }}>
+                {enabled ? "Los clientes verán este descuento" : "El descuento está oculto para los clientes"}
+              </p>
+            </div>
+            <label className="toggle-switch" style={{ flexShrink: 0 }}>
+              <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
+              <span className="toggle-track"><span className="toggle-thumb" /></span>
+            </label>
+          </div>
+
+          <div>
+            <p style={{ fontWeight: 600, fontSize: ".875rem", color: "var(--text-primary)", margin: "0 0 12px" }}>Niveles de descuento</p>
+            <TiersSection type={type} tiers={tiers} onChange={setTiers} />
+          </div>
+        </div>
+
+        <div style={{ padding: "16px 24px", borderTop: "1px solid var(--border)", display: "flex", gap: 10, flexShrink: 0 }}>
+          <button type="button" className="btn btn--secondary btn--sm" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
+          <button type="button" className="btn btn--primary btn--sm" style={{ flex: 2 }} onClick={() => onSave({ type, tiers, enabled })}>
+            Guardar descuento
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1179,6 +1291,7 @@ function DiscountsTab({ pageId }) {
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
+  const [drawer,   setDrawer]   = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -1206,6 +1319,31 @@ function DiscountsTab({ pageId }) {
         return { ...p, effectivePrice, discountedPrice, floor, minNeeded, isViolation: floor > 0 && discountedPrice < floor - 0.01 };
       }).filter(p => p.isViolation)
     : [];
+
+  const existingTypes = [
+    ...(config.quantity_tiers.length > 0 ? ["quantity"] : []),
+    ...(config.price_tiers.length    > 0 ? ["price"]    : []),
+  ];
+
+  function openNewDrawer() {
+    const availType = !existingTypes.includes("quantity") ? "quantity" : "price";
+    setDrawer({ isNew: true, type: availType, tiers: [], enabled: true });
+  }
+
+  function openEditDrawer(type) {
+    const tiers   = type === "quantity" ? config.quantity_tiers : config.price_tiers;
+    const enabled = type === "quantity" ? config.enabled_quantity : config.enabled_price;
+    setDrawer({ isNew: false, type, tiers, enabled });
+  }
+
+  function handleDrawerSave({ type, tiers, enabled }) {
+    if (type === "quantity") {
+      setConfig(c => ({ ...c, enabled_quantity: enabled, quantity_tiers: tiers }));
+    } else {
+      setConfig(c => ({ ...c, enabled_price: enabled, price_tiers: tiers }));
+    }
+    setDrawer(null);
+  }
 
   async function handleSave(e) {
     e.preventDefault();
@@ -1239,84 +1377,145 @@ function DiscountsTab({ pageId }) {
 
   if (loading) return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {[1,2].map(i => <div key={i} className="skeleton" style={{ height: 64, borderRadius: "var(--radius-lg)" }} />)}
+      {[1,2].map(i => <div key={i} className="skeleton" style={{ height: 70, borderRadius: "var(--radius-lg)" }} />)}
     </div>
   );
 
-  return (
-    <form onSubmit={handleSave}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <DiscountAccordion icon={Tag} title="Descuentos por cantidad" enabled={config.enabled_quantity} onToggle={v => setConfig(c => ({ ...c, enabled_quantity: v }))}>
-          <TiersSection type="quantity" tiers={config.quantity_tiers} onChange={ts => setConfig(c => ({ ...c, quantity_tiers: ts }))} />
-        </DiscountAccordion>
-        <DiscountAccordion icon={TrendingDown} title="Descuentos por monto del carrito" enabled={config.enabled_price} onToggle={v => setConfig(c => ({ ...c, enabled_price: v }))}>
-          <TiersSection type="price" tiers={config.price_tiers} onChange={ts => setConfig(c => ({ ...c, price_tiers: ts }))} />
-        </DiscountAccordion>
+  const discountCards = [
+    { type: "quantity", icon: Tag,         title: "Descuento por cantidad",          tiers: config.quantity_tiers, enabled: config.enabled_quantity },
+    { type: "price",    icon: TrendingDown, title: "Descuento por monto del carrito", tiers: config.price_tiers,    enabled: config.enabled_price    },
+  ].filter(d => d.tiers.length > 0);
 
-        {violations.length > 0 && (
-          <div className="card" style={{ border: "1.5px solid var(--danger,#ef4444)", background: "var(--danger-light,#fef2f2)", padding: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <AlertTriangle size={16} color="var(--danger,#ef4444)" />
-              <strong style={{ color: "var(--danger,#ef4444)", fontSize: ".9375rem" }}>
-                {violations.length} producto{violations.length !== 1 ? "s" : ""} quedaría{violations.length !== 1 ? "n" : ""} por debajo del precio mínimo
-              </strong>
+  const canCreate = existingTypes.length < 2;
+
+  return (
+    <>
+      <DiscountDrawer
+        open={!!drawer}
+        isNew={drawer?.isNew}
+        type={drawer?.type}
+        tiers={drawer?.tiers}
+        enabled={drawer?.enabled}
+        existingTypes={existingTypes}
+        onClose={() => setDrawer(null)}
+        onSave={handleDrawerSave}
+      />
+
+      <form onSubmit={handleSave}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div>
+              <h3 style={{ margin: 0, fontWeight: 700, fontSize: "1rem", color: "var(--text-primary)" }}>Descuentos</h3>
+              <p style={{ margin: "3px 0 0", fontSize: ".82rem", color: "var(--text-secondary)" }}>
+                Configurá descuentos automáticos para tus clientes.
+              </p>
             </div>
-            <p style={{ fontSize: ".82rem", color: "var(--text-secondary)", margin: "0 0 14px" }}>
-              Con un descuento del {maxDiscountPct.toFixed(1)}%, estos productos quedarían por debajo de su costo. Subí sus precios antes de guardar.
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, padding: "0 4px", fontSize: ".75rem", fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".04em" }}>
-                <span>Producto</span><span>Tu precio</span><span>Con descuento</span><span>Nuevo precio</span>
+            {canCreate && discountCards.length > 0 && (
+              <button type="button" className="btn btn--primary btn--sm" style={{ flexShrink: 0 }} onClick={openNewDrawer}>
+                <Plus size={13} /> Crear descuento
+              </button>
+            )}
+          </div>
+
+          {discountCards.length === 0 ? (
+            <div style={{ border: "2px dashed var(--border)", borderRadius: "var(--radius-lg)", padding: "48px 24px", textAlign: "center" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--bg-subtle,#f4f6f3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <Tag size={20} color="var(--text-secondary)" />
               </div>
-              {violations.map(v => {
-                const draft    = draftAdj[v.id] ?? "";
-                const draftNum = Number(draft);
-                const canAccept = draft !== "" && !isNaN(draftNum) && draftNum >= Math.ceil(v.minNeeded);
-                return (
-                  <div key={v.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, alignItems: "center", padding: "10px 12px", background: "#fff", borderRadius: "var(--radius-md)", border: "1px solid var(--danger,#ef4444)" }}>
-                    <div style={{ fontSize: ".8375rem", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.custom_name || v.name}</div>
-                    <div style={{ fontSize: ".8125rem", color: "var(--text-secondary)" }}>{fmt(v.effectivePrice)}</div>
-                    <div style={{ fontSize: ".8125rem", color: "var(--danger,#ef4444)", fontWeight: 600 }}>{fmt(v.discountedPrice)}</div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <div style={{ position: "relative", flex: 1 }}>
-                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: ".75rem", color: "var(--text-secondary)", pointerEvents: "none" }}>$</span>
-                        <input type="number" min={Math.ceil(v.minNeeded)} step={1}
-                          className="form-input form-input--sm" style={{ paddingLeft: 18 }}
-                          value={draft}
-                          placeholder={Math.ceil(v.minNeeded).toLocaleString("es-AR")}
-                          onChange={e => setDraftAdj(p => ({ ...p, [v.id]: e.target.value }))}
-                          onKeyDown={e => {
-                            if (e.key === "Enter" && canAccept) {
-                              setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
-                              setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
-                            }
-                          }}
-                        />
-                      </div>
-                      <button type="button" className="btn btn--sm btn--primary" disabled={!canAccept}
-                        onClick={() => {
-                          setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
-                          setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
-                        }}>
-                        Aceptar
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              <p style={{ fontWeight: 600, fontSize: ".9375rem", color: "var(--text-primary)", margin: "0 0 6px" }}>Sin descuentos creados</p>
+              <p style={{ fontSize: ".85rem", color: "var(--text-secondary)", margin: "0 0 20px" }}>
+                Creá un descuento por cantidad o por monto del carrito.
+              </p>
+              <button type="button" className="btn btn--primary" onClick={openNewDrawer}>
+                <Plus size={14} /> Crear mi primer descuento
+              </button>
             </div>
+          ) : (
+            discountCards.map(d => {
+              const maxPct = Math.max(0, ...d.tiers.map(t => Number(t.discount_pct)).filter(v => !isNaN(v)));
+              return (
+                <DiscountCard
+                  key={d.type}
+                  icon={d.icon}
+                  title={d.title}
+                  enabled={d.enabled}
+                  onToggle={v => setConfig(c => d.type === "quantity" ? { ...c, enabled_quantity: v } : { ...c, enabled_price: v })}
+                  tiersCount={d.tiers.length}
+                  maxPct={maxPct.toFixed(0)}
+                  onEdit={() => openEditDrawer(d.type)}
+                />
+              );
+            })
+          )}
+
+          {violations.length > 0 && (
+            <div className="card" style={{ border: "1.5px solid var(--danger,#ef4444)", background: "var(--danger-light,#fef2f2)", padding: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <AlertTriangle size={16} color="var(--danger,#ef4444)" />
+                <strong style={{ color: "var(--danger,#ef4444)", fontSize: ".9375rem" }}>
+                  {violations.length} producto{violations.length !== 1 ? "s" : ""} quedaría{violations.length !== 1 ? "n" : ""} por debajo del precio mínimo
+                </strong>
+              </div>
+              <p style={{ fontSize: ".82rem", color: "var(--text-secondary)", margin: "0 0 14px" }}>
+                Con un descuento del {maxDiscountPct.toFixed(1)}%, estos productos quedarían por debajo de su costo. Subí sus precios antes de guardar.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, padding: "0 4px", fontSize: ".75rem", fontWeight: 600, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".04em" }}>
+                  <span>Producto</span><span>Tu precio</span><span>Con descuento</span><span>Nuevo precio</span>
+                </div>
+                {violations.map(v => {
+                  const draft     = draftAdj[v.id] ?? "";
+                  const draftNum  = Number(draft);
+                  const canAccept = draft !== "" && !isNaN(draftNum) && draftNum >= Math.ceil(v.minNeeded);
+                  return (
+                    <div key={v.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1.6fr", gap: 10, alignItems: "center", padding: "10px 12px", background: "#fff", borderRadius: "var(--radius-md)", border: "1px solid var(--danger,#ef4444)" }}>
+                      <div style={{ fontSize: ".8375rem", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{v.custom_name || v.name}</div>
+                      <div style={{ fontSize: ".8125rem", color: "var(--text-secondary)" }}>{fmt(v.effectivePrice)}</div>
+                      <div style={{ fontSize: ".8125rem", color: "var(--danger,#ef4444)", fontWeight: 600 }}>{fmt(v.discountedPrice)}</div>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <div style={{ position: "relative", flex: 1 }}>
+                          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: ".75rem", color: "var(--text-secondary)", pointerEvents: "none" }}>$</span>
+                          <input type="number" min={Math.ceil(v.minNeeded)} step={1}
+                            className="form-input form-input--sm" style={{ paddingLeft: 18 }}
+                            value={draft}
+                            placeholder={Math.ceil(v.minNeeded).toLocaleString("es-AR")}
+                            onChange={e => setDraftAdj(p => ({ ...p, [v.id]: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === "Enter" && canAccept) {
+                                setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
+                                setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
+                              }
+                            }}
+                          />
+                        </div>
+                        <button type="button" className="btn btn--sm btn--primary" disabled={!canAccept}
+                          onClick={() => {
+                            setPriceAdj(p => ({ ...p, [v.id]: draftNum }));
+                            setDraftAdj(p => { const n = { ...p }; delete n[v.id]; return n; });
+                          }}>
+                          Aceptar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {discountCards.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
+            {error && <span style={{ fontSize: ".875rem", color: "var(--danger)" }}>{error}</span>}
+            {saved && <span style={{ fontSize: ".875rem", color: "var(--success)", fontWeight: 500 }}>✓ Guardado</span>}
+            <button type="submit" disabled={saving || violations.length > 0} className="btn btn--primary btn--lg">
+              {saving ? "Guardando..." : "Guardar cambios"}
+            </button>
           </div>
         )}
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
-        {error && <span style={{ fontSize: ".875rem", color: "var(--danger)" }}>{error}</span>}
-        {saved && <span style={{ fontSize: ".875rem", color: "var(--success)", fontWeight: 500 }}>✓ Guardado</span>}
-        <button type="submit" disabled={saving || violations.length > 0} className="btn btn--primary btn--lg">
-          {saving ? "Guardando..." : "Guardar descuentos"}
-        </button>
-      </div>
-    </form>
+      </form>
+    </>
   );
 }
 
