@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import client from "../api/client";
-import { Loader2, Star, Trash2 } from "lucide-react";
+import { Loader2, Puzzle, Star, Trash2 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -329,13 +329,36 @@ export default function Integrations() {
 
   return (
     <main style={{ maxWidth: 720 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: "0 0 4px", fontSize: "1.375rem", fontWeight: 700 }}>Integraciones</h1>
-        <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: ".9375rem" }}>
-          Activá herramientas externas para potenciar tu tienda.
-        </p>
-      </div>
+      {/* Hero */}
+      <section style={{
+        position: "relative",
+        overflow: "hidden",
+        borderRadius: 28,
+        padding: "clamp(28px, 4vw, 44px)",
+        marginBottom: 28,
+        color: "#fff",
+        background: "radial-gradient(circle at 14% 22%, rgba(87,214,37,.28), transparent 26rem), radial-gradient(circle at 84% 18%, rgba(87,214,37,.12), transparent 22rem), linear-gradient(135deg, #061006 0%, #09200d 52%, #123816 100%)",
+        boxShadow: "0 24px 64px rgba(15,23,42,.16)",
+      }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px)",
+          backgroundSize: "42px 42px",
+          maskImage: "radial-gradient(circle at center, black 30%, transparent 82%)",
+          pointerEvents: "none",
+        }} />
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: ".72rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#b8ff9d", marginBottom: 12 }}>
+            <Puzzle size={13} /> Integraciones
+          </span>
+          <h1 style={{ margin: "0 0 10px", fontSize: "clamp(1.9rem, 4vw, 3.2rem)", fontWeight: 800, lineHeight: .95, letterSpacing: "-.05em", color: "#fff" }}>
+            Conectá tus herramientas
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,.6)", lineHeight: 1.5, maxWidth: 400 }}>
+            Activá integraciones externas para potenciar tu tienda y entender mejor a tus clientes.
+          </p>
+        </div>
+      </section>
 
       {/* Page selector */}
       <div className="card" style={{ padding: "16px 20px", marginBottom: 24 }}>

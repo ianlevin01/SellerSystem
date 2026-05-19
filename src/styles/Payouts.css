@@ -10,7 +10,6 @@
   --soft:    #f4f7ef;
   --line:    rgba(15, 23, 42, .09);
   padding: clamp(20px, 3vw, 36px);
-  max-width: 1100px;
   color: var(--ink);
   font-family: var(--font, "Inter", "DM Sans", system-ui, sans-serif);
 }

@@ -163,6 +163,10 @@ export default function Register() {
       next.password = "Ingresá una contraseña";
     } else if (form.password.length < 8) {
       next.password = "La contraseña debe tener mínimo 8 caracteres";
+    } else if (!/[A-Z]/.test(form.password)) {
+      next.password = "La contraseña debe tener al menos una mayúscula";
+    } else if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(form.password)) {
+      next.password = "La contraseña debe tener al menos un número o carácter especial";
     }
 
     return next;
