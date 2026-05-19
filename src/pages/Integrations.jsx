@@ -328,7 +328,7 @@ export default function Integrations() {
   }
 
   return (
-    <main style={{ maxWidth: 720 }}>
+    <main>
       {/* Hero */}
       <section style={{
         position: "relative",
