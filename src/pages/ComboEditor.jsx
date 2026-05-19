@@ -55,7 +55,7 @@ export default function ComboEditor() {
     }).catch(() => setError("No se pudo cargar el combo.")).finally(() => setLoading(false));
   }, [pageId, comboId]);
 
-  const FREE_SHIPPING_MIN_MARGIN = 0; // TODO: volver a 15000 después de pruebas
+  const FREE_SHIPPING_MIN_MARGIN = 15000;
 
   // Price floor: sum of precio_1 × quantity for each product
   const minRequired = products.reduce((sum, p) => {

@@ -157,7 +157,7 @@ function ProductImage({ product }) {
 }
 
 const PAGE_SIZE = 20;
-const FREE_SHIPPING_MIN_MARGIN = 0; // TODO: volver a 15000 después de pruebas
+const FREE_SHIPPING_MIN_MARGIN = 15000;
 
 export default function PageProducts({ pageId }) {
   const navigate = useNavigate();
