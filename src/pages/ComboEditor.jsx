@@ -26,6 +26,7 @@ export default function ComboEditor() {
   const [error,        setError]        = useState("");
   const [name,         setName]         = useState("");
   const [price,        setPrice]        = useState("");
+  const [promoPrice,   setPromoPrice]   = useState("");
   const [desc,         setDesc]         = useState("");
   const [freeShipping, setFreeShipping] = useState(false);
   const [saving,       setSaving]       = useState(false);
@@ -41,6 +42,7 @@ export default function ComboEditor() {
       setCombo(c);
       setName(c.name || "");
       setPrice(c.custom_price > 0 ? String(c.custom_price) : "");
+      setPromoPrice(c.promo_price && c.promo_enabled ? String(c.promo_price) : "");
       setDesc(c.description || "");
       setProducts(c.products || []);
       setImages(c.images || []);
@@ -53,12 +55,19 @@ export default function ComboEditor() {
     }).catch(() => setError("No se pudo cargar el combo.")).finally(() => setLoading(false));
   }, [pageId, comboId]);
 
+  const FREE_SHIPPING_MIN_MARGIN = 15000;
+
   // Price floor: sum of precio_1 × quantity for each product
   const minRequired = products.reduce((sum, p) => {
     return sum + (productPrices[p.product_id] || 0) * (p.quantity || 1);
   }, 0);
+  const minPrice   = freeShipping && minRequired > 0 ? minRequired + FREE_SHIPPING_MIN_MARGIN : minRequired;
   const comboPrice = Number(price) || 0;
-  const priceOk    = comboPrice === 0 || comboPrice >= minRequired;
+  const priceOk    = comboPrice === 0 || comboPrice >= minPrice;
+
+  const comboPriceNum = Number(promoPrice) || 0;
+  const promoOk       = comboPriceNum === 0
+    || (comboPriceNum >= minPrice && (comboPrice === 0 || comboPriceNum < comboPrice));
 
   function setProductQty(productId, qty) {
     setProducts(prev => prev.map(p =>
@@ -71,7 +80,15 @@ export default function ComboEditor() {
   async function handleSave() {
     if (!name.trim()) { setSaveMsg("El nombre es requerido."); return; }
     if (comboPrice > 0 && !priceOk) {
-      setSaveMsg(`El precio mínimo para este combo es ${money(minRequired)}.`);
+      setSaveMsg(`El precio mínimo para este combo es ${money(minPrice)}.`);
+      return;
+    }
+    if (comboPriceNum > 0 && !promoOk) {
+      if (comboPriceNum < minPrice) {
+        setSaveMsg(`El precio promo no puede ser menor al mínimo permitido (${money(minPrice)}).`);
+      } else {
+        setSaveMsg("El precio promo debe ser menor al precio regular.");
+      }
       return;
     }
     setSaving(true); setSaveMsg("");
@@ -81,6 +98,7 @@ export default function ComboEditor() {
         description:   desc.trim() || null,
         custom_price:  comboPrice,
         free_shipping: freeShipping,
+        promo_price:   comboPriceNum > 0 ? comboPriceNum : null,
         products:      products.map(p => ({ product_id: p.product_id, quantity: p.quantity || 1 })),
       });
       setSaveMsg("Guardado");
@@ -187,12 +205,45 @@ export default function ComboEditor() {
                 style={{ maxWidth: 200 }}
               />
             </div>
-            {minRequired > 0 && (
+            {minPrice > 0 && (
               <p style={{ marginTop: 6, fontSize: ".8rem", display: "flex", alignItems: "center", gap: 5,
                 color: priceOk ? "var(--color-success, #16a34a)" : "var(--color-error, #dc2626)" }}>
                 {priceOk
-                  ? <><CheckCircle2 size={13} /> Precio válido · Mínimo: {money(minRequired)}</>
-                  : <><AlertTriangle size={13} /> El mínimo es {money(minRequired)} (suma de costos de los productos)</>
+                  ? <><CheckCircle2 size={13} /> Precio válido · Mínimo: {money(minPrice)}{freeShipping && minRequired > 0 ? " (incluye margen de envío)" : ""}</>
+                  : <><AlertTriangle size={13} /> El mínimo es {money(minPrice)}{freeShipping ? " (incluye margen de envío gratis)" : " (suma de costos de los productos)"}</>
+                }
+              </p>
+            )}
+          </div>
+
+          {/* Promo price */}
+          <div>
+            <label style={{ display: "block", fontSize: ".85rem", marginBottom: 4, color: "var(--color-text-secondary)" }}>
+              Precio promo{" "}
+              <span style={{ fontWeight: 400, color: "var(--color-text-tertiary, #9ca3af)" }}>
+                (opcional · debe ser menor al precio regular)
+              </span>
+            </label>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <b style={{ color: "var(--color-text-secondary)" }}>$</b>
+              <input
+                className="form-input"
+                type="number"
+                min="0"
+                value={promoPrice}
+                onChange={e => setPromoPrice(e.target.value)}
+                placeholder="Dejar vacío para desactivar"
+                style={{ maxWidth: 200 }}
+              />
+            </div>
+            {comboPriceNum > 0 && (
+              <p style={{ marginTop: 6, fontSize: ".8rem", display: "flex", alignItems: "center", gap: 5,
+                color: promoOk ? "var(--color-success, #16a34a)" : "var(--color-error, #dc2626)" }}>
+                {promoOk
+                  ? <><CheckCircle2 size={13} /> Precio promo válido · Se mostrará con badge de oferta</>
+                  : comboPriceNum < minPrice
+                    ? <><AlertTriangle size={13} /> El precio promo no puede ser menor al mínimo ({money(minPrice)})</>
+                    : <><AlertTriangle size={13} /> El precio promo debe ser menor al precio regular ({money(comboPrice)})</>
                 }
               </p>
             )}

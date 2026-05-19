@@ -2829,6 +2829,11 @@ input[type="color"] {
 
 /* Field */
 .pe-field { display: flex; flex-direction: column; gap: 6px; }
+@keyframes pe-highlight {
+  0%, 100% { background: transparent; }
+  20%, 80%  { background: rgba(77,184,26,.10); border-radius: 8px; }
+}
+.pe-field--highlighted { animation: pe-highlight 1.8s ease forwards; }
 .pe-field__label {
   display: flex;
   align-items: baseline;
@@ -3856,6 +3861,111 @@ input[type="color"] {
   z-index: 9999;
   box-shadow: 0 4px 16px rgba(0,0,0,.25);
   white-space: normal;
+}
+
+/* ── Free-shipping warning modal ─────────────────────────── */
+.fs-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fsBackdropIn .15s ease;
+}
+@keyframes fsBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+.fs-modal {
+  background: var(--surface, #fff);
+  border-radius: 18px;
+  padding: 32px 28px 24px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0,0,0,.22);
+  animation: fsModalIn .18s cubic-bezier(.34,1.56,.64,1);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+@keyframes fsModalIn { from { opacity: 0; transform: scale(.94) translateY(12px); } to { opacity: 1; transform: none; } }
+
+.fs-modal__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #059669;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fs-modal__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  margin: 0;
+}
+
+.fs-modal__body {
+  font-size: .875rem;
+  color: var(--text-secondary, #374151);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.fs-modal__note {
+  font-size: .8125rem;
+  color: var(--text-secondary, #6b7280);
+  line-height: 1.5;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--surface-2, #f9fafb);
+  border-radius: 10px;
+  border: 1px solid var(--border, #e5e7eb);
+}
+
+.fs-modal__detail {
+  background: var(--surface-2, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fs-modal__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .8125rem;
+}
+.fs-modal__row span { color: var(--text-secondary, #6b7280); }
+.fs-modal__row strong { font-weight: 700; color: var(--text-primary, #111827); }
+.fs-modal__row--gap {
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #e5e7eb);
+  margin-top: 2px;
+}
+.fs-modal__val--warn { color: #dc2626 !important; }
+.fs-modal__val--ok   { color: #059669 !important; }
+
+.fs-modal__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.fs-modal__actions .btn--ghost { color: var(--text-secondary, #6b7280); }
+.fs-modal__actions .btn--secondary {
+  background: var(--surface-2, #f3f4f6);
+  color: var(--text-primary, #374151);
+  border: 1.5px solid var(--border, #d1d5db);
 }
 
 /* static combo price display (same height/border as price input) */

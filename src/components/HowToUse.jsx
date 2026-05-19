@@ -1,6 +1,6 @@
 // src/components/HowToUse.jsx
-// Reemplaza OnboardingGuide.jsx — explicación contextual por página
-// Usarlo en Layout.jsx: reemplazar <OnboardingGuide /> por <HowToUse />
+// Panel de ayuda contextual por página (botón flotante "¿Cómo usar?")
+// El tour guiado con spotlight está en GuidedTour.jsx
 
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
@@ -245,8 +245,8 @@ export default function HowToUse() {
 
   // Cerrar al cambiar de página
   useEffect(() => {
-    setOpen(false);
-    setExpandedIdx(null);
+    setOpen(false);       // eslint-disable-line react-hooks/set-state-in-effect
+    setExpandedIdx(null); // eslint-disable-line react-hooks/set-state-in-effect
   }, [location.pathname]);
 
   // Cerrar al hacer clic afuera

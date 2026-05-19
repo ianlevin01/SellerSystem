@@ -41,7 +41,7 @@
 .og-dim {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.22);
+  background: rgba(0,0,0,.65);
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
@@ -52,10 +52,10 @@
   border-radius: 20px;
   pointer-events: none;
   box-shadow:
-    0 0 0 9999px rgba(0,0,0,.26),
+    0 0 0 9999px rgba(0,0,0,.65),
     0 0 0 2px rgba(117,236,61,.95),
     0 22px 80px rgba(0,0,0,.18);
-  background: rgba(117,236,61,.025);
+  background: transparent;
   transition:
     top .28s cubic-bezier(.2,.8,.2,1),
     left .28s cubic-bezier(.2,.8,.2,1),

@@ -314,6 +314,7 @@ export default function Pages() {
         <button
           type="button"
           className="vtz-pages-btn vtz-pages-btn--hero"
+          data-tour="new-page-btn"
           onClick={() => setShowNew(true)}
         >
           <Plus size={18} />
@@ -321,7 +322,7 @@ export default function Pages() {
         </button>
       </section>
 
-      <section className="vtz-pages-stats">
+      <section className="vtz-pages-stats" data-tour="pages-stats">
         <article>
           <Store size={23} />
           <span>Tiendas creadas</span>
@@ -391,6 +392,7 @@ export default function Pages() {
               <article
                 key={page.id}
                 className="vtz-page-card"
+                data-tour={index === 0 ? "page-card" : undefined}
                 style={{
                   "--page-color": page.banner_color || "#57d625",
                   animationDelay: `${index * 40}ms`,
@@ -451,7 +453,7 @@ export default function Pages() {
                   </div>
                 </div>
 
-                <div className="vtz-page-card__actions">
+                <div className="vtz-page-card__actions" data-tour={index === 0 ? "page-card-actions" : undefined}>
                   <button
                     type="button"
                     className="vtz-pages-btn vtz-pages-btn--primary"

@@ -343,31 +343,33 @@ export default function Orders() {
                           <div className="vtz-order__resume">
                             <h3>Resumen</h3>
 
-                            {Number(order.shipping_amount) > 0 && (
-                              <div>
-                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                  <Truck size={13} /> Envío
-                                </span>
-                                <strong>{money(order.shipping_amount)}</strong>
-                              </div>
-                            )}
-
                             <div>
                               <span>Total vendido</span>
                               <strong>{money(order.total)}</strong>
                             </div>
 
-                            <div className="is-highlight">
-                              <span>Tu ganancia</span>
-                              <strong>{money(order.ganancia_vendedor)}</strong>
-                            </div>
-
-                            {Number(order.ahorro_vendedor) > 0 && (
-                              <div style={{ color: "var(--success, #16a34a)", fontSize: ".8rem", marginTop: 4, display: "flex", gap: 4 }}>
-                                <TrendingUp size={13} style={{ marginTop: 1, flexShrink: 0 }} />
-                                <span>Ahorraste {money(order.ahorro_vendedor)} en esta venta por tu nivel de ventas.</span>
+                            {Number(order.shipping_amount) > 0 && (
+                              <div>
+                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <Truck size={13} /> Envío cobrado al cliente
+                                </span>
+                                <strong>+ {money(order.shipping_amount)}</strong>
                               </div>
                             )}
+
+                            {Number(order.free_shipping_absorbed) > 0 && (
+                              <div style={{ color: "var(--error, #dc2626)" }}>
+                                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                  <Truck size={13} /> Costo de envío gratis
+                                </span>
+                                <strong>− {money(order.free_shipping_absorbed)}</strong>
+                              </div>
+                            )}
+
+                            <div className="is-highlight">
+                              <span>Tu ganancia neta</span>
+                              <strong>{money(order.ganancia_vendedor)}</strong>
+                            </div>
 
                             <p style={{ fontSize: ".78rem", color: "var(--text-tertiary)", marginTop: 4 }}>
                               {status.description}

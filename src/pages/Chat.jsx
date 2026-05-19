@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Sparkles,
   UserRound,
+  Zap,
 } from "lucide-react";
 
 function formatTime(d) {
@@ -209,17 +210,131 @@ function MessageBubble({ msg, conversationId, onQuoteAccepted }) {
   );
 }
 
-export default function Chat() {
-  const [conversations, setConversations] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [reply, setReply] = useState("");
-  const [sending, setSending] = useState(false);
-  const [loadingConvs, setLoadingConvs] = useState(true);
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
-  const [search, setSearch] = useState("");
+// ── Admin chat panel ───────────────────────────────────────────
 
+function AdminChatPanel() {
+  const [messages,  setMessages]  = useState([]);
+  const [input,     setInput]     = useState("");
+  const [loading,   setLoading]   = useState(true);
+  const [sending,   setSending]   = useState(false);
   const endRef = useRef(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await client.get("/seller/chat/admin/messages");
+      setMessages(res.data.messages || []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const timer = setInterval(load, 10000);
+    return () => clearInterval(timer);
+  }, [load]);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  async function send(e) {
+    e.preventDefault();
+    if (!input.trim() || sending) return;
+    const body = input.trim();
+    setSending(true);
+    try {
+      await client.post("/seller/chat/admin/messages", { body });
+      setInput("");
+      await load();
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section className="vtz-chat-main">
+      <header className="vtz-chat-main__head">
+        <div className="vtz-chat-main__avatar" style={{ background: "#6366f1" }}>
+          <Zap size={18} />
+        </div>
+        <div className="vtz-chat-main__info">
+          <strong>Equipo Ventaz</strong>
+          <span>Mensajes del equipo de soporte</span>
+        </div>
+        <div className="vtz-chat-main__badge" style={{ background: "rgba(99,102,241,.12)", color: "#6366f1" }}>
+          <BadgeCheck size={16} />
+          Ventaz
+        </div>
+      </header>
+
+      <div className="vtz-chat-thread">
+        {loading ? (
+          <div className="vtz-chat-thread-loading">
+            {[1, 2, 3].map((i) => <span key={i} className={i % 2 === 0 ? "is-right" : ""} />)}
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="vtz-chat-thread-empty">
+            No hay mensajes todavía. Cuando el equipo Ventaz te escriba, vas a verlo acá.
+          </div>
+        ) : (
+          messages.map((m) => {
+            const isSeller = m.sender === "seller";
+            return (
+              <div
+                key={m.id}
+                className={`vtz-chat-message-row ${isSeller ? "vtz-chat-message-row--seller" : "vtz-chat-message-row--customer"}`}
+              >
+                <div className={`vtz-chat-bubble ${isSeller ? "vtz-chat-bubble--seller" : "vtz-chat-bubble--customer"}`}
+                  style={!isSeller ? { borderLeft: "3px solid #6366f1" } : {}}>
+                  {!isSeller && (
+                    <small style={{ color: "#6366f1", fontWeight: 700, fontSize: ".7rem", marginBottom: 2, display: "block" }}>
+                      Equipo Ventaz
+                    </small>
+                  )}
+                  <p>{m.body}</p>
+                  <small>{formatTime(m.created_at)}</small>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <form className="vtz-chat-composer" onSubmit={send}>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(e); } }}
+          placeholder="Escribí tu mensaje para el equipo Ventaz..."
+          disabled={sending}
+          rows={1}
+          autoFocus
+        />
+        <button type="submit" disabled={sending || !input.trim()}>
+          {sending ? <Loader2 size={18} className="vtz-chat-spin" /> : <Send size={18} />}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────
+
+export default function Chat() {
+  const [chatTab,       setChatTab]       = useState("clients"); // "clients" | "admin"
+  const [adminUnread,   setAdminUnread]   = useState(0);
+  const [conversations, setConversations] = useState([]);
+  const [selected,      setSelected]      = useState(null);
+  const [messages,      setMessages]      = useState([]);
+  const [reply,         setReply]         = useState("");
+  const [sending,       setSending]       = useState(false);
+  const [loadingConvs,  setLoadingConvs]  = useState(true);
+  const [loadingMsgs,   setLoadingMsgs]   = useState(false);
+  const [search,        setSearch]        = useState("");
+
+  const endRef  = useRef(null);
   const pollRef = useRef(null);
 
   const fetchConversations = useCallback(async () => {
@@ -245,6 +360,16 @@ export default function Chat() {
 
   useEffect(() => {
     fetchConversations();
+    // Poll admin unread count
+    const pollAdmin = async () => {
+      try {
+        const res = await client.get("/seller/chat/admin/unread");
+        setAdminUnread(Number(res.data) || 0);
+      } catch { /* ignore */ }
+    };
+    pollAdmin();
+    const timer = setInterval(pollAdmin, 15000);
+    return () => clearInterval(timer);
   }, [fetchConversations]);
 
   useEffect(() => {
@@ -329,155 +454,183 @@ export default function Chat() {
         </div>
       </section>
 
-      <section className="vtz-chat-layout">
-        <aside className="vtz-chat-sidebar">
-          <header className="vtz-chat-sidebar__head">
-            <div>
-              <span>Clientes</span>
-              <strong>Conversaciones</strong>
+      {/* Tab switcher */}
+      <div className="vtz-chat-tabs">
+        <button
+          type="button"
+          className={`vtz-chat-tab ${chatTab === "clients" ? "is-active" : ""}`}
+          onClick={() => setChatTab("clients")}
+        >
+          <MessageSquare size={15} />
+          Clientes
+          {totalUnread > 0 && <b>{totalUnread}</b>}
+        </button>
+        <button
+          type="button"
+          className={`vtz-chat-tab ${chatTab === "admin" ? "is-active" : ""}`}
+          onClick={() => { setChatTab("admin"); setAdminUnread(0); }}
+        >
+          <Zap size={15} />
+          Equipo Ventaz
+          {adminUnread > 0 && <b>{adminUnread}</b>}
+        </button>
+      </div>
+
+      {chatTab === "admin" ? (
+        <section className="vtz-chat-layout" style={{ gridTemplateColumns: "1fr" }}>
+          <AdminChatPanel />
+        </section>
+      ) : (
+        <section className="vtz-chat-layout">
+          <aside className="vtz-chat-sidebar">
+            <header className="vtz-chat-sidebar__head">
+              <div>
+                <span>Clientes</span>
+                <strong>Conversaciones</strong>
+              </div>
+
+              {totalUnread > 0 && <b>{totalUnread}</b>}
+            </header>
+
+            <div className="vtz-chat-search">
+              <Search size={16} />
+              <input
+                placeholder="Buscar cliente..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
 
-            {totalUnread > 0 && <b>{totalUnread}</b>}
-          </header>
-
-          <div className="vtz-chat-search">
-            <Search size={16} />
-            <input
-              placeholder="Buscar cliente..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="vtz-chat-list">
-            {loadingConvs ? (
-              <div className="vtz-chat-loading-list">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="vtz-chat-conv-skeleton">
-                    <span />
-                    <div>
-                      <i />
-                      <i />
+            <div className="vtz-chat-list">
+              {loadingConvs ? (
+                <div className="vtz-chat-loading-list">
+                  {[1, 2, 3, 4].map((item) => (
+                    <div key={item} className="vtz-chat-conv-skeleton">
+                      <span />
+                      <div>
+                        <i />
+                        <i />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="vtz-chat-empty-list">
-                <MessageSquare size={28} />
-                <p>{search ? "No encontramos ese cliente" : "Todavía no hay consultas"}</p>
+                  ))}
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="vtz-chat-empty-list">
+                  <MessageSquare size={28} />
+                  <p>{search ? "No encontramos ese cliente" : "Todavía no hay consultas"}</p>
+                </div>
+              ) : (
+                filtered.map((conv) => {
+                  const isActive = selected?.id === conv.id;
+                  const color = avatarColor(conv.customer_name);
+
+                  return (
+                    <button
+                      type="button"
+                      key={conv.id}
+                      className={`vtz-chat-conv ${isActive ? "is-active" : ""}`}
+                      onClick={() => {
+                        setSelected(conv);
+                        setMessages([]);
+                      }}
+                    >
+                      <span className="vtz-chat-conv__avatar" style={{ background: color }}>
+                        {initials(conv.customer_name) || <UserRound size={17} />}
+                      </span>
+
+                      <span className="vtz-chat-conv__body">
+                        <strong>{conv.customer_name}</strong>
+                        <small>{shortPreview(conv.last_message)}</small>
+                      </span>
+
+                      <span className="vtz-chat-conv__meta">
+                        <small>{formatDate(conv.updated_at)}</small>
+                        {conv.unread_count > 0 && <b>{conv.unread_count}</b>}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </aside>
+
+          <section className="vtz-chat-main">
+            {!selected ? (
+              <div className="vtz-chat-empty">
+                <div className="vtz-chat-empty__icon">
+                  <MessageSquare size={28} />
+                </div>
+                <h2>Elegí una conversación</h2>
+                <p>Cuando un cliente escriba desde tu tienda, lo vas a poder responder desde acá.</p>
               </div>
             ) : (
-              filtered.map((conv) => {
-                const isActive = selected?.id === conv.id;
-                const color = avatarColor(conv.customer_name);
-
-                return (
-                  <button
-                    type="button"
-                    key={conv.id}
-                    className={`vtz-chat-conv ${isActive ? "is-active" : ""}`}
-                    onClick={() => {
-                      setSelected(conv);
-                      setMessages([]);
-                    }}
+              <>
+                <header className="vtz-chat-main__head">
+                  <div
+                    className="vtz-chat-main__avatar"
+                    style={{ background: avatarColor(selected.customer_name) }}
                   >
-                    <span className="vtz-chat-conv__avatar" style={{ background: color }}>
-                      {initials(conv.customer_name) || <UserRound size={17} />}
-                    </span>
+                    {initials(selected.customer_name) || <UserRound size={18} />}
+                  </div>
 
-                    <span className="vtz-chat-conv__body">
-                      <strong>{conv.customer_name}</strong>
-                      <small>{shortPreview(conv.last_message)}</small>
+                  <div className="vtz-chat-main__info">
+                    <strong>{selected.customer_name}</strong>
+                    <span>
+                      {[selected.customer_email, selected.customer_phone].filter(Boolean).join(" · ") ||
+                        "Sin datos de contacto"}
                     </span>
+                  </div>
 
-                    <span className="vtz-chat-conv__meta">
-                      <small>{formatDate(conv.updated_at)}</small>
-                      {conv.unread_count > 0 && <b>{conv.unread_count}</b>}
-                    </span>
+                  <div className="vtz-chat-main__badge">
+                    <BadgeCheck size={16} />
+                    Cliente
+                  </div>
+                </header>
+
+                <div className="vtz-chat-thread">
+                  {loadingMsgs ? (
+                    <div className="vtz-chat-thread-loading">
+                      {[1, 2, 3].map((item) => (
+                        <span key={item} className={item % 2 === 0 ? "is-right" : ""} />
+                      ))}
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="vtz-chat-thread-empty">
+                      No hay mensajes todavía. Escribí una respuesta abajo.
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <MessageBubble
+                        key={msg.id}
+                        msg={msg}
+                        conversationId={selected.id}
+                        onQuoteAccepted={() => fetchMessages(selected.id)}
+                      />
+                    ))
+                  )}
+                  <div ref={endRef} />
+                </div>
+
+                <form className="vtz-chat-composer" onSubmit={handleSend}>
+                  <textarea
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    onKeyDown={handleInputKeyDown}
+                    placeholder="Escribí tu respuesta..."
+                    disabled={sending}
+                    rows={1}
+                    autoFocus
+                  />
+
+                  <button type="submit" disabled={sending || !reply.trim()}>
+                    {sending ? <Loader2 size={18} className="vtz-chat-spin" /> : <Send size={18} />}
                   </button>
-                );
-              })
+                </form>
+              </>
             )}
-          </div>
-        </aside>
-
-        <section className="vtz-chat-main">
-          {!selected ? (
-            <div className="vtz-chat-empty">
-              <div className="vtz-chat-empty__icon">
-                <MessageSquare size={28} />
-              </div>
-              <h2>Elegí una conversación</h2>
-              <p>Cuando un cliente escriba desde tu tienda, lo vas a poder responder desde acá.</p>
-            </div>
-          ) : (
-            <>
-              <header className="vtz-chat-main__head">
-                <div
-                  className="vtz-chat-main__avatar"
-                  style={{ background: avatarColor(selected.customer_name) }}
-                >
-                  {initials(selected.customer_name) || <UserRound size={18} />}
-                </div>
-
-                <div className="vtz-chat-main__info">
-                  <strong>{selected.customer_name}</strong>
-                  <span>
-                    {[selected.customer_email, selected.customer_phone].filter(Boolean).join(" · ") ||
-                      "Sin datos de contacto"}
-                  </span>
-                </div>
-
-                <div className="vtz-chat-main__badge">
-                  <BadgeCheck size={16} />
-                  Cliente
-                </div>
-              </header>
-
-              <div className="vtz-chat-thread">
-                {loadingMsgs ? (
-                  <div className="vtz-chat-thread-loading">
-                    {[1, 2, 3].map((item) => (
-                      <span key={item} className={item % 2 === 0 ? "is-right" : ""} />
-                    ))}
-                  </div>
-                ) : messages.length === 0 ? (
-                  <div className="vtz-chat-thread-empty">
-                    No hay mensajes todavía. Escribí una respuesta abajo.
-                  </div>
-                ) : (
-                  messages.map((msg) => (
-                    <MessageBubble
-                      key={msg.id}
-                      msg={msg}
-                      conversationId={selected.id}
-                      onQuoteAccepted={() => fetchMessages(selected.id)}
-                    />
-                  ))
-                )}
-                <div ref={endRef} />
-              </div>
-
-              <form className="vtz-chat-composer" onSubmit={handleSend}>
-                <textarea
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  onKeyDown={handleInputKeyDown}
-                  placeholder="Escribí tu respuesta..."
-                  disabled={sending}
-                  rows={1}
-                  autoFocus
-                />
-
-                <button type="submit" disabled={sending || !reply.trim()}>
-                  {sending ? <Loader2 size={18} className="vtz-chat-spin" /> : <Send size={18} />}
-                </button>
-              </form>
-            </>
-          )}
+          </section>
         </section>
-      </section>
+      )}
     </main>
   );
 }

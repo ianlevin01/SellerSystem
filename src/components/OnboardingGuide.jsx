@@ -720,7 +720,7 @@ export default function OnboardingGuide() {
 
       {open && step && (
         <div className="og-layer" role="dialog" aria-modal="true">
-          <div className="og-dim" />
+          {!spotlight && <div className="og-dim" />}
 
           {spotlight && (
             <div

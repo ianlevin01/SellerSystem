@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
 import {
   AlertTriangle, Building2, ChevronLeft,
-  ExternalLink, FileText, Image as ImageIcon, LayoutGrid, Layers,
-  Loader2, Monitor, MousePointerClick, Palette, PanelBottom, Pencil, Percent, Plus,
+  ExternalLink, FileText, Globe, Image as ImageIcon, LayoutGrid, Layers,
+  Loader2, Monitor, MousePointerClick, Package, Palette, PanelBottom, Pencil, Percent, Plus,
   RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Upload, X, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
@@ -14,13 +14,25 @@ function slugify(str) {
   return String(str || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
-function storeUrl(slug) {
+function storeUrl(slug, edit = false) {
   if (import.meta.env.DEV) {
     const base = import.meta.env.VITE_STORE_DEV_URL || "http://localhost:5174";
-    return `${base}?shop=${slug}`;
+    const url = `${base}?shop=${slug}`;
+    return edit ? `${url}&__edit=1` : url;
   }
   const domain = import.meta.env.VITE_STORE_DOMAIN || "ventaz.com.ar";
-  return `https://${slug}.${domain}`;
+  const url = `https://${slug}.${domain}`;
+  return edit ? `${url}?__edit=1` : url;
+}
+
+function productUrl(slug, productId, type = "product") {
+  const path = type === "combo" ? `/combo/${productId}` : `/product/${productId}`;
+  if (import.meta.env.DEV) {
+    const base = import.meta.env.VITE_STORE_DEV_URL || "http://localhost:5174";
+    return `${base}${path}?shop=${slug}&__edit=1`;
+  }
+  const domain = import.meta.env.VITE_STORE_DOMAIN || "ventaz.com.ar";
+  return `https://${slug}.${domain}${path}?__edit=1`;
 }
 
 function assetPreviewSrc(value) {
@@ -56,9 +68,9 @@ const GOOGLE_FONTS = [
   "Ubuntu", "PT Sans", "Josefin Sans", "Quicksand",
 ];
 
-function Field({ label, hint, children }) {
+function Field({ label, hint, fieldId, highlighted, children }) {
   return (
-    <div className="pe-field">
+    <div className={`pe-field${highlighted ? " pe-field--highlighted" : ""}`} id={fieldId}>
       <label className="pe-field__label">
         {label}
         {hint && <span className="pe-field__hint">{hint}</span>}
@@ -108,38 +120,48 @@ function Toggle({ checked, onChange, label }) {
 // ── Config sections sidebar nav ───────────────────────────────
 
 const CONFIG_SECTIONS = [
-  { id: "identidad",  label: "Identidad",      Icon: Building2         },
-  { id: "info",       label: "Info pública",   Icon: FileText          },
-  { id: "inicio",     label: "Inicio / Hero",  Icon: ImageIcon         },
-  { id: "catalogo",   label: "Catálogo",       Icon: LayoutGrid        },
-  { id: "botones",    label: "Botones & CTA",  Icon: MousePointerClick },
-  { id: "promo",      label: "Barra de promo", Icon: Zap               },
-  { id: "colores",    label: "Colores",        Icon: Palette           },
-  { id: "apariencia", label: "Apariencia",     Icon: Layers            },
-  { id: "footer",     label: "Pie de página",  Icon: PanelBottom       },
-  { id: "redes",      label: "Redes sociales", Icon: Share2            },
-  { id: "categorias", label: "Categorías",     Icon: Tag               },
+  { id: "identidad", label: "Identidad", Icon: Building2  },
+  { id: "tema",      label: "Tema",      Icon: Palette    },
+  { id: "cabecera",  label: "Cabecera",  Icon: Layers     },
+  { id: "portada",   label: "Portada",   Icon: ImageIcon  },
+  { id: "catalogo",  label: "Catálogo",  Icon: LayoutGrid },
+  { id: "producto",  label: "Producto",  Icon: Package    },
+  { id: "pie",       label: "Pie",       Icon: PanelBottom},
+  { id: "seo",       label: "SEO",       Icon: Globe      },
 ];
 
 // ── ConfigTab ─────────────────────────────────────────────────
 
 function ConfigTab({ pageId }) {
-  const iframeRef  = useRef(null);
-  const logoRef    = useRef(null);
-  const heroRef    = useRef(null);
-  const [previewMode,    setPreviewMode]    = useState("desktop");
-  const [iframeSrc,      setIframeSrc]      = useState("");
-  const [iframeKey,      setIframeKey]      = useState(0);
-  const [uploadingLogo,  setUploadingLogo]  = useState(false);
-  const [uploadingHero,  setUploadingHero]  = useState(false);
+  const iframeRef     = useRef(null);
+  const logoRef       = useRef(null);
+  const heroRef       = useRef(null);
+  const faviconRef    = useRef(null);
+  const ogImageRef    = useRef(null);
+  const slugRef       = useRef("");
+  const [previewMode,      setPreviewMode]      = useState("desktop");
+  const [iframeSrc,        setIframeSrc]        = useState("");
+  const [iframeKey,        setIframeKey]        = useState(0);
+  const [uploadingLogo,    setUploadingLogo]    = useState(false);
+  const [uploadingHero,    setUploadingHero]    = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [uploadingOgImage, setUploadingOgImage] = useState(false);
+  const [highlightedField, setHighlightedField] = useState(null);
 
   const DEFAULT_THEME = {
     hero_bg_type: "color", hero_overlay_opacity: 50,
-    hero_btn_text: "Ver productos", hero_btn_radius: 99,
+    hero_btn_text: "Ver productos", hero_layout: "center", hero_btn_radius: 99,
     products_cols: 3, products_section_title: "",
-    card_style: "default", btn_radius: 8,
+    card_style: "default", card_gap: "normal",
+    card_density: "normal", btn_radius: 14, button_style: "soft",
     show_trust_badges: true, show_search_bar: true,
     footer_bg: "", footer_text_color: "", footer_tagline: "",
+    navbar_style: "default", navbar_sticky: true,
+    navbar_show_categories: false,
+    category_display: "pills",
+    product_detail_style: "standard",
+    product_btn_text: "",
+    product_show_reviews: true,
   };
 
   const [form, setForm] = useState({
@@ -153,13 +175,15 @@ function ConfigTab({ pageId }) {
     promo_text: "", show_promo_bar: true,
     costo_envio: 0,
     theme_config: { ...DEFAULT_THEME },
+    favicon_url: "", og_image_url: "", meta_title: "", meta_description: "",
+    tiktok: "", youtube: "",
   });
   const [categories, setCategories] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
   const [saved,    setSaved]    = useState(false);
   const [error,    setError]    = useState("");
-  const [section,  setSection]  = useState("tienda");
+  const [section,  setSection]  = useState("identidad");
 
   function formFromData(d) {
     setForm({
@@ -186,6 +210,12 @@ function ConfigTab({ pageId }) {
       show_promo_bar:      d.show_promo_bar       != null ? Boolean(d.show_promo_bar) : true,
       costo_envio:         d.costo_envio          != null ? Number(d.costo_envio) : 0,
       theme_config:        { ...DEFAULT_THEME, ...(d.theme_config || {}) },
+      favicon_url:         d.favicon_url          || "",
+      og_image_url:        d.og_image_url         || "",
+      meta_title:          d.meta_title           || "",
+      meta_description:    d.meta_description     || "",
+      tiktok:              d.tiktok               || "",
+      youtube:             d.youtube              || "",
     });
   }
 
@@ -197,7 +227,7 @@ function ConfigTab({ pageId }) {
     ]).then(([pageRes, catRes]) => {
       formFromData(pageRes.data);
       setCategories(catRes.data || []);
-      if (pageRes.data.slug) setIframeSrc(storeUrl(pageRes.data.slug));
+      if (pageRes.data.slug) setIframeSrc(storeUrl(pageRes.data.slug, true));
     }).finally(() => setLoading(false));
   }, [pageId]);
 
@@ -208,18 +238,54 @@ function ConfigTab({ pageId }) {
     iframe.contentWindow.postMessage({ type: "ventaz_preview", payload: { ...form, __preview_section: section } }, "*");
   }, [form, iframeSrc]);
 
+  // Keep slugRef current so the message handler can build product URLs without stale closures
+  useEffect(() => { slugRef.current = form.slug; }, [form.slug]);
+
+  // Bidirectional bridge: store → editor (click on element navigates to its section)
+  const FIELD_TO_SECTION = {
+    navbar:         "cabecera",
+    logo:           "identidad",
+    hero:           "portada",
+    promo_bar:      "cabecera",
+    products:       "catalogo",
+    categories:     "catalogo",
+    footer:         "pie",
+    product_detail: "producto",
+  };
+
+  useEffect(() => {
+    function handler(e) {
+      if (e.data?.type === "ventaz_field_click") {
+        const target = FIELD_TO_SECTION[e.data.field];
+        if (target) {
+          setSection(target);
+          setHighlightedField(e.data.field);
+          setTimeout(() => setHighlightedField(null), 2000);
+        }
+      } else if (e.data?.type === "ventaz_product_enter") {
+        const { productId, productType } = e.data;
+        setSection("producto");
+        setIframeSrc(productUrl(slugRef.current, productId, productType));
+      }
+    }
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   function inferPreviewTarget(key, scope = "field") {
     if (scope === "theme") {
       if (String(key).startsWith("footer_")) return "footer";
       if (String(key).startsWith("hero_") || key === "show_trust_badges") return "hero";
-      if (["card_style", "card_density", "products_cols", "show_search_bar", "button_style", "btn_radius"].includes(key)) return "products";
-      return section === "colores" ? "products" : section;
+      if (["navbar_style", "navbar_sticky"].includes(key)) return "header";
+      if (["card_style", "card_density", "card_gap", "products_cols", "show_search_bar",
+           "button_style", "btn_radius", "category_display"].includes(key)) return "products";
+      return section === "diseno" ? "products" : section;
     }
 
     if (["hero_headline", "hero_image_url", "tagline", "banner_color"].includes(key)) return "hero";
     if (["color_bg", "color_text", "card_border_radius", "card_show_shadow"].includes(key)) return "products";
     if (["store_name", "logo_url"].includes(key)) return "header";
-    return section === "colores" ? "products" : section;
+    return section === "diseno" ? "products" : section;
   }
 
   function sendPreview(nextForm, target) {
@@ -319,12 +385,38 @@ function ConfigTab({ pageId }) {
       theme_config: {
         card_style: "bordered",
         card_density: "normal",
+        card_gap: "normal",
         btn_radius: 18,
         hero_btn_radius: 99,
         hero_layout: "center",
         products_cols: 3,
         footer_bg: "#1f1308",
         footer_text_color: "#fff7ed",
+        button_style: "round",
+        navbar_style: "default",
+      },
+    },
+    {
+      id: "editorial",
+      name: "Editorial",
+      desc: "Minimalista y fuerte, tipo Zara.",
+      banner_color: "#111111",
+      color_bg: "#ffffff",
+      color_text: "#111111",
+      theme_config: {
+        card_style: "minimal",
+        card_density: "normal",
+        card_gap: "none",
+        btn_radius: 0,
+        hero_btn_radius: 0,
+        hero_layout: "left",
+        products_cols: 3,
+        footer_bg: "#111111",
+        footer_text_color: "#ffffff",
+        footer_tagline: "",
+        button_style: "square",
+        navbar_style: "default",
+        navbar_sticky: true,
       },
     },
   ];
@@ -436,21 +528,25 @@ function ConfigTab({ pageId }) {
     };
   }
 
-  const handleLogoUpload = handleAssetUpload("/seller/images/logo",       "logo_url",       setUploadingLogo, logoRef);
-  const handleHeroUpload = handleAssetUpload("/seller/images/asset/hero", "hero_image_url", setUploadingHero, heroRef);
+  const handleLogoUpload    = handleAssetUpload("/seller/images/logo",           "logo_url",       setUploadingLogo,    logoRef);
+  const handleHeroUpload    = handleAssetUpload("/seller/images/asset/hero",     "hero_image_url", setUploadingHero,    heroRef);
+  const handleFaviconUpload = handleAssetUpload("/seller/images/asset/favicon",  "favicon_url",    setUploadingFavicon, faviconRef);
+  const handleOgImageUpload = handleAssetUpload("/seller/images/asset/og_image", "og_image_url",   setUploadingOgImage, ogImageRef);
 
   async function handleSave() {
     setError(""); setSaving(true); setSaved(false);
     try {
       const payload = {
         ...form,
-        logo_url: cleanAssetForSave(form.logo_url),
+        logo_url:       cleanAssetForSave(form.logo_url),
         hero_image_url: cleanAssetForSave(form.hero_image_url),
+        favicon_url:    cleanAssetForSave(form.favicon_url),
+        og_image_url:   cleanAssetForSave(form.og_image_url),
       };
 
       const res = await client.put(`/seller/store/pages/${pageId}`, payload);
       formFromData(res.data);
-      if (res.data.slug) setIframeSrc(storeUrl(res.data.slug));
+      if (res.data.slug) setIframeSrc(storeUrl(res.data.slug, true));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       setTimeout(() => setIframeKey(k => k + 1), 400);
@@ -471,12 +567,17 @@ function ConfigTab({ pageId }) {
   const tc = form.theme_config || {};
 
   const SECTIONS = [
-    { id: "tienda",   label: "Tienda"   },
-    { id: "hero",     label: "Portada"  },
-    { id: "catalogo", label: "Productos" },
-    { id: "colores",  label: "Estilo"   },
-    { id: "contacto", label: "Contacto" },
+    { id: "identidad", label: "Identidad" },
+    { id: "tema",      label: "Tema"      },
+    { id: "cabecera",  label: "Cabecera"  },
+    { id: "portada",   label: "Portada"   },
+    { id: "catalogo",  label: "Catálogo"  },
+    { id: "producto",  label: "Producto"  },
+    { id: "pie",       label: "Pie"       },
+    { id: "seo",       label: "SEO"       },
   ];
+
+  const isOnProductPage = iframeSrc.includes("/product/") || iframeSrc.includes("/combo/");
 
   return (
     <div className="pe-editor">
@@ -485,7 +586,7 @@ function ConfigTab({ pageId }) {
       <div className="pe-editor__left">
 
         {/* Section tabs */}
-        <div className="pe-editor__tabs">
+        <div className="pe-editor__tabs" data-tour="page-tabs">
           {SECTIONS.map(s => (
             <button key={s.id} type="button"
               className={`pe-editor__tab ${section === s.id ? "is-active" : ""}`}
@@ -498,9 +599,10 @@ function ConfigTab({ pageId }) {
         {/* Scrollable fields */}
         <div className="pe-editor__fields">
 
-          {/* ── Tienda ─────────────────────────────────── */}
-          {section === "tienda" && <>
-            <Field label="Nombre de la tienda" hint="Aparece en el banner y en todos lados">
+          {/* ── Identidad ──────────────────────────────── */}
+          {section === "identidad" && <>
+            <Field label="Nombre de la tienda" hint="Aparece en el navbar y en toda la tienda"
+              highlighted={highlightedField === "logo"}>
               <input className="form-input" value={form.store_name}
                 onChange={e => setForm(p => ({ ...p, store_name: e.target.value, page_name: e.target.value }))}
                 placeholder="Ej: Belissia Shop" />
@@ -522,44 +624,52 @@ function ConfigTab({ pageId }) {
                 Solo minúsculas, números y guiones. Cambiar esto modifica el link de tu tienda.
               </p>
             </Field>
-            <Field label="Descripción" hint="Visible en el footer y SEO">
-              <textarea className="form-textarea" value={form.store_description}
-                onChange={e => set("store_description", e.target.value)}
-                placeholder="Los mejores productos..." rows={2} />
-            </Field>
-            <Field label="Tagline" hint="Subtítulo debajo del título en el hero">
-              <input className="form-input" value={form.tagline}
-                onChange={e => set("tagline", e.target.value)}
-                placeholder="Todo lo que necesitás" maxLength={160} />
-            </Field>
-            <Field label="Logo de la tienda" hint="PNG, JPG, SVG o WEBP · máx. 2 MB">
+            <Field label="Logo de la tienda" hint="PNG, JPG, SVG o WEBP · máx. 2 MB"
+              highlighted={highlightedField === "logo"}>
               {form.logo_url && (
                 <img src={assetPreviewSrc(form.logo_url)} alt="logo"
                   style={{ marginBottom: 8, height: 52, objectFit: "contain", borderRadius: 6, border: "1px solid var(--border)", background: "#fff", padding: 4 }}
                   onError={e => { e.target.style.display = "none"; }} />
               )}
-              <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 <button type="button" className="btn btn--ghost btn--sm"
-                  onClick={() => logoRef.current?.click()}
-                  disabled={uploadingLogo}
-                  style={{ flexShrink: 0 }}
-                >
+                  onClick={() => logoRef.current?.click()} disabled={uploadingLogo}>
                   {uploadingLogo ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
-                  {uploadingLogo ? "Subiendo..." : "Subir archivo"}
+                  {uploadingLogo ? "Subiendo..." : "Subir logo"}
                 </button>
                 {form.logo_url && (
                   <button type="button" className="btn btn--ghost btn--sm"
-                    onClick={() => set("logo_url", "")}
-                    style={{ flexShrink: 0 }}
-                  >
+                    onClick={() => set("logo_url", "")}>
                     <Trash2 size={13} /> Quitar
                   </button>
                 )}
               </div>
               <input ref={logoRef} type="file"
                 accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
-                style={{ display: "none" }}
-                onChange={handleLogoUpload} />
+                style={{ display: "none" }} onChange={handleLogoUpload} />
+            </Field>
+            <Field label="Favicon" hint="Ícono de la pestaña del navegador · ICO, PNG · máx. 2 MB">
+              {form.favicon_url && (
+                <img src={assetPreviewSrc(form.favicon_url)} alt="favicon"
+                  style={{ marginBottom: 8, height: 32, width: 32, objectFit: "contain", borderRadius: 4, border: "1px solid var(--border)", background: "#fff", padding: 2 }}
+                  onError={e => { e.target.style.display = "none"; }} />
+              )}
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button type="button" className="btn btn--ghost btn--sm"
+                  onClick={() => faviconRef.current?.click()} disabled={uploadingFavicon}>
+                  {uploadingFavicon ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
+                  {uploadingFavicon ? "Subiendo..." : "Subir favicon"}
+                </button>
+                {form.favicon_url && (
+                  <button type="button" className="btn btn--ghost btn--sm"
+                    onClick={() => set("favicon_url", "")}>
+                    <Trash2 size={13} /> Quitar
+                  </button>
+                )}
+              </div>
+              <input ref={faviconRef} type="file"
+                accept="image/x-icon,image/png,image/jpeg,image/webp"
+                style={{ display: "none" }} onChange={handleFaviconUpload} />
             </Field>
             <Field label="Tipografía">
               <select className="form-input" value={form.font_family}
@@ -573,94 +683,141 @@ function ConfigTab({ pageId }) {
                 </p>
               )}
             </Field>
+            <Field label="Descripción" hint="Footer y SEO">
+              <textarea className="form-textarea" value={form.store_description}
+                onChange={e => set("store_description", e.target.value)}
+                placeholder="Los mejores productos..." rows={2} />
+            </Field>
           </>}
 
-          {/* ── Hero ───────────────────────────────────── */}
-          {section === "hero" && <>
-            <Field label="Tipo de portada" hint="Elegí si la primera pantalla usa color o una imagen.">
-              <div className="pe-option-grid pe-option-grid--2">
+          {/* ── Tema ────────────────────────────────────── */}
+          {section === "tema" && <>
+            <div className="pe-section-note">
+              <strong>Apariencia global</strong>
+              <span>Elegí un estilo base o personalizá cada detalle. Cambia todo en tiempo real.</span>
+            </div>
+
+            <div className="pe-divider-title">Estilo rápido</div>
+            <div className="pe-style-presets">
+              {STYLE_PRESETS.map((preset) => (
+                <button key={preset.id} type="button"
+                  className="pe-style-preset"
+                  onClick={() => applyStylePreset(preset)}
+                  title={`Aplicar estilo ${preset.name}`}>
+                  <span className="pe-style-preset__colors">
+                    <i style={{ background: preset.banner_color }} />
+                    <i style={{ background: preset.color_bg }} />
+                    <i style={{ background: preset.theme_config.footer_bg || "#111" }} />
+                  </span>
+                  <strong>{preset.name}</strong>
+                  <small>{preset.desc}</small>
+                </button>
+              ))}
+            </div>
+
+            <div className="pe-divider-title">Colores</div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color de marca</strong>
+                <span>Portada, botones, precios destacados y acentos.</span>
+              </div>
+              <ColorRow value={form.banner_color || "#5b52f0"} onChange={v => set("banner_color", v)} />
+            </div>
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Fondo general</strong>
+                <span>Fondo de la tienda y secciones.</span>
+              </div>
+              <ColorRow value={form.color_bg || "#fafafa"}
+                onChange={v => set("color_bg", v)}
+                onClear={() => set("color_bg", "")} />
+            </div>
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Texto principal</strong>
+                <span>Títulos, precios y descripciones.</span>
+              </div>
+              <ColorRow value={form.color_text || "#111111"}
+                onChange={v => set("color_text", v)}
+                onClear={() => set("color_text", "")} />
+            </div>
+
+            <div className="pe-divider-title">Botones y forma</div>
+
+            <Field label="Estilo de botones">
+              <div className="pe-choice-grid pe-choice-grid--3">
                 {[
-                  { val: "color", label: "Color sólido", desc: "Usa el color principal de la pestaña Estilo." },
-                  { val: "image", label: "Imagen", desc: "Subís una foto de fondo para la portada." },
-                ].map(({ val, label, desc }) => (
-                  <button
-                    key={val}
-                    type="button"
-                    className={optionClass((tc.hero_bg_type || "color") === val)}
-                    onClick={() => setTheme("hero_bg_type", val)}
-                  >
-                    <strong>{label}</strong>
-                    <span>{desc}</span>
+                  { value: "square", label: "Rectos",   desc: "Sin redondeo" },
+                  { value: "soft",   label: "Suaves",   desc: "Redondeados" },
+                  { value: "round",  label: "Redondos", desc: "Totalmente redondos" },
+                ].map(item => (
+                  <button key={item.value} type="button"
+                    className={`pe-choice-card ${(tc.button_style || "soft") === item.value ? "is-active" : ""}`}
+                    onClick={() => setButtonStyle(item.value)}>
+                    <strong>{item.label}</strong>
+                    <span>{item.desc}</span>
                   </button>
                 ))}
               </div>
             </Field>
 
-            {tc.hero_bg_type === "image" ? (<>
-              <Field label="Imagen de fondo" hint="PNG, JPG o WEBP · máx. 2 MB">
-                {form.hero_image_url && (
-                  <img src={assetPreviewSrc(form.hero_image_url)} alt="hero preview"
-                    style={{ marginBottom: 8, width: "100%", maxHeight: 80, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
-                    onError={e => { e.target.style.display = "none"; }} />
-                )}
-                <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-                  <button type="button" className="btn btn--ghost btn--sm"
-                    onClick={() => heroRef.current?.click()}
-                    disabled={uploadingHero}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {uploadingHero ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
-                    {uploadingHero ? "Subiendo..." : "Subir archivo"}
+            <Field label="Espaciado general">
+              <div className="pe-choice-grid pe-choice-grid--3">
+                {[
+                  { value: "compact", label: "Compacto" },
+                  { value: "normal",  label: "Normal"   },
+                  { value: "wide",    label: "Amplio"   },
+                ].map(item => (
+                  <button key={item.value} type="button"
+                    className={`pe-choice-card ${(tc.card_density || "normal") === item.value ? "is-active" : ""}`}
+                    onClick={() => setDensity(item.value)}>
+                    <strong>{item.label}</strong>
                   </button>
-                  {form.hero_image_url && (
-                    <button type="button" className="btn btn--ghost btn--sm"
-                      onClick={() => set("hero_image_url", "")}
-                      style={{ flexShrink: 0 }}
-                    >
-                      <Trash2 size={13} /> Quitar
-                    </button>
-                  )}
-                </div>
-                <input ref={heroRef} type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  style={{ display: "none" }}
-                  onChange={handleHeroUpload} />
-              </Field>
-              <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
-                <input type="range" min={0} max={90} step={5}
-                  value={tc.hero_overlay_opacity ?? 50}
-                  onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
-                  style={{ width: "100%", accentColor: "var(--brand)" }} />
-              </Field>
-            </>) : (
-              <div className="pe-info-box">
-                <strong>La portada usa el color principal.</strong>
-                <span>Para cambiarlo, entrá en la pestaña Estilo. Así evitamos editar el mismo color en dos lugares distintos.</span>
+                ))}
               </div>
-            )}
+            </Field>
 
-            <Field label="Título principal">
-              <input className="form-input" value={form.hero_headline}
-                onChange={e => set("hero_headline", e.target.value)}
-                placeholder="Ej: Todo lo que necesitás" />
+            <div className="pe-reset-design">
+              <button type="button" className="btn btn--ghost btn--sm"
+                onClick={() => applyStylePreset(STYLE_PRESETS[0])}>
+                Volver al estilo recomendado
+              </button>
+            </div>
+          </>}
+
+          {/* ── Cabecera ────────────────────────────────── */}
+          {section === "cabecera" && <>
+            <Field label="Estilo del navbar" highlighted={highlightedField === "navbar"}>
+              <div className="pe-option-grid pe-option-grid--3">
+                {[
+                  { value: "default",     label: "Clásico",      desc: "Fondo claro." },
+                  { value: "transparent", label: "Transparente", desc: "Sobre la portada." },
+                  { value: "dark",        label: "Oscuro",       desc: "Fondo oscuro." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.navbar_style || "default") === value)}
+                    onClick={() => setTheme("navbar_style", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
+              </div>
             </Field>
-            <Field label="Texto del botón">
-              <input className="form-input" value={tc.hero_btn_text || ""}
-                onChange={e => setTheme("hero_btn_text", e.target.value)}
-                placeholder="Ver productos" />
+            <Field label="Navbar al hacer scroll">
+              <Toggle checked={tc.navbar_sticky !== false}
+                onChange={v => setTheme("navbar_sticky", v)}
+                label={tc.navbar_sticky !== false ? "Fijo (siempre visible)" : "Estático"} />
             </Field>
-            <Field label="Redondeo del botón" hint={`${tc.hero_btn_radius ?? 99}px`}>
-              <input type="range" min={0} max={99} step={4}
-                value={tc.hero_btn_radius ?? 99}
-                onChange={e => setTheme("hero_btn_radius", Number(e.target.value))}
-                style={{ width: "100%", accentColor: "var(--brand)" }} />
+            <Field label="Mostrar categorías en el navbar">
+              <Toggle checked={!!tc.navbar_show_categories}
+                onChange={v => setTheme("navbar_show_categories", v)}
+                label={tc.navbar_show_categories ? "Activado" : "Desactivado"} />
+              <p style={{ fontSize: ".77rem", color: "var(--text-tertiary)", marginTop: 4 }}>Muestra las categorías del catálogo como links en el navbar.</p>
             </Field>
-            <Field label="Badges de confianza">
-              <Toggle checked={tc.show_trust_badges !== false}
-                onChange={v => setTheme("show_trust_badges", v)}
-                label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
-            </Field>
-            <Field label="Barra de promoción">
+
+            <div className="pe-divider-title">Barra de promoción</div>
+
+            <Field label="Barra de promoción" highlighted={highlightedField === "promo_bar"}>
               <Toggle checked={form.show_promo_bar}
                 onChange={v => set("show_promo_bar", v)}
                 label={form.show_promo_bar ? "Visible" : "Oculta"} />
@@ -675,103 +832,191 @@ function ConfigTab({ pageId }) {
             )}
           </>}
 
+          {/* ── Portada ─────────────────────────────────── */}
+          {section === "portada" && <>
+            <Field label="Tipo de fondo" highlighted={highlightedField === "hero"}>
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { val: "color", label: "Color de marca", desc: "Usa el color configurado en Tema." },
+                  { val: "image", label: "Foto de fondo",  desc: "Subís una imagen para el hero." },
+                ].map(({ val, label, desc }) => (
+                  <button key={val} type="button"
+                    className={optionClass((tc.hero_bg_type || "color") === val)}
+                    onClick={() => setTheme("hero_bg_type", val)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            {tc.hero_bg_type === "image" ? (<>
+              <Field label="Imagen de fondo" hint="PNG, JPG o WEBP · máx. 2 MB">
+                {form.hero_image_url && (
+                  <img src={assetPreviewSrc(form.hero_image_url)} alt="hero preview"
+                    style={{ marginBottom: 8, width: "100%", maxHeight: 80, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
+                    onError={e => { e.target.style.display = "none"; }} />
+                )}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button type="button" className="btn btn--ghost btn--sm"
+                    onClick={() => heroRef.current?.click()} disabled={uploadingHero}>
+                    {uploadingHero ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
+                    {uploadingHero ? "Subiendo..." : "Subir imagen"}
+                  </button>
+                  {form.hero_image_url && (
+                    <button type="button" className="btn btn--ghost btn--sm"
+                      onClick={() => set("hero_image_url", "")}>
+                      <Trash2 size={13} /> Quitar
+                    </button>
+                  )}
+                </div>
+                <input ref={heroRef} type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  style={{ display: "none" }} onChange={handleHeroUpload} />
+              </Field>
+              <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
+                <input type="range" min={0} max={90} step={5}
+                  value={tc.hero_overlay_opacity ?? 50}
+                  onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
+                  style={{ width: "100%", accentColor: "var(--brand)" }} />
+              </Field>
+            </>) : (
+              <div className="pe-info-box">
+                <strong>La portada usa el color de marca.</strong>
+                <span>Cambialo en la pestaña Tema → Color de marca.</span>
+              </div>
+            )}
+
+            <Field label="Alineación del contenido">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { value: "center", label: "Centrada",  desc: "Texto al centro." },
+                  { value: "left",   label: "Izquierda", desc: "Tipo marca premium." },
+                ].map(item => (
+                  <button key={item.value} type="button"
+                    className={optionClass((tc.hero_layout || "center") === item.value)}
+                    onClick={() => setTheme("hero_layout", item.value)}>
+                    <strong>{item.label}</strong><span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Título principal">
+              <input className="form-input" value={form.hero_headline}
+                onChange={e => set("hero_headline", e.target.value)}
+                placeholder="Ej: Todo lo que necesitás" />
+            </Field>
+
+            <Field label="Tagline" hint="Subtítulo debajo del título">
+              <input className="form-input" value={form.tagline}
+                onChange={e => set("tagline", e.target.value)}
+                placeholder="Envíos a todo el país, pagá con MercadoPago" maxLength={160} />
+            </Field>
+
+            <Field label="Texto del botón">
+              <input className="form-input" value={tc.hero_btn_text || ""}
+                onChange={e => setTheme("hero_btn_text", e.target.value)}
+                placeholder="Ver productos" />
+            </Field>
+
+            <Field label="Badges de confianza">
+              <Toggle checked={tc.show_trust_badges !== false}
+                onChange={v => setTheme("show_trust_badges", v)}
+                label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
+            </Field>
+          </>}
+
           {/* ── Catálogo ────────────────────────────────── */}
           {section === "catalogo" && <>
             <div className="pe-section-note">
-              <strong>Cómo se ven los productos</strong>
-              <span>Estos controles cambian la grilla, las tarjetas y los botones del catálogo.</span>
+              <strong>Grilla y tarjetas</strong>
+              <span>Controlá cómo se ven los productos en la tienda.</span>
             </div>
 
-            <Field label="Columnas de productos" hint="En celular siempre se acomoda automáticamente.">
+            <Field label="Columnas" hint="En móvil se ajusta automáticamente."
+              highlighted={highlightedField === "products"}>
               <div className="pe-option-grid pe-option-grid--3">
                 {[2, 3, 4].map(n => (
-                  <button
-                    key={n}
-                    type="button"
+                  <button key={n} type="button"
                     className={optionClass((tc.products_cols ?? 3) === n)}
-                    onClick={() => setTheme("products_cols", n)}
-                  >
-                    <strong>{n} columnas</strong>
-                    <span>{n === 2 ? "Más grande" : n === 3 ? "Equilibrado" : "Más productos visibles"}</span>
+                    onClick={() => setTheme("products_cols", n)}>
+                    <strong>{n} col.</strong>
+                    <span>{n === 2 ? "Grande" : n === 3 ? "Equilibrado" : "Compacto"}</span>
                   </button>
                 ))}
               </div>
               <div className="pe-grid-preview" style={{ gridTemplateColumns: `repeat(${tc.products_cols ?? 3}, 1fr)` }}>
-                {Array.from({ length: tc.products_cols ?? 3 }, (_, i) => (
-                  <span key={i} />
-                ))}
+                {Array.from({ length: tc.products_cols ?? 3 }, (_, i) => <span key={i} />)}
               </div>
             </Field>
 
-            <Field label="Estilo de tarjetas">
+            <Field label="Estilo de tarjeta">
               <div className="pe-option-grid pe-option-grid--2">
                 {[
-                  { value: "default",  label: "Clásico",    desc: "Tarjeta limpia con sombra suave." },
-                  { value: "minimal",  label: "Mínimo",     desc: "Más simple y liviano." },
-                  { value: "bordered", label: "Con borde",  desc: "Separa mejor cada producto." },
-                  { value: "floating", label: "Flotante",   desc: "Más profundidad visual." },
+                  { value: "default",  label: "Clásica",   desc: "Con sombra suave." },
+                  { value: "minimal",  label: "Minimal",   desc: "Simple y limpia." },
+                  { value: "bordered", label: "Con borde", desc: "Más estructurada." },
+                  { value: "floating", label: "Flotante",  desc: "Mayor profundidad." },
                 ].map(({ value, label, desc }) => (
-                  <button
-                    key={value}
-                    type="button"
+                  <button key={value} type="button"
                     className={optionClass((tc.card_style || "default") === value)}
-                    onClick={() => setTheme("card_style", value)}
-                  >
-                    <strong>{label}</strong>
-                    <span>{desc}</span>
+                    onClick={() => setTheme("card_style", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
                   </button>
                 ))}
               </div>
             </Field>
 
-            <Field label="Redondeo de tarjetas" hint={`${form.card_border_radius ?? 12}px`}>
-              <div className="pe-range-row">
-                <input
-                  type="range"
-                  min={0}
-                  max={32}
-                  step={1}
-                  value={form.card_border_radius ?? 12}
-                  onChange={e => setCardRadius(e.target.value)}
-                />
-                <span>{form.card_border_radius ?? 12}px</span>
+            <Field label="Separación entre productos">
+              <div className="pe-option-grid pe-option-grid--3">
+                {[
+                  { value: "normal", label: "Normal",   desc: "Con espacio." },
+                  { value: "tight",  label: "Ajustado", desc: "Poco espacio." },
+                  { value: "none",   label: "Sin sep.", desc: "Tipo Zara." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.card_gap || "normal") === value)}
+                    onClick={() => setTheme("card_gap", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
               </div>
             </Field>
 
-            <Field label="Sombra en tarjetas">
-              <Toggle checked={form.card_show_shadow}
-                onChange={v => set("card_show_shadow", v)}
-                label={form.card_show_shadow ? "Con sombra" : "Sin sombra"} />
-            </Field>
+            <div className="pe-divider-title">Búsqueda y encabezado</div>
 
-            <Field label="Búsqueda del catálogo">
+            <Field label="Buscador">
               <Toggle checked={tc.show_search_bar !== false}
                 onChange={v => setTheme("show_search_bar", v)}
-                label={tc.show_search_bar !== false ? "Mostrar buscador" : "Ocultar buscador"} />
+                label={tc.show_search_bar !== false ? "Visible" : "Oculto"} />
             </Field>
 
-            <Field label="Título de la sección de productos">
+            <Field label="Título de la sección">
               <input className="form-input" value={tc.products_section_title || ""}
                 onChange={e => setTheme("products_section_title", e.target.value)}
                 placeholder="Todos los productos" />
             </Field>
 
-            <Field label="Redondeo de botones" hint={`${tc.btn_radius ?? 8}px`}>
-              <div className="pe-range-row">
-                <input
-                  type="range"
-                  min={0}
-                  max={28}
-                  step={1}
-                  value={tc.btn_radius ?? 8}
-                  onChange={e => setButtonRadius(e.target.value)}
-                />
-                <span>{tc.btn_radius ?? 8}px</span>
+            <div className="pe-divider-title">Categorías</div>
+
+            <Field label="Cómo se muestran" highlighted={highlightedField === "categories"}>
+              <div className="pe-option-grid pe-option-grid--3">
+                {[
+                  { value: "pills",  label: "Pastillas", desc: "Filtros en fila." },
+                  { value: "grid",   label: "Grilla",    desc: "Cards grandes." },
+                  { value: "hidden", label: "Ocultas",   desc: "Sin filtro." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.category_display || "pills") === value)}
+                    onClick={() => setTheme("category_display", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
               </div>
             </Field>
 
-            {categories.length > 0 && (
-              <Field label="Categorías visibles" hint="Si no elegís ninguna, se muestran todas.">
+            {categories.length > 0 && tc.category_display !== "hidden" && (
+              <Field label="Categorías visibles" hint="Sin selección = todas visibles.">
                 <div className="pe-cat-grid">
                   {categories.map(cat => (
                     <button key={cat.id} type="button"
@@ -789,202 +1034,126 @@ function ConfigTab({ pageId }) {
                 )}
               </Field>
             )}
+
           </>}
 
-                    {/* ── Colores ─────────────────────────────────── */}
-          {section === "colores" && <>
+          {/* ── Producto ────────────────────────────────── */}
+          {section === "producto" && <>
             <div className="pe-section-note">
-              <strong>Diseño de la tienda</strong>
-              <span>Elegí un estilo base y ajustá lo importante. Todo impacta en la vista previa al instante.</span>
+              <strong>Página de producto</strong>
+              <span>Doble clic en un producto de la previsualización para ver cómo se ve. Configurá el layout y los textos.</span>
             </div>
 
-            <div className="pe-divider-title">Estilo rápido</div>
-
-            <div className="pe-style-presets">
-              {STYLE_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className="pe-style-preset"
-                  onClick={() => applyStylePreset(preset)}
-                  title={`Aplicar estilo ${preset.name}`}
-                >
-                  <span className="pe-style-preset__colors">
-                    <i style={{ background: preset.banner_color }} />
-                    <i style={{ background: preset.color_bg }} />
-                    <i style={{ background: preset.theme_config.footer_bg }} />
-                  </span>
-                  <strong>{preset.name}</strong>
-                  <small>{preset.desc}</small>
-                </button>
-              ))}
-            </div>
-
-            <div className="pe-divider-title">Colores</div>
-
-            <div className="pe-style-control">
-              <div className="pe-style-control__head">
-                <strong>Color de marca</strong>
-                <span>Cambia portada, botones, links, precios destacados y acentos.</span>
-              </div>
-              <ColorRow value={form.banner_color || "#5b52f0"} onChange={v => set("banner_color", v)} />
-            </div>
-
-            <div className="pe-style-control">
-              <div className="pe-style-control__head">
-                <strong>Fondo general</strong>
-                <span>Cambia el fondo de la tienda, detrás de productos y secciones.</span>
-              </div>
-              <ColorRow value={form.color_bg || "#fafafa"}
-                onChange={v => set("color_bg", v)}
-                onClear={() => set("color_bg", "")} />
-            </div>
-
-            <div className="pe-style-control">
-              <div className="pe-style-control__head">
-                <strong>Texto principal</strong>
-                <span>Cambia títulos, descripciones y textos principales.</span>
-              </div>
-              <ColorRow value={form.color_text || "#111111"}
-                onChange={v => set("color_text", v)}
-                onClear={() => set("color_text", "")} />
-            </div>
-
-            <div className="pe-divider-title">Forma y estructura</div>
-
-            <Field label="Estilo de portada" hint="Define cómo se acomoda el texto principal.">
-              <div className="pe-choice-grid pe-choice-grid--2">
+            <Field label="Layout">
+              <div className="pe-option-grid pe-option-grid--3">
                 {[
-                  { value: "center", label: "Centrada", desc: "Más simple y directa" },
-                  { value: "left", label: "Izquierda", desc: "Más tipo marca premium" },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`pe-choice-card ${(tc.hero_layout || "center") === item.value ? "is-active" : ""}`}
-                    onClick={() => setTheme("hero_layout", item.value)}
-                  >
-                    <strong>{item.label}</strong>
-                    <span>{item.desc}</span>
+                  { value: "standard",   label: "Clásico",   desc: "Imagen + info, lado a lado." },
+                  { value: "fullscreen", label: "Inmersivo", desc: "Imagen grande arriba, info abajo." },
+                  { value: "minimal",    label: "Minimal",   desc: "Columna simple y limpia." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.product_detail_style || "standard") === value)}
+                    onClick={() => setTheme("product_detail_style", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
                   </button>
                 ))}
               </div>
             </Field>
 
-            <Field label="Estilo de botones" hint="Cambia botones de portada y catálogo.">
-              <div className="pe-choice-grid pe-choice-grid--3">
-                {[
-                  { value: "square", label: "Rectos" },
-                  { value: "soft", label: "Suaves" },
-                  { value: "round", label: "Redondos" },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`pe-choice-card ${(tc.button_style || "soft") === item.value ? "is-active" : ""}`}
-                    onClick={() => setButtonStyle(item.value)}
-                  >
-                    <strong>{item.label}</strong>
-                  </button>
-                ))}
-              </div>
+            <Field label="Texto del botón de compra" hint="Aparece en el botón principal de cada producto">
+              <input className="form-input" value={tc.product_btn_text || ""}
+                onChange={e => setTheme("product_btn_text", e.target.value)}
+                placeholder="Agregar al carrito" maxLength={40} />
             </Field>
 
-            <Field label="Tarjetas de producto" hint="Cambia la estética de las cards del catálogo.">
-              <div className="pe-choice-grid pe-choice-grid--2">
-                {[
-                  { value: "default", label: "Clásicas", desc: "Equilibradas" },
-                  { value: "minimal", label: "Minimal", desc: "Más limpias" },
-                  { value: "bordered", label: "Con borde", desc: "Más ordenadas" },
-                  { value: "floating", label: "Flotantes", desc: "Más premium" },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`pe-choice-card ${(tc.card_style || "default") === item.value ? "is-active" : ""}`}
-                    onClick={() => setTheme("card_style", item.value)}
-                  >
-                    <strong>{item.label}</strong>
-                    <span>{item.desc}</span>
-                  </button>
-                ))}
-              </div>
+            <Field label="Mostrar reseñas de clientes">
+              <Toggle checked={tc.product_show_reviews !== false}
+                onChange={v => setTheme("product_show_reviews", v)}
+                label={tc.product_show_reviews !== false ? "Visibles" : "Ocultas"} />
             </Field>
 
-            <Field label="Espaciado" hint="Define si la tienda se siente compacta o más aireada.">
-              <div className="pe-choice-grid pe-choice-grid--3">
-                {[
-                  { value: "compact", label: "Compacto" },
-                  { value: "normal", label: "Normal" },
-                  { value: "wide", label: "Amplio" },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    className={`pe-choice-card ${(tc.card_density || "normal") === item.value ? "is-active" : ""}`}
-                    onClick={() => setDensity(item.value)}
-                  >
-                    <strong>{item.label}</strong>
-                  </button>
-                ))}
+            {!isOnProductPage && (
+              <div className="pe-info-box" style={{ marginTop: 8 }}>
+                <strong>Tip:</strong>
+                <span>Hacé doble clic en cualquier producto de la previsualización para ver la página de detalle aquí.</span>
               </div>
-            </Field>
+            )}
+          </>}
 
-            <div className="pe-divider-title">Footer</div>
-
+          {/* ── Pie de página ──────────────────────────── */}
+          {section === "pie" && <>
             <div className="pe-style-control">
-              <div className="pe-style-control__head">
-                <strong>Fondo del footer</strong>
-                <span>Cambia el bloque final de la tienda.</span>
-              </div>
+              <div className="pe-style-control__head"><strong>Fondo del footer</strong></div>
               <ColorRow value={tc.footer_bg || "#0a0f09"}
                 onChange={v => setTheme("footer_bg", v)}
                 onClear={() => setTheme("footer_bg", "")} />
             </div>
-
             <div className="pe-style-control">
-              <div className="pe-style-control__head">
-                <strong>Texto del footer</strong>
-                <span>Cambia la frase y los textos del pie de página.</span>
-              </div>
+              <div className="pe-style-control__head"><strong>Texto del footer</strong></div>
               <ColorRow value={tc.footer_text_color || "#ffffff"}
                 onChange={v => setTheme("footer_text_color", v)}
                 onClear={() => setTheme("footer_text_color", "")} />
             </div>
-
             <Field label="Frase del footer">
               <input className="form-input" value={tc.footer_tagline || ""}
                 onChange={e => setTheme("footer_tagline", e.target.value)}
                 placeholder="Envíos a todo el país · Atención personalizada" />
             </Field>
-
-            <div className="pe-divider-title">Ayudas visuales</div>
-
-            <Field label="Badges de confianza">
-              <Toggle checked={tc.show_trust_badges !== false}
-                onChange={v => setTheme("show_trust_badges", v)}
-                label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
-            </Field>
-
-            <Field label="Barra de búsqueda">
-              <Toggle checked={tc.show_search_bar !== false}
-                onChange={v => setTheme("show_search_bar", v)}
-                label={tc.show_search_bar !== false ? "Visible" : "Oculta"} />
-            </Field>
-
-            <div className="pe-reset-design">
-              <button
-                type="button"
-                className="btn btn--ghost btn--sm"
-                onClick={() => applyStylePreset(STYLE_PRESETS[0])}
-              >
-                Volver al estilo recomendado
-              </button>
-            </div>
           </>}
 
-                    {/* ── Contacto ────────────────────────────────── */}
-          {section === "contacto" && <>
+          {/* ── SEO & Redes ─────────────────────────────── */}
+          {section === "seo" && <>
+            <div className="pe-section-note">
+              <strong>SEO y redes sociales</strong>
+              <span>Mejorá cómo se ve tu tienda en Google y al compartir links.</span>
+            </div>
+
+            <div className="pe-divider-title">Meta tags</div>
+
+            <Field label="Título de la página" hint="Pestaña del navegador y Google">
+              <input className="form-input" value={form.meta_title}
+                onChange={e => set("meta_title", e.target.value)}
+                placeholder={form.store_name || "Mi tienda"} maxLength={60} />
+              <p style={{ margin: "4px 0 0", fontSize: ".78rem", color: "var(--text-secondary)" }}>
+                {(form.meta_title || "").length}/60 caracteres
+              </p>
+            </Field>
+
+            <Field label="Descripción meta" hint="Aparece en resultados de Google">
+              <textarea className="form-textarea" value={form.meta_description}
+                onChange={e => set("meta_description", e.target.value)}
+                placeholder="Describí tu tienda en 1-2 frases" rows={2} maxLength={160} />
+              <p style={{ margin: "4px 0 0", fontSize: ".78rem", color: "var(--text-secondary)" }}>
+                {(form.meta_description || "").length}/160 caracteres
+              </p>
+            </Field>
+
+            <Field label="Imagen OG" hint="Se muestra al compartir en WhatsApp, redes, etc. · máx. 2 MB">
+              {form.og_image_url && (
+                <img src={assetPreviewSrc(form.og_image_url)} alt="og preview"
+                  style={{ marginBottom: 8, width: "100%", maxHeight: 80, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
+                  onError={e => { e.target.style.display = "none"; }} />
+              )}
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <button type="button" className="btn btn--ghost btn--sm"
+                  onClick={() => ogImageRef.current?.click()} disabled={uploadingOgImage}>
+                  {uploadingOgImage ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
+                  {uploadingOgImage ? "Subiendo..." : "Subir imagen"}
+                </button>
+                {form.og_image_url && (
+                  <button type="button" className="btn btn--ghost btn--sm"
+                    onClick={() => set("og_image_url", "")}>
+                    <Trash2 size={13} /> Quitar
+                  </button>
+                )}
+              </div>
+              <input ref={ogImageRef} type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                style={{ display: "none" }} onChange={handleOgImageUpload} />
+            </Field>
+
+            <div className="pe-divider-title">Redes sociales y contacto</div>
+
             <Field label="WhatsApp" hint="Con código de país, sin +">
               <div style={{ position: "relative" }}>
                 <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)" }}>+</span>
@@ -1003,17 +1172,31 @@ function ConfigTab({ pageId }) {
                   style={{ paddingLeft: 24 }} />
               </div>
             </Field>
-            <Field label="Facebook" hint="URL completa">
+            <Field label="Facebook" hint="URL completa o usuario">
               <input className="form-input" value={form.facebook}
                 onChange={e => set("facebook", e.target.value)}
                 placeholder="https://facebook.com/mitienda" maxLength={120} />
+            </Field>
+            <Field label="TikTok" hint="Solo el usuario, sin @">
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)" }}>@</span>
+                <input className="form-input" value={form.tiktok}
+                  onChange={e => set("tiktok", e.target.value)}
+                  placeholder="mitienda" maxLength={60}
+                  style={{ paddingLeft: 24 }} />
+              </div>
+            </Field>
+            <Field label="YouTube" hint="URL del canal o usuario">
+              <input className="form-input" value={form.youtube}
+                onChange={e => set("youtube", e.target.value)}
+                placeholder="https://youtube.com/@mitienda" maxLength={120} />
             </Field>
           </>}
 
         </div>{/* end .pe-editor__fields */}
 
         {/* Save bar */}
-        <div className="pe-editor__save">
+        <div className="pe-editor__save" data-tour="page-save">
           <span className="pe-editor__save-status">
             {error && <span style={{ color: "var(--danger)" }}>⚠ {error}</span>}
             {saved && <span style={{ color: "var(--brand)" }}>✓ Guardado</span>}
@@ -1029,6 +1212,12 @@ function ConfigTab({ pageId }) {
       {/* ── Right panel (live preview) ───────────────────────────── */}
       <div className="pe-editor__right">
         <div className="pe-editor__preview-bar">
+          {isOnProductPage && form.slug && (
+            <button type="button" className="pe-editor__device-btn" title="Volver a la tienda"
+              onClick={() => setIframeSrc(storeUrl(form.slug, true))}>
+              <ChevronLeft size={14} />
+            </button>
+          )}
           <button type="button"
             className={`pe-editor__device-btn ${previewMode === "desktop" ? "is-active" : ""}`}
             onClick={() => setPreviewMode("desktop")} title="Vista escritorio">
@@ -1039,13 +1228,13 @@ function ConfigTab({ pageId }) {
             onClick={() => setPreviewMode("mobile")} title="Vista móvil">
             <Smartphone size={14} />
           </button>
-          <div className="pe-editor__preview-url">{iframeSrc || "Cargando..."}</div>
+          <div className="pe-editor__preview-url">{form.slug ? storeUrl(form.slug) : "Cargando..."}</div>
           <button type="button" className="pe-editor__device-btn"
             onClick={() => setIframeKey(k => k + 1)} title="Recargar">
             <RefreshCw size={13} />
           </button>
-          {iframeSrc && (
-            <a href={iframeSrc} target="_blank" rel="noreferrer"
+          {form.slug && (
+            <a href={storeUrl(form.slug)} target="_blank" rel="noreferrer"
               className="pe-editor__device-btn" title="Abrir en nueva pestaña">
               <ExternalLink size={13} />
             </a>

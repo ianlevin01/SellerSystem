@@ -157,6 +157,7 @@ function ProductImage({ product }) {
 }
 
 const PAGE_SIZE = 20;
+const FREE_SHIPPING_MIN_MARGIN = 15000; // margen mínimo requerido para cubrir envío gratis
 
 export default function PageProducts({ pageId }) {
   const navigate = useNavigate();
@@ -178,6 +179,7 @@ export default function PageProducts({ pageId }) {
   const [message,       setMessage]       = useState("");
   const [toast,         setToast]         = useState(null);
   const [infoTip,       setInfoTip]       = useState(null);
+  const [fsModal,       setFsModal]       = useState(null); // free shipping warning modal
   const toastTimerRef = useRef(null);
   const toolbarRef = useRef(null);
   const [fixedToolbar, setFixedToolbar] = useState({ show: false, left: 0, width: 0, top: 0 });
@@ -261,7 +263,7 @@ export default function PageProducts({ pageId }) {
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchProducts(0), query ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
-  }, [pageId, query, category, onlyMine]);
+  }, [pageId, query, category, onlyMine, comboMode]);
 
   async function fetchProducts(offset = 0) {
     abortRef.current?.abort();
@@ -272,8 +274,8 @@ export default function PageProducts({ pageId }) {
     const params = { limit: PAGE_SIZE, offset };
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
-    if (onlyMine)           params.only_mine   = "true";
-    else                    params.not_mine    = "true";
+    if (onlyMine)        params.only_mine = "true";
+    else if (!comboMode) params.not_mine  = "true";
 
     try {
       const res  = await client.get(`/seller/store/pages/${pageId}/products`, { params, signal: controller.signal });
@@ -357,7 +359,9 @@ export default function PageProducts({ pageId }) {
     const saved     = backendPagePrice(product);
     const inStore   = isProductInStore(product) || Boolean(locallyAdded[productKey(product.id)]);
     const profit    = sale - cost;
-    const valid     = cost > 0 && sale >= cost;
+    // Si tiene envío gratis activo el precio mínimo se eleva
+    const minPrice  = product.free_shipping ? cost + FREE_SHIPPING_MIN_MARGIN : cost;
+    const valid     = cost > 0 && sale >= minPrice;
     const priceChanged = inStore && Math.round(sale) !== Math.round(saved || suggested);
     const promoState   = promos[product.id] || {};
     const promoChanged = inStore && (
@@ -365,7 +369,8 @@ export default function PageProducts({ pageId }) {
       Boolean(promoState.promoEnabled) !== Boolean(product.promo_enabled)
     );
     const changed = priceChanged || promoChanged;
-    return { cost, suggested, sale, saved, profit, valid, changed, inStore, profitPct: cost > 0 ? Math.round((profit / cost) * 100) : 0 };
+    return { cost, suggested, sale, saved, profit, valid, changed, inStore, minPrice,
+             profitPct: cost > 0 ? Math.round((profit / cost) * 100) : 0 };
   }
 
   function useSuggested(product) { setPrice(product.id, suggestedPrice(product)); }
@@ -373,7 +378,7 @@ export default function PageProducts({ pageId }) {
   async function addProduct(product) {
     const info = getInfo(product);
     if (!info.valid) {
-      setMessage(`Para agregar "${productName(product)}", el precio tiene que ser igual o mayor a ${money(info.cost)}.`);
+      setMessage(`Para agregar "${productName(product)}", el precio tiene que ser igual o mayor a ${money(info.minPrice)}.`);
       return false;
     }
     setSavingId(product.id);
@@ -400,14 +405,17 @@ export default function PageProducts({ pageId }) {
   async function savePrice(product) {
     const info = getInfo(product);
     if (!info.valid) {
-      setMessage(`El precio de "${productName(product)}" no puede ser menor a ${money(info.cost)}.`);
+      const msg = product.free_shipping
+        ? `Con envío gratis, el precio de "${productName(product)}" no puede ser menor a ${money(info.minPrice)} (costo + margen de envío).`
+        : `El precio de "${productName(product)}" no puede ser menor a ${money(info.cost)}.`;
+      setMessage(msg);
       return false;
     }
     const promo      = promos[product.id] || {};
     const promoPrice = Number(promo.promoPrice) || 0;
     const promoEnabled = promoPrice > 0;
-    if (promoEnabled && promoPrice < info.cost) {
-      showErrorToast(`El precio promo no puede ser menor al mínimo permitido (${money(info.cost)}).`);
+    if (promoEnabled && promoPrice < info.minPrice) {
+      showErrorToast(`El precio promo no puede ser menor al mínimo permitido (${money(info.minPrice)}).`);
       return false;
     }
     setSavingId(product.id);
@@ -479,13 +487,53 @@ export default function PageProducts({ pageId }) {
     }
   }
 
-  async function toggleFreeShipping(product) {
-    const newVal = !product.free_shipping;
+  async function applyFreeShipping(product, adjustPrice = false) {
+    const cost       = resellerCost(product);
+    const minRequired = cost + FREE_SHIPPING_MIN_MARGIN;
     try {
-      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/customize`, { free_shipping: newVal });
-      setProducts(prev => prev.map(p => sameProductId(p.id, product.id) ? { ...p, free_shipping: newVal } : p));
+      if (adjustPrice) {
+        // Ajustar precio al mínimo requerido antes de activar
+        await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/price`, { custom_price: minRequired });
+        setPrices(prev => ({ ...prev, [product.id]: String(minRequired) }));
+        setProducts(prev => prev.map(p => sameProductId(p.id, product.id)
+          ? { ...p, custom_price: minRequired, precio_venta: minRequired }
+          : p
+        ));
+      }
+      await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/customize`, { free_shipping: true });
+      setProducts(prev => prev.map(p => sameProductId(p.id, product.id) ? { ...p, free_shipping: true } : p));
+      setFsModal(null);
     } catch (err) {
       setMessage(err.response?.data?.message || "No se pudo actualizar el envío.");
+      setFsModal(null);
+    }
+  }
+
+  async function toggleFreeShipping(product) {
+    const newVal = !product.free_shipping;
+
+    if (!newVal) {
+      // Desactivar: directo, sin validación
+      try {
+        await client.patch(`/seller/store/pages/${pageId}/products/${product.id}/customize`, { free_shipping: false });
+        setProducts(prev => prev.map(p => sameProductId(p.id, product.id) ? { ...p, free_shipping: false } : p));
+      } catch (err) {
+        setMessage(err.response?.data?.message || "No se pudo actualizar el envío.");
+      }
+      return;
+    }
+
+    // Activar: validar que el precio actual cubre el margen de envío
+    const cost        = resellerCost(product);
+    const currentPrice = roundPrice(prices[product.id]) || roundPrice(backendPagePrice(product));
+    const minRequired  = cost + FREE_SHIPPING_MIN_MARGIN;
+
+    if (cost > 0 && currentPrice < minRequired) {
+      // Precio insuficiente → mostrar modal con opciones
+      setFsModal({ type: "product", product, cost, minRequired, currentPrice });
+    } else {
+      // Precio OK → activar directamente
+      await applyFreeShipping(product, false);
     }
   }
 
@@ -495,8 +543,8 @@ export default function PageProducts({ pageId }) {
     const promoEnabled = promoPrice > 0;
     if (promoEnabled) {
       const info = getInfo(product);
-      if (promoPrice < info.cost) {
-        showErrorToast(`El precio promo no puede ser menor al mínimo permitido (${money(info.cost)}).`);
+      if (promoPrice < info.minPrice) {
+        showErrorToast(`El precio promo no puede ser menor al mínimo permitido (${money(info.minPrice)}).`);
         return;
       }
     }
@@ -522,9 +570,20 @@ export default function PageProducts({ pageId }) {
 
   async function toggleComboFreeShipping(combo) {
     const newVal = !combo.free_shipping;
+    if (newVal) {
+      // Activar en combo: mostrar aviso informativo (no tenemos el costo del combo en el front)
+      setFsModal({ type: "combo", combo, onConfirm: async () => {
+        try {
+          await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, { free_shipping: true });
+          setCombos(prev => prev.map(c => c.id === combo.id ? { ...c, free_shipping: true } : c));
+        } catch { /* silent */ }
+        setFsModal(null);
+      }});
+      return;
+    }
     try {
-      await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, { free_shipping: newVal });
-      setCombos(prev => prev.map(c => c.id === combo.id ? { ...c, free_shipping: newVal } : c));
+      await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, { free_shipping: false });
+      setCombos(prev => prev.map(c => c.id === combo.id ? { ...c, free_shipping: false } : c));
     } catch { /* silent */ }
   }
 
@@ -621,7 +680,7 @@ export default function PageProducts({ pageId }) {
   }
 
   return (
-    <div className="seller-products">
+    <div className="seller-products" style={comboMode ? { paddingBottom: 90 } : undefined}>
 
       {/* Toast — renderizado en body para evitar clipping por overflow */}
       {toast && createPortal(
@@ -643,31 +702,100 @@ export default function PageProducts({ pageId }) {
         document.body
       )}
 
+      {/* Modal de advertencia envío gratis */}
+      {fsModal && createPortal(
+        <div className="fs-modal-backdrop" onClick={() => setFsModal(null)}>
+          <div className="fs-modal" onClick={e => e.stopPropagation()}>
+            <div className="fs-modal__icon">
+              <Truck size={28} />
+            </div>
+            <h3 className="fs-modal__title">Envío gratis — revisá tu margen</h3>
+            <p className="fs-modal__body">
+              El costo del envío puede variar entre <strong>$4.000 y $15.000</strong> por pedido.
+              Si activás envío gratis, ese costo lo absorbés vos, por lo que necesitás un margen suficiente para no perder plata.
+            </p>
+
+            {fsModal.type === "product" && (
+              <div className="fs-modal__detail">
+                <div className="fs-modal__row">
+                  <span>Tu precio actual</span>
+                  <strong className="fs-modal__val--warn">{money(fsModal.currentPrice)}</strong>
+                </div>
+                <div className="fs-modal__row">
+                  <span>Mínimo requerido</span>
+                  <strong className="fs-modal__val--ok">{money(fsModal.minRequired)}</strong>
+                </div>
+                <div className="fs-modal__row fs-modal__row--gap">
+                  <span>Diferencia</span>
+                  <strong>{money(fsModal.minRequired - fsModal.currentPrice)} por debajo del mínimo</strong>
+                </div>
+              </div>
+            )}
+
+            {fsModal.type === "combo" && (
+              <p className="fs-modal__note">
+                Para combos, asegurate de que el precio del combo cubra el costo de envío.
+              </p>
+            )}
+
+            <div className="fs-modal__actions">
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                onClick={() => setFsModal(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={() => {
+                  if (fsModal.type === "product") applyFreeShipping(fsModal.product, true);
+                  else if (fsModal.type === "combo") fsModal.onConfirm();
+                }}
+              >
+                <Truck size={15} />
+                {fsModal.type === "product"
+                  ? `Ajustar precio a ${money(fsModal.minRequired)} y activar`
+                  : "Activar envío gratis"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {comboMode && createPortal(
+        <div className="combo-finalize-bar">
+          <span className="combo-finalize-bar__count">
+            {comboSelected.size === 0
+              ? "Ningún producto seleccionado"
+              : `${comboSelected.size} producto${comboSelected.size !== 1 ? "s" : ""} seleccionado${comboSelected.size !== 1 ? "s" : ""}`}
+          </span>
+          <button type="button" className="btn btn--ghost btn--sm combo-finalize-bar__cancel" onClick={cancelComboMode}>
+            <X size={14} /> Cancelar
+          </button>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={finalizeCombo}
+            disabled={comboSelected.size === 0 || creatingCombo}
+          >
+            {creatingCombo ? <Loader2 size={16} className="seller-products-spin" /> : <CheckCircle2 size={16} />}
+            {creatingCombo ? "Creando combo..." : "Finalizar combo"}
+          </button>
+        </div>,
+        document.body
+      )}
+
       {comboMode ? (
         <section className="combo-mode-banner">
           <div className="combo-mode-banner__info">
-            <Layers size={17} />
+            <Layers size={22} />
             <div>
-              <strong>Modo combo</strong>
-              <span>Seleccioná los productos que quieras incluir</span>
+              <strong>Seleccioná los productos que querés incluir en el combo</strong>
+              <span>Modo combo activo · tocá cada producto para agregarlo o quitarlo</span>
             </div>
-          </div>
-          <div className="combo-mode-banner__actions">
-            <span className="combo-mode-banner__count">
-              {comboSelected.size} {comboSelected.size === 1 ? "producto" : "productos"}
-            </span>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={cancelComboMode}>
-              <X size={14} /> Cancelar
-            </button>
-            <button
-              type="button"
-              className="btn btn--primary btn--sm"
-              onClick={finalizeCombo}
-              disabled={comboSelected.size === 0 || creatingCombo}
-            >
-              {creatingCombo ? <Loader2 size={14} className="seller-products-spin" /> : <CheckCircle2 size={14} />}
-              {creatingCombo ? "Creando..." : "Finalizar combo"}
-            </button>
           </div>
         </section>
       ) : (
@@ -730,7 +858,7 @@ export default function PageProducts({ pageId }) {
 
       <div className="seller-products-mini-help">
         <Zap size={14} />
-        <span><strong>Precio promo:</strong> si es menor a tu precio normal, la tienda lo muestra como descuento automático: <strong>10% OFF</strong>.</span>
+        <span><strong>Precio promo:</strong> si es menor a tu precio normal, la tienda lo muestra como precio especial con el original tachado.</span>
       </div>
 
       {message && (
@@ -976,7 +1104,7 @@ export default function PageProducts({ pageId }) {
                                 className="seller-product-promo-info"
                                 onMouseEnter={e => {
                                   const r = e.currentTarget.getBoundingClientRect();
-                                  setInfoTip({ x: r.left + r.width / 2, y: r.top, text: "Precio con descuento. Si es menor a tu precio normal, la tienda muestra el % de ahorro automáticamente (ej: 10% OFF)." });
+                                  setInfoTip({ x: r.left + r.width / 2, y: r.top, text: "Precio con descuento. Si es menor a tu precio normal, la tienda muestra el original tachado y el precio especial." });
                                 }}
                                 onMouseLeave={() => setInfoTip(null)}
                               >
@@ -997,9 +1125,9 @@ export default function PageProducts({ pageId }) {
                             onChange={e => setPromos(prev => ({ ...prev, [product.id]: { ...(prev[product.id] || {}), promoPrice: e.target.value } }))}
                           />
                         </div>
-                        {promoPrice > 0 && promoPrice < info.cost && (
+                        {promoPrice > 0 && promoPrice < info.minPrice && (
                           <small className="seller-product-promo-hint is-warn">
-                            Mínimo {money(info.cost)}
+                            Mínimo {money(info.minPrice)}
                           </small>
                         )}
                         {promoPrice > 0 && promoPrice >= info.cost && promoPct === 0 && (
@@ -1020,7 +1148,8 @@ export default function PageProducts({ pageId }) {
                   {!info.valid && info.sale > 0 && (
                     <div className="seller-product-warning">
                       <AlertTriangle size={14} />
-                      No puede ser menor a {money(info.cost)}
+                      No puede ser menor a {money(info.minPrice)}
+                      {product.free_shipping && <span style={{ display: "block", fontSize: ".72rem", marginTop: 2, opacity: .8 }}>Incluye margen mínimo de envío gratis</span>}
                     </div>
                   )}
 

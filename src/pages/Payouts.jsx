@@ -28,6 +28,12 @@ function dateFmt(d) {
     day: "2-digit", month: "short", year: "numeric",
   });
 }
+function releaseDate(orderDate) {
+  if (!orderDate) return "—";
+  const d = new Date(orderDate);
+  d.setDate(d.getDate() + 7);
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+}
 function maskCvu(cvu) {
   if (!cvu || cvu.length < 6) return cvu;
   return `${cvu.slice(0, 4)} •••• •••• •••• ${cvu.slice(-4)}`;
@@ -132,7 +138,7 @@ export default function Payouts() {
         </div>
         <div className="vtz-payouts-hero__amounts">
           <div className="vtz-payouts-hero__amount">
-            <span>No disponible</span>
+            <span>Saldo pendiente</span>
             <strong>{money(pendingTotal)}</strong>
           </div>
           <div className="vtz-payouts-hero__amount vtz-payouts-hero__amount--available">
@@ -223,11 +229,11 @@ export default function Payouts() {
         <section className="vtz-payouts-card vtz-payouts-card--locked" style={{ animationDelay: "60ms" }}>
           <div className="vtz-payouts-card__head">
             <Clock3 size={15} />
-            <h2>Saldo no disponible</h2>
+            <h2>Saldo pendiente</h2>
             <div className="vtz-tip-wrap">
               <HelpCircle size={14} className="vtz-tip-icon" />
               <div className="vtz-tip">
-                Este saldo fue recientemente acreditado. Dentro de las siguientes horas va a estar disponible para transferir.
+                Tus ganancias están en período de retención de 7 días desde la compra. Pasado ese plazo quedan disponibles para transferir.
               </div>
             </div>
             <strong className="vtz-payouts-card__total">{money(pendingTotal)}</strong>
@@ -238,7 +244,9 @@ export default function Payouts() {
               {summary.pending.orders.map(o => (
                 <li key={o.id}>
                   <span className="vtz-payouts-orders__num">#{o.order_numero}</span>
-                  <span className="vtz-payouts-orders__date">{dateFmt(o.order_date)}</span>
+                  <span className="vtz-payouts-orders__date vtz-payouts-orders__date--release">
+                    <Clock3 size={10} /> Se libera el {releaseDate(o.order_date)}
+                  </span>
                   <span className="vtz-payouts-orders__earn">{money(o.amount)}</span>
                 </li>
               ))}
@@ -343,7 +351,13 @@ export default function Payouts() {
                 <span>
                   {p.status === "transferido"
                     ? <span className="vtz-badge vtz-badge--green"><CheckCircle2 size={11} /> Transferido</span>
-                    : <span className="vtz-badge vtz-badge--amber"><Clock3 size={11} /> En proceso</span>
+                    : <span className="vtz-badge vtz-badge--amber" style={{ position: "relative" }}>
+                        <Clock3 size={11} /> En proceso
+                        <span className="vtz-payout-pending-tip">
+                          <HelpCircle size={11} />
+                          <span className="vtz-payout-pending-tip__text">Los cobros pueden demorar hasta 24hs hábiles</span>
+                        </span>
+                      </span>
                   }
                 </span>
               </div>
