@@ -4,8 +4,9 @@ import client from "../api/client";
 import "../styles/AiAssistant.css";
 import { Bot, Loader2, Send, Sparkles, Trash2, X } from "lucide-react";
 
-const STORAGE_KEY = "ventaz_ai_history";
-const MAX_STORED  = 40;
+const STORAGE_KEY  = "ventaz_ai_history";
+const TOOLTIP_KEY  = "ventaz_taz_tooltip_dismissed";
+const MAX_STORED   = 40;
 
 const WELCOME = {
   role:    "assistant",
@@ -36,6 +37,14 @@ export default function AiAssistant() {
   const [messages, setMessages] = useState(loadHistory);
   const [input,    setInput]    = useState("");
   const [loading,  setLoading]  = useState(false);
+  const [showTooltip, setShowTooltip] = useState(
+    () => !localStorage.getItem(TOOLTIP_KEY)
+  );
+
+  function dismissTooltip() {
+    localStorage.setItem(TOOLTIP_KEY, "1");
+    setShowTooltip(false);
+  }
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
@@ -95,15 +104,23 @@ export default function AiAssistant() {
     <>
       {/* Floating button */}
       <div className="vtz-ai-fab-wrap">
-        {!open && (
+        {!open && showTooltip && (
           <div className="vtz-ai-fab-tooltip">
-            Disponible para ayudarte con la configuración de tu tienda
+            <span>Disponible para ayudarte con la configuración de tu tienda</span>
+            <button
+              type="button"
+              className="vtz-ai-fab-tooltip__close"
+              onClick={dismissTooltip}
+              aria-label="Cerrar"
+            >
+              <X size={12} />
+            </button>
           </div>
         )}
         <button
           type="button"
           className={`vtz-ai-fab ${open ? "vtz-ai-fab--active" : ""}`}
-          onClick={() => setOpen(o => !o)}
+          onClick={() => { dismissTooltip(); setOpen(o => !o); }}
           aria-label="Asistente Ventaz"
         >
           {open ? <X size={20} /> : <Sparkles size={20} />}

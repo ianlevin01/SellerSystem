@@ -20,12 +20,15 @@
   font-size: .8125rem;
   font-weight: 500;
   line-height: 1.4;
-  padding: 10px 14px;
+  padding: 10px 12px 10px 14px;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.06);
-  max-width: 210px;
+  max-width: 230px;
   animation: taz-tooltip-in .3s ease both;
   position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .vtz-ai-fab-tooltip::after {
@@ -37,6 +40,23 @@
   border-right: none;
   border-left-color: #fff;
 }
+
+.vtz-ai-fab-tooltip__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 6px;
+  transition: background .12s;
+}
+.vtz-ai-fab-tooltip__close:hover { background: #e2e8f0; }
 
 @keyframes taz-tooltip-in {
   from { opacity: 0; transform: translateX(-6px); }
