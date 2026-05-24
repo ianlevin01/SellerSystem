@@ -58,7 +58,7 @@ const FLOW_STEPS = [
     id: "tienda",
     number: "02",
     title: "Armás tu tienda",
-    subtitle: "Tu marca, tu link, tu precio",
+    subtitle: "Tu tienda, tu link, tu precio",
     text: "Publicás productos en tu tienda propia, con tu identidad, tu nombre y tu forma de vender.",
     icon: Store,
   },
@@ -329,7 +329,7 @@ export default function Landing() {
             </div>
 
             <h1>
-              Tu marca.
+              Tu tienda.
               <br />
               Tu precio.
               <br />
@@ -489,7 +489,7 @@ export default function Landing() {
 
             <div className="vtz-about-card__quote">
               <Sparkles size={18} />
-              <strong>Tu marca. Tu precio. Tu negocio.</strong>
+              <strong>Tu tienda. Tu precio. Tu negocio.</strong>
             </div>
           </article>
 
@@ -732,7 +732,7 @@ export default function Landing() {
           </div>
           <h2>Creá tu tienda y empezá con una estructura lista para vender.</h2>
           <p>
-            Tu marca. Tu precio. Tu negocio. Ventaz te da la base para enfocarte en conseguir clientes,
+            Tu tienda. Tu precio. Tu negocio. Ventaz te da la base para enfocarte en conseguir clientes,
             construir confianza y generar ventas con una operación mucho más ordenada.
           </p>
 

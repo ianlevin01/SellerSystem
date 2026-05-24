@@ -342,7 +342,7 @@ export default function Profile() {
                 value={form.first_name}
                 onChange={handleChange}
                 required
-                placeholder="Ej: Lucas"
+                placeholder="Ej: Martín"
               />
             </label>
 
@@ -356,7 +356,7 @@ export default function Profile() {
                 value={form.last_name}
                 onChange={handleChange}
                 required
-                placeholder="Ej: Dercye"
+                placeholder="Ej: González"
               />
             </label>
 

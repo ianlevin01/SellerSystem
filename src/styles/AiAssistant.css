@@ -1,12 +1,51 @@
 /* src/styles/AiAssistant.css */
 
-/* ── FAB button ─────────────────────────────────────────────── */
+/* ── FAB wrapper ────────────────────────────────────────────── */
 
-.vtz-ai-fab {
+.vtz-ai-fab-wrap {
   position: fixed;
   bottom: 24px;
   right: 24px;
   z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+/* ── Tooltip bubble ─────────────────────────────────────────── */
+
+.vtz-ai-fab-tooltip {
+  background: #fff;
+  color: #1e293b;
+  font-size: .8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.06);
+  max-width: 210px;
+  animation: taz-tooltip-in .3s ease both;
+  position: relative;
+}
+
+.vtz-ai-fab-tooltip::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  bottom: 14px;
+  border: 6px solid transparent;
+  border-right: none;
+  border-left-color: #fff;
+}
+
+@keyframes taz-tooltip-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── FAB button ─────────────────────────────────────────────── */
+
+.vtz-ai-fab {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -21,6 +60,7 @@
   background: linear-gradient(135deg, #57d625 0%, #4ab81e 100%);
   box-shadow: 0 4px 20px rgba(99,102,241,.45);
   transition: transform .15s, box-shadow .15s, background .15s;
+  flex-shrink: 0;
 }
 
 .vtz-ai-fab:hover {
@@ -65,9 +105,13 @@
     bottom: 76px;
   }
 
-  .vtz-ai-fab {
+  .vtz-ai-fab-wrap {
     right: 16px;
     bottom: 16px;
+  }
+
+  .vtz-ai-fab-tooltip {
+    display: none;
   }
 }
 

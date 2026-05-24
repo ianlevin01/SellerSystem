@@ -150,11 +150,12 @@ function ConfigTab({ pageId }) {
 
   const DEFAULT_THEME = {
     hero_bg_type: "color", hero_overlay_opacity: 50,
+    hero_wave_shape: "wave", hero_bg_pattern: "circles",
     hero_btn_text: "Ver productos", hero_layout: "center", hero_btn_radius: 99,
     products_cols: 3, products_section_title: "",
     card_style: "default", card_gap: "normal",
     card_density: "normal", btn_radius: 14, button_style: "soft",
-    show_trust_badges: true, show_search_bar: true,
+    show_trust_badges: true, show_search_bar: true, show_discount_on_cards: true,
     footer_bg: "", footer_text_color: "", footer_tagline: "",
     navbar_style: "default", navbar_sticky: true,
     navbar_show_categories: false,
@@ -278,7 +279,7 @@ function ConfigTab({ pageId }) {
       if (String(key).startsWith("hero_") || key === "show_trust_badges") return "hero";
       if (["navbar_style", "navbar_sticky"].includes(key)) return "header";
       if (["card_style", "card_density", "card_gap", "products_cols", "show_search_bar",
-           "button_style", "btn_radius", "category_display"].includes(key)) return "products";
+           "button_style", "btn_radius", "category_display", "show_discount_on_cards"].includes(key)) return "products";
       return section === "diseno" ? "products" : section;
     }
 
@@ -924,6 +925,42 @@ function ConfigTab({ pageId }) {
                 onChange={v => setTheme("show_trust_badges", v)}
                 label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
             </Field>
+
+            <Field label="Forma del separador inferior">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { value: "wave",     label: "Ola",       desc: "Transición suave." },
+                  { value: "straight", label: "Recto",     desc: "Borde limpio." },
+                  { value: "diagonal", label: "Diagonal",  desc: "Corte inclinado." },
+                  { value: "double",   label: "Doble ola", desc: "Más dinamismo." },
+                ].map(item => (
+                  <button key={item.value} type="button"
+                    className={optionClass((tc.hero_wave_shape || "wave") === item.value)}
+                    onClick={() => setTheme("hero_wave_shape", item.value)}>
+                    <strong>{item.label}</strong><span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            {tc.hero_bg_type !== "image" && (
+              <Field label="Patrón de fondo">
+                <div className="pe-option-grid pe-option-grid--2">
+                  {[
+                    { value: "circles",   label: "Círculos",   desc: "Formas redondeadas flotantes." },
+                    { value: "bubbles",   label: "Burbujas",   desc: "Burbujeo sutil." },
+                    { value: "gradient",  label: "Gradiente",  desc: "Resplandor suave." },
+                    { value: "geometric", label: "Geométrico", desc: "Polígonos angulares." },
+                  ].map(item => (
+                    <button key={item.value} type="button"
+                      className={optionClass((tc.hero_bg_pattern || "circles") === item.value)}
+                      onClick={() => setTheme("hero_bg_pattern", item.value)}>
+                      <strong>{item.label}</strong><span>{item.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
           </>}
 
           {/* ── Catálogo ────────────────────────────────── */}
@@ -989,6 +1026,12 @@ function ConfigTab({ pageId }) {
               <Toggle checked={tc.show_search_bar !== false}
                 onChange={v => setTheme("show_search_bar", v)}
                 label={tc.show_search_bar !== false ? "Visible" : "Oculto"} />
+            </Field>
+
+            <Field label="Descuentos en las tarjetas" hint="Muestra tiers disponibles debajo del precio.">
+              <Toggle checked={tc.show_discount_on_cards !== false}
+                onChange={v => setTheme("show_discount_on_cards", v)}
+                label={tc.show_discount_on_cards !== false ? "Visible" : "Oculto"} />
             </Field>
 
             <Field label="Título de la sección">

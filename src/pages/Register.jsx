@@ -388,7 +388,7 @@ export default function Register() {
                   id="reg-name"
                   type="text"
                   autoComplete="name"
-                  placeholder="Ej: Lucas Dercye"
+                  placeholder="Ej: María García"
                   value={form.name}
                   onBlur={() => markTouched("name")}
                   onChange={(e) => updateField("name", e.target.value)}

@@ -94,15 +94,22 @@ export default function AiAssistant() {
   return (
     <>
       {/* Floating button */}
-      <button
-        type="button"
-        className={`vtz-ai-fab ${open ? "vtz-ai-fab--active" : ""}`}
-        onClick={() => setOpen(o => !o)}
-        aria-label="Asistente Ventaz"
-      >
-        {open ? <X size={20} /> : <Sparkles size={20} />}
-        {!open && <span>Taz</span>}
-      </button>
+      <div className="vtz-ai-fab-wrap">
+        {!open && (
+          <div className="vtz-ai-fab-tooltip">
+            Disponible para ayudarte con la configuración de tu tienda
+          </div>
+        )}
+        <button
+          type="button"
+          className={`vtz-ai-fab ${open ? "vtz-ai-fab--active" : ""}`}
+          onClick={() => setOpen(o => !o)}
+          aria-label="Asistente Ventaz"
+        >
+          {open ? <X size={20} /> : <Sparkles size={20} />}
+          {!open && <span>Taz</span>}
+        </button>
+      </div>
 
       {/* Chat panel */}
       {open && (
