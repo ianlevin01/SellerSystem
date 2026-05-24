@@ -3,7 +3,7 @@
 // cambio hecho por Yolo
 
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { firebaseAuth } from "../firebase";
@@ -72,7 +72,7 @@ function getPasswordScore(password) {
 }
 
 function passwordLabel(score, password) {
-  if (!password) return "Usá mínimo 8 caracteres";
+  if (!password) return "Mínimo 8 caracteres, mayúscula, número y símbolo";
   if (score <= 1) return "Muy débil";
   if (score === 2) return "Aceptable";
   if (score === 3) return "Buena";
@@ -81,6 +81,7 @@ function passwordLabel(score, password) {
 
 export default function Register() {
   const { loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -165,8 +166,10 @@ export default function Register() {
       next.password = "La contraseña debe tener mínimo 8 caracteres";
     } else if (!/[A-Z]/.test(form.password)) {
       next.password = "La contraseña debe tener al menos una mayúscula";
-    } else if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(form.password)) {
-      next.password = "La contraseña debe tener al menos un número o carácter especial";
+    } else if (!/[0-9]/.test(form.password)) {
+      next.password = "La contraseña debe tener al menos un número";
+    } else if (!/[^A-Za-z0-9]/.test(form.password)) {
+      next.password = "La contraseña debe tener al menos un carácter especial (!@#$%...)";
     }
 
     return next;
@@ -179,9 +182,17 @@ export default function Register() {
     setLoadingGoogle(true);
     try {
       await loginWithGoogle();
+      setTimeout(() => navigate("/dashboard"), 300);
     } catch (err) {
+      if (
+        err.code === "auth/popup-closed-by-user" ||
+        err.code === "auth/cancelled-popup-request" ||
+        err.code === "auth/popup-blocked"
+      ) {
+        setLoadingGoogle(false);
+        return;
+      }
       setError(err.response?.data?.message || err.message || "Error al registrarse con Google");
-    } finally {
       setLoadingGoogle(false);
     }
   }
