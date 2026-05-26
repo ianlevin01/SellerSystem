@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { firebaseAuth } from "../firebase";
+import { trackStdEvent } from "../utils/pixel";
 import "../styles/Login.css";
 import {
   ArrowRight,
@@ -84,6 +85,7 @@ export default function Login() {
 
     try {
       await login(form.email.trim(), form.password);
+      trackStdEvent("Login", { method: "email" });
       setSuccess(true);
       setTimeout(() => navigate("/dashboard"), 650);
     } catch (err) {
@@ -98,6 +100,7 @@ export default function Login() {
 
     try {
       await loginWithGoogle();
+      trackStdEvent("Login", { method: "google" });
       setSuccess(true);
       setTimeout(() => navigate("/dashboard"), 650);
     } catch (err) {

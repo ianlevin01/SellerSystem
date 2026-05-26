@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { firebaseAuth } from "../firebase";
+import { trackStdEvent } from "../utils/pixel";
 import "../styles/Register.css";
 import {
   ArrowRight,
@@ -182,6 +183,7 @@ export default function Register() {
     setLoadingGoogle(true);
     try {
       await loginWithGoogle();
+      trackStdEvent("CompleteRegistration", { method: "google" });
       setTimeout(() => navigate("/dashboard"), 300);
     } catch (err) {
       if (
@@ -252,6 +254,7 @@ export default function Register() {
         });
       }
 
+      trackStdEvent("CompleteRegistration", { method: "email" });
       setSuccess(true);
     } catch (err) {
       setError(err.response?.data?.message || "Error al crear tu tienda. Intentá de nuevo.");

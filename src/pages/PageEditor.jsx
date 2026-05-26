@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
+import { trackEvent } from "../utils/pixel";
 import {
   AlertTriangle, Building2, ChevronLeft,
   ExternalLink, FileText, Globe, Image as ImageIcon, LayoutGrid, Layers,
@@ -548,6 +549,7 @@ function ConfigTab({ pageId }) {
       const res = await client.put(`/seller/store/pages/${pageId}`, payload);
       formFromData(res.data);
       if (res.data.slug) setIframeSrc(storeUrl(res.data.slug, true));
+      trackEvent("Personalizacion_Diseno", { section });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
       setTimeout(() => setIframeKey(k => k + 1), 400);
@@ -1598,6 +1600,7 @@ function DiscountsTab({ pageId }) {
         price_tiers:      cleanTiers(config.price_tiers),
       });
       setConfig({ ...EMPTY_DISCOUNTS, ...res.data, quantity_tiers: res.data.quantity_tiers || [], price_tiers: res.data.price_tiers || [] });
+      trackEvent("Personalizacion_Descuentos");
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -1934,6 +1937,7 @@ function IntegrationsTab({ pageId }) {
     try {
       await client.post(`/seller/store/pages/${pageId}/integrations/${integration.key}/toggle`, { active: newActive });
       setIntegrations(prev => prev.map(i => i.key === integration.key ? { ...i, activated: newActive } : i));
+      trackEvent("Personalizacion_Integraciones", { integration: integration.key, active: newActive });
     } catch { /* silencio */ } finally {
       setToggling(p => ({ ...p, [integration.key]: false }));
     }

@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { trackEvent } from "../utils/pixel";
 import "../styles/Profile.css";
 import {
   Camera,
@@ -206,6 +207,7 @@ export default function Profile() {
     try {
       await client.put("/seller/auth/profile", payload);
 
+      trackEvent("Configuracion_Perfil");
       setSaveMsg("Guardado correctamente");
       setTimeout(() => setSaveMsg(""), 3000);
       updateSeller(payload);
@@ -218,6 +220,7 @@ export default function Profile() {
           age,
         });
 
+        trackEvent("Configuracion_Perfil");
         setSaveMsg("Guardado correctamente");
         setTimeout(() => setSaveMsg(""), 3000);
         updateSeller(payload);

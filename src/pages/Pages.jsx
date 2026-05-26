@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import client from "../api/client";
+import { trackEvent } from "../utils/pixel";
 import "../styles/Pages.css";
 import {
   ArrowRight,
@@ -98,6 +99,7 @@ function NewPageModal({ onClose, onCreated }) {
         slug:       form.slug.trim(),
       });
 
+      trackEvent("Creacion_Tienda");
       onCreated(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Error al crear la tienda");
