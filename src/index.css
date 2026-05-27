@@ -3021,12 +3021,20 @@ input[type="color"] {
 /* ── Page Editor Split Layout ──────────────────────────────── */
 .pe-editor {
   display: flex;
+  flex-direction: column;
   height: calc(100vh - 220px);
   min-height: 480px;
   margin: 0 -40px -36px;
   border-top: 1px solid var(--border);
   overflow: hidden;
   background: var(--bg);
+}
+
+.pe-editor__body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .pe-editor__left {
@@ -3040,7 +3048,7 @@ input[type="color"] {
 
 .pe-editor__tabs {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   background: var(--bg);
@@ -5866,6 +5874,11 @@ button:active:not(:disabled),
     background: var(--surface) !important;
   }
 
+  .pe-editor__body {
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
   .pe-editor__left {
     width: 100% !important;
     flex: 0 0 auto !important;
@@ -6023,6 +6036,7 @@ body,
   .seller-products-grid,
   .seller-product-card,
   .pe-editor,
+  .pe-editor__body,
   .pe-editor__left,
   .pe-editor__right,
   .pe-editor__fields,

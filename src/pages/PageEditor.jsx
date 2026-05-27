@@ -585,19 +585,22 @@ function ConfigTab({ pageId }) {
   return (
     <div className="pe-editor">
 
+      {/* ── Full-width section tabs ──────────────────────────────── */}
+      <div className="pe-editor__tabs" data-tour="page-tabs">
+        {SECTIONS.map(s => (
+          <button key={s.id} type="button"
+            className={`pe-editor__tab ${section === s.id ? "is-active" : ""}`}
+            onClick={() => setSection(s.id)}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Body: left fields + right preview ───────────────────── */}
+      <div className="pe-editor__body">
+
       {/* ── Left panel ──────────────────────────────────────────── */}
       <div className="pe-editor__left">
-
-        {/* Section tabs */}
-        <div className="pe-editor__tabs" data-tour="page-tabs">
-          {SECTIONS.map(s => (
-            <button key={s.id} type="button"
-              className={`pe-editor__tab ${section === s.id ? "is-active" : ""}`}
-              onClick={() => setSection(s.id)}>
-              {s.label}
-            </button>
-          ))}
-        </div>
 
         {/* Scrollable fields */}
         <div className="pe-editor__fields">
@@ -1306,6 +1309,8 @@ function ConfigTab({ pageId }) {
           )}
         </div>
       </div>
+
+      </div>{/* end .pe-editor__body */}
 
     </div>
   );
