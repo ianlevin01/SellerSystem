@@ -1014,3 +1014,161 @@
   color: #6d28d9;
   font-weight: 600;
 }
+
+/* ── Número de tier (1 2 3 4) ── */
+.vtz-calc-tier__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  font-size: .7rem;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.is-current .vtz-calc-tier__num {
+  background: #16a34a;
+  color: #fff;
+}
+
+.is-max.is-current .vtz-calc-tier__num {
+  background: #7c3aed;
+}
+
+.is-unlocked .vtz-calc-tier__num {
+  background: #bbf7d0;
+  color: #15803d;
+}
+
+/* ── Check de tier ya alcanzado ── */
+.vtz-calc-tier__check {
+  color: #16a34a;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+/* ── Toast de tier desbloqueado ── */
+.vtz-calc-toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: #0f172a;
+  border: 1px solid rgba(117,236,61,.30);
+  color: #fff;
+  box-shadow: 0 24px 64px rgba(0,0,0,.38), 0 0 0 1px rgba(117,236,61,.12);
+  animation: vtz-toast-in .28s cubic-bezier(.22,1,.36,1) both;
+  max-width: 320px;
+}
+
+@keyframes vtz-toast-in {
+  from { opacity: 0; transform: translateX(20px) scale(.97); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.vtz-calc-toast svg {
+  flex: 0 0 auto;
+  color: #79ef45;
+  margin-top: 2px;
+}
+
+.vtz-calc-toast strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: .92rem;
+  letter-spacing: -.02em;
+}
+
+.vtz-calc-toast span {
+  display: block;
+  color: rgba(255,255,255,.62);
+  font-size: .82rem;
+  line-height: 1.4;
+}
+
+/* ── Tier panel (dentro de la result card) ── */
+.vtz-calc-tier-panel {
+  position: relative;
+  z-index: 1;
+  margin-top: 22px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  transition: border-color .35s ease, background .35s ease;
+}
+
+.vtz-calc-tier-panel.is-active {
+  border-color: color-mix(in srgb, var(--tier-color, #16a34a) 60%, transparent);
+  background: rgba(255,255,255,.09);
+}
+
+.vtz-calc-tier-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.vtz-calc-tier-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--tier-color, #16a34a);
+  color: #fff;
+  font-size: .74rem;
+  font-weight: 900;
+  letter-spacing: .03em;
+}
+
+.vtz-calc-tier-panel__desc {
+  color: rgba(255,255,255,.55);
+  font-size: .8rem;
+  font-weight: 750;
+}
+
+.vtz-calc-tier-panel__bar {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.vtz-calc-tier-panel__bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--tier-color, #16a34a);
+  transition: width .5s ease;
+}
+
+.vtz-calc-tier-panel__hint {
+  color: rgba(255,255,255,.52);
+  font-size: .78rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.vtz-calc-tier-panel__hint strong {
+  color: rgba(255,255,255,.88);
+  font-weight: 1000;
+}
+
+.vtz-calc-tier-panel__max {
+  color: rgba(255,255,255,.72);
+  font-size: .82rem;
+  font-weight: 750;
+}

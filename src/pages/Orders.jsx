@@ -23,6 +23,7 @@ const FILTERS = [
   { key: "all",          label: "Todos" },
   { key: "pending",      label: "Pendientes" },
   { key: "consultation", label: "A confirmar" },
+  { key: "paid",         label: "Pagados (MP)" },
   { key: "green",        label: "Confirmados" },
   { key: "blue",         label: "En proceso" },
   { key: "red",          label: "Con problema" },

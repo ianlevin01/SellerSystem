@@ -4648,6 +4648,113 @@ input[type="color"] {
   }
 }
 
+/* ── Sidebar collapse button ── */
+.sidebar__collapse-btn {
+  display: none;
+}
+
+/* ── Sidebar collapsed (desktop only) ── */
+@media (min-width: 921px) {
+  .sidebar__collapse-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--sidebar-border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--sidebar-text);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .14s, color .14s;
+  }
+
+  .sidebar__collapse-btn:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-active);
+  }
+
+  /* collapsed sidebar width */
+  .sidebar--collapsed {
+    width: 64px;
+    overflow: hidden;
+  }
+
+  /* shift main content when sidebar is collapsed */
+  .layout--sidebar-collapsed .layout__main {
+    width: calc(100% - 64px);
+    margin-left: 64px;
+  }
+
+  /* hide text labels in collapsed mode */
+  .sidebar--collapsed .sidebar__label,
+  .sidebar--collapsed .sidebar__store-name,
+  .sidebar--collapsed .sidebar__avatar-info,
+  .sidebar--collapsed .sidebar__info-links,
+  .sidebar--collapsed .sidebar__store-picker {
+    display: none;
+  }
+
+  /* logo area — center icon + toggle button stacked */
+  .sidebar--collapsed .sidebar__logo {
+    padding: 14px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .sidebar--collapsed .sidebar__logo-mark {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .sidebar--collapsed .sidebar__collapse-btn {
+    display: inline-flex; /* keep visible so user can expand again */
+    margin-left: 0;
+  }
+
+  /* avatar — center just the image */
+  .sidebar--collapsed .sidebar__avatar {
+    padding: 10px 0;
+    justify-content: center;
+  }
+
+  /* nav links — center icon only */
+  .sidebar--collapsed .sidebar__link {
+    justify-content: center;
+    padding: 11px;
+    gap: 0;
+  }
+
+  /* footer — center icon only */
+  .sidebar--collapsed .sidebar__footer {
+    padding: 10px 0 16px;
+    align-items: center;
+  }
+
+  .sidebar--collapsed .sidebar__footer-btn {
+    justify-content: center;
+    padding: 10px;
+    width: 44px;
+  }
+}
+
+/* ── Kicker icon hide ── */
+.vtz-calc-kicker svg,
+.vtz-orders-kicker svg,
+.vtz-chat-kicker svg,
+.vtz-profile-kicker svg,
+.vtz-pages-kicker svg,
+.vtz-payouts-kicker svg,
+.info-kicker svg {
+  display: none;
+}
+
 /* Botones flotantes alineados */
 .og-launcher {
   right: 24px !important;
@@ -5191,19 +5298,26 @@ button:active:not(:disabled),
   border-color: var(--border);
 }
 
+.about-system-card > div:not(.about-system-card__line) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .about-system-card span {
-  color: rgba(255,255,255,.66);
-  font-size: .78rem;
+  color: rgba(255,255,255,.52);
+  font-size: .72rem;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: .10em;
 }
 
 .about-system-card strong,
 .contact-response-card strong,
 .legal-note strong {
-  font-size: 1.25rem;
-  line-height: 1.1;
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.2;
   letter-spacing: -.04em;
 }
 

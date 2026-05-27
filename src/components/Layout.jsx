@@ -8,8 +8,8 @@ import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
-  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, Store, Wallet, Menu, X, Puzzle,
-  Info, Mail, FileText
+  Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
+  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText
 } from "lucide-react";
 
 const nav = [
@@ -44,7 +44,15 @@ export default function Layout() {
   const [storeOpen, setStoreOpen]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [adminUnread, setAdminUnread]   = useState(0);
+  const [collapsed, setCollapsed]       = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
   const storeRef                        = useRef(null);
+
+  function toggleCollapse() {
+    setCollapsed(prev => {
+      localStorage.setItem("sidebar-collapsed", String(!prev));
+      return !prev;
+    });
+  }
 
   useEffect(() => {
     client.get("/seller/store/pages").then(r => setPages(r.data)).catch(() => {});
@@ -87,7 +95,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`layout ${mobileOpen ? "layout--mobile-open" : ""}`}>
+    <div className={`layout ${mobileOpen ? "layout--mobile-open" : ""} ${collapsed ? "layout--sidebar-collapsed" : ""}`}>
       <header className="mobile-topbar">
         <button
           type="button"
@@ -119,7 +127,7 @@ export default function Layout() {
         aria-label="Cerrar menú"
       />
 
-      <aside className={`sidebar ${mobileOpen ? "sidebar--open" : ""}`}>
+      <aside className={`sidebar ${mobileOpen ? "sidebar--open" : ""} ${collapsed ? "sidebar--collapsed" : ""}`}>
         <button
           type="button"
           className="sidebar__mobile-close"
@@ -131,6 +139,15 @@ export default function Layout() {
         <div className="sidebar__logo">
           <div className="sidebar__logo-mark">
             <img src="/ventaz.png" alt="Ventaz" style={{ height: 32, objectFit: "contain" }} />
+            <button
+              type="button"
+              className="sidebar__collapse-btn"
+              onClick={toggleCollapse}
+              aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
+              title={collapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
           </div>
           <div className="sidebar__store-name">
             {seller?.store_name || seller?.name || "Mi tienda"}
@@ -160,12 +177,13 @@ export default function Layout() {
               key={to}
               to={to}
               onClick={() => setMobileOpen(false)}
+              title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 "sidebar__link" + (isActive ? " active" : "")
               }
             >
               <Icon size={15} />
-              {label}
+              <span className="sidebar__label">{label}</span>
             </NavLink>
           ))}
         </nav>
@@ -194,37 +212,39 @@ export default function Layout() {
                 type="button"
                 className={`sidebar__footer-btn${storeOpen ? " sidebar__footer-btn--active" : ""}`}
                 onClick={() => setStoreOpen(p => !p)}
+                title={collapsed ? "Ver mis tiendas" : undefined}
               >
                 <Store size={15} />
-                Ver mis tiendas
+                <span className="sidebar__label">Ver mis tiendas</span>
                 <ChevronUp
                   size={12}
+                  className="sidebar__label"
                   style={{ marginLeft: "auto", transition: "transform .2s", transform: storeOpen ? "rotate(0deg)" : "rotate(180deg)" }}
                 />
               </button>
             </div>
           )}
           <div className="sidebar__info-links">
-            <NavLink to="/about" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+            <NavLink to="/about" onClick={() => setMobileOpen(false)} title={collapsed ? "Quiénes somos" : undefined} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
               <Info size={15} />
-              Quiénes somos
+              <span className="sidebar__label">Quiénes somos</span>
             </NavLink>
-            <NavLink to="/contact" onClick={() => { setMobileOpen(false); setAdminUnread(0); }} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+            <NavLink to="/contact" onClick={() => { setMobileOpen(false); setAdminUnread(0); }} title={collapsed ? "Contacto" : undefined} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
               <Mail size={15} />
-              Contacto
+              <span className="sidebar__label">Contacto</span>
               {adminUnread > 0 && (
                 <span className="sidebar__link-badge">{adminUnread}</span>
               )}
             </NavLink>
-            <NavLink to="/legal" onClick={() => setMobileOpen(false)} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
+            <NavLink to="/legal" onClick={() => setMobileOpen(false)} title={collapsed ? "Legal y privacidad" : undefined} className={({ isActive }) => "sidebar__footer-btn sidebar__footer-link" + (isActive ? " active" : "")}>
               <FileText size={15} />
-              Legal y privacidad
+              <span className="sidebar__label">Legal y privacidad</span>
             </NavLink>
           </div>
 
-          <button type="button" className="sidebar__footer-btn" onClick={handleLogout}>
+          <button type="button" className="sidebar__footer-btn" onClick={handleLogout} title={collapsed ? "Cerrar sesión" : undefined}>
             <LogOut size={15} />
-            Cerrar sesión
+            <span className="sidebar__label">Cerrar sesión</span>
           </button>
         </div>
       </aside>

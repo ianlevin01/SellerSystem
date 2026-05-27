@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import "../styles/Calculator.css";
 import {
   AlertTriangle,
@@ -7,21 +7,17 @@ import {
   Sparkles,
   Star,
   TrendingUp,
+  Trophy,
   Zap,
 } from "lucide-react";
 
-// platformPct por tramo de monto del pedido
 const PLATFORM_PCTS = [30, 27.5, 22, 20];
 
-// Reducción de costo vs base (30%):
-//   tier 1: 1.10×1.275 vs 1.10×1.30 → (1.43-1.4025)/1.43 ≈ 1.9% → ~2%
-//   tier 2: 1.10×1.22  vs 1.10×1.30 → (1.43-1.342)/1.43  ≈ 6.2% → ~6%
-//   tier 3: 1.10×1.20  vs 1.10×1.30 → (1.43-1.32)/1.43   ≈ 7.7% → ~8%
 const TIERS = [
-  { threshold: 0,       nextThreshold: 100_000, label: "Pedido estándar",   range: "Hasta $100k",     desc: "Costo base"       },
-  { threshold: 100_000, nextThreshold: 250_000, label: "Pedido grande",     range: "$100k – $250k",   desc: "El costo baja ~2%" },
-  { threshold: 250_000, nextThreshold: 500_000, label: "Pedido muy grande", range: "$250k – $500k",   desc: "El costo baja ~6%" },
-  { threshold: 500_000, nextThreshold: null,    label: "Pedido mayorista",  range: "Más de $500k",    desc: "El costo baja ~8%" },
+  { threshold: 0,       nextThreshold: 100_000, label: "Pedido estándar",   range: "Hasta $100k",     desc: "Costo base",       color: "#64748b" },
+  { threshold: 100_000, nextThreshold: 250_000, label: "Pedido grande",     range: "$100k – $250k",   desc: "El costo baja ~2%", color: "#2563eb" },
+  { threshold: 250_000, nextThreshold: 500_000, label: "Pedido muy grande", range: "$250k – $500k",   desc: "El costo baja ~6%", color: "#16a34a" },
+  { threshold: 500_000, nextThreshold: null,    label: "Pedido mayorista",  range: "Más de $500k",    desc: "El costo baja ~8%", color: "#7c3aed" },
 ];
 
 const QUICK_MARKUPS = [
@@ -30,6 +26,8 @@ const QUICK_MARKUPS = [
   { label: "+50%",   pct: 50 },
   { label: "+100%",  pct: 100 },
 ];
+
+const MAX_PRICE = 9_999_999;
 
 function fmt(n) {
   return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 });
@@ -49,26 +47,23 @@ export default function Calculator() {
   const [costo,    setCosto]    = useState("");
   const [precio,   setPrecio]   = useState("");
   const [cantidad, setCantidad] = useState(1);
+  const [tierToast, setTierToast] = useState(null); // índice del tier nuevo
+  const prevTierRef = useRef(0);
 
   const data = useMemo(() => {
-    const costoUnidad  = Math.max(0, numberValue(costo));
-    const precioVenta  = Math.max(0, numberValue(precio));
-    const unidades     = Math.max(1, parseInt(cantidad, 10) || 1);
+    const costoUnidad  = Math.max(0, Math.min(MAX_PRICE, numberValue(costo)));
+    const precioVenta  = Math.max(0, Math.min(MAX_PRICE, numberValue(precio)));
+    const unidades     = Math.max(1, Math.min(9999, parseInt(cantidad, 10) || 1));
 
-    const precioMinimo = costoUnidad; // precio mínimo = costo base (no se puede vender menos)
+    const precioMinimo = costoUnidad;
     const totalVenta   = precioVenta * unidades;
 
-    // Tier del pedido según su monto total
     const activeTierIdx = totalVenta >= 500_000 ? 3
       : totalVenta >= 250_000 ? 2
       : totalVenta >= 100_000 ? 1 : 0;
 
-    const platformPct = PLATFORM_PCTS[activeTierIdx];
-
-    // costoUnidad fue calculado con tier base 30%.
-    // Cuando el pedido cae en un tier mejor, el costo real es proporcialmente menor:
-    //   adjustedCost = costoUnidad × (1 + platformPct/100) / 1.30
-    const adjustedCost   = costoUnidad > 0 ? costoUnidad * (1 + platformPct / 100) / 1.30 : 0;
+    const platformPct   = PLATFORM_PCTS[activeTierIdx];
+    const adjustedCost  = costoUnidad > 0 ? costoUnidad * (1 + platformPct / 100) / 1.30 : 0;
     const gananciaUnidad = Math.max(0, precioVenta - adjustedCost);
     const ganancia       = gananciaUnidad * unidades;
     const margenPct      = adjustedCost > 0 && precioVenta > adjustedCost
@@ -79,12 +74,38 @@ export default function Calculator() {
     const faltaPrecio  = costoUnidad > 0 && precioVenta <= 0;
     const porDebajo    = costoUnidad > 0 && precioVenta > 0 && precioVenta < precioMinimo;
 
+    // Progreso hacia el próximo tier (0–100)
+    const tier = TIERS[activeTierIdx];
+    const tierProgress = tier.nextThreshold && totalVenta > 0
+      ? Math.min(100, ((totalVenta - tier.threshold) / (tier.nextThreshold - tier.threshold)) * 100)
+      : activeTierIdx === 3 ? 100 : 0;
+
+    const faltaParaSiguiente = tier.nextThreshold && totalVenta < tier.nextThreshold
+      ? tier.nextThreshold - totalVenta
+      : null;
+
     return {
       costoUnidad, precioVenta, unidades, adjustedCost,
       precioMinimo, totalVenta, gananciaUnidad, ganancia, margenPct,
       precioValido, faltaPrecio, porDebajo, activeTierIdx,
+      tierProgress, faltaParaSiguiente,
     };
   }, [costo, precio, cantidad]);
+
+  // Toast cuando se sube de tier
+  useEffect(() => {
+    if (data.totalVenta <= 0) { prevTierRef.current = 0; return; }
+    if (data.activeTierIdx > prevTierRef.current) {
+      setTierToast(data.activeTierIdx);
+      const t = setTimeout(() => setTierToast(null), 4500);
+      prevTierRef.current = data.activeTierIdx;
+      return () => clearTimeout(t);
+    }
+    // Si bajan los valores, actualizar referencia
+    if (data.activeTierIdx < prevTierRef.current) {
+      prevTierRef.current = data.activeTierIdx;
+    }
+  }, [data.activeTierIdx, data.totalVenta]);
 
   function setQuickPrice(pct) {
     if (!data.costoUnidad) return;
@@ -107,8 +128,22 @@ export default function Calculator() {
         ? `Ese precio está por debajo de tu costo: ${money(data.precioMinimo)}.`
         : "Precio válido. Todo lo que vendas por encima del costo es tuyo.";
 
+  const activeTier = TIERS[data.activeTierIdx];
+
   return (
     <main className="vtz-calc-simple">
+
+      {/* ── Toast de tier nuevo ── */}
+      {tierToast !== null && (
+        <div className="vtz-calc-toast">
+          <Trophy size={18} />
+          <div>
+            <strong>¡Tramo desbloqueado!</strong>
+            <span>{TIERS[tierToast].label} — {TIERS[tierToast].desc}</span>
+          </div>
+        </div>
+      )}
+
       <section className="vtz-calc-top">
         <div>
           <span className="vtz-calc-kicker">
@@ -141,6 +176,7 @@ export default function Calculator() {
               <input
                 type="number"
                 min="0"
+                max={MAX_PRICE}
                 placeholder="Ej: 15600"
                 value={costo}
                 onChange={(e) => setCosto(e.target.value)}
@@ -158,6 +194,7 @@ export default function Calculator() {
               <input
                 type="number"
                 min="0"
+                max={MAX_PRICE}
                 placeholder={data.costoUnidad ? `Mínimo: ${fmt(data.precioMinimo)}` : "Ej: 23000"}
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
@@ -187,9 +224,10 @@ export default function Calculator() {
               <input
                 type="number"
                 min="1"
+                max="9999"
                 step="1"
                 value={cantidad}
-                onChange={(e) => setCantidad(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                onChange={(e) => setCantidad(Math.max(1, Math.min(9999, parseInt(e.target.value, 10) || 1)))}
               />
             </div>
           </label>
@@ -214,11 +252,34 @@ export default function Calculator() {
               : "Completá los datos para ver el resultado."}
           </p>
 
-          {ready && data.activeTierIdx > 0 && (
-            <p style={{ margin: "4px 0 8px", fontSize: ".8rem", color: "var(--brand)", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-              <Zap size={12} /> Pedido grande: {TIERS[data.activeTierIdx].desc.toLowerCase()}
-            </p>
-          )}
+          {/* ── Indicador de tramo activo ── */}
+          <div className={`vtz-calc-tier-panel ${data.totalVenta > 0 ? "is-active" : ""}`}
+               style={{ "--tier-color": activeTier.color }}>
+            <div className="vtz-calc-tier-panel__row">
+              <div className="vtz-calc-tier-panel__badge">
+                {data.activeTierIdx === 3 ? <Star size={11} /> : <Zap size={11} />}
+                {activeTier.label}
+              </div>
+              <span className="vtz-calc-tier-panel__desc">{activeTier.desc}</span>
+            </div>
+
+            {/* Barra de progreso hacia el siguiente tramo */}
+            {data.totalVenta > 0 && activeTier.nextThreshold && (
+              <>
+                <div className="vtz-calc-tier-panel__bar">
+                  <div className="vtz-calc-tier-panel__bar-fill" style={{ width: `${data.tierProgress}%` }} />
+                </div>
+                <div className="vtz-calc-tier-panel__hint">
+                  Te faltan <strong>{money(data.faltaParaSiguiente)}</strong> para "{TIERS[data.activeTierIdx + 1].label}"
+                </div>
+              </>
+            )}
+            {data.totalVenta > 0 && data.activeTierIdx === 3 && (
+              <div className="vtz-calc-tier-panel__max">
+                ¡Estás en el tramo máximo! 🎉
+              </div>
+            )}
+          </div>
 
           <div className="vtz-calc-main-numbers">
             <div>
@@ -250,6 +311,75 @@ export default function Calculator() {
         </article>
       </section>
 
+      {/* ── Tramos de descuento — ARRIBA del guide ── */}
+      <section className="vtz-calc-tiers">
+        <div className="vtz-calc-tiers__head">
+          <TrendingUp size={18} />
+          <strong>Tramos por monto de pedido</strong>
+        </div>
+        <p className="vtz-calc-tiers__sub">
+          Si el total del pedido supera cierto monto, el costo de todos sus productos baja automáticamente. A más grande el pedido, más ganás.
+        </p>
+
+        <div className="vtz-calc-tiers__grid">
+          {TIERS.map((t, i) => {
+            const isActive  = data.totalVenta > 0 && data.activeTierIdx === i;
+            const isReached = data.totalVenta > 0 && data.activeTierIdx > i;
+
+            // Progreso de este tier (solo si es el activo y tiene siguiente)
+            const thisPct = isActive && t.nextThreshold && data.totalVenta > 0
+              ? Math.min(100, ((data.totalVenta - t.threshold) / (t.nextThreshold - t.threshold)) * 100)
+              : isReached ? 100 : 0;
+
+            return (
+              <div
+                key={i}
+                className={[
+                  "vtz-calc-tier",
+                  isActive  ? "is-current"  : "",
+                  isReached ? "is-unlocked" : "",
+                  !isActive && !isReached ? "is-locked" : "",
+                  t.nextThreshold === null && isActive ? "is-max" : "",
+                ].filter(Boolean).join(" ")}
+              >
+                <div className="vtz-calc-tier__header">
+                  <span className="vtz-calc-tier__num">{i + 1}</span>
+                  <span className="vtz-calc-tier__label">{t.label}</span>
+                  {isActive && <span className="vtz-calc-tier__badge">Activo</span>}
+                  {isReached && !isActive && <CheckCircle2 size={13} className="vtz-calc-tier__check" />}
+                </div>
+
+                <div className="vtz-calc-tier__range">{t.range}</div>
+
+                <div className="vtz-calc-tier__cost">
+                  <span style={{
+                    fontSize: ".85rem",
+                    fontWeight: 700,
+                    color: isActive ? t.color : isReached ? "#16a34a" : "#94a3b8",
+                  }}>
+                    {t.desc}
+                  </span>
+                </div>
+
+                {/* Barra de progreso solo en el tier activo */}
+                {isActive && t.nextThreshold && (
+                  <div className="vtz-calc-tier__progress-wrap">
+                    <div className="vtz-calc-tier__progress">
+                      <div className="vtz-calc-tier__progress-bar" style={{ width: `${thisPct}%`, background: t.color }} />
+                    </div>
+                    <small>{fmt(data.totalVenta)} / {fmt(t.nextThreshold)}</small>
+                  </div>
+                )}
+
+                {isActive && t.nextThreshold === null && (
+                  <p className="vtz-calc-tier__max-msg">¡Tramo máximo!</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="vtz-calc-guide">
         <div>
           <TrendingUp size={20} />
@@ -270,59 +400,6 @@ export default function Calculator() {
         </div>
       </section>
 
-      <section className="vtz-calc-tiers">
-        <div className="vtz-calc-tiers__head">
-          <TrendingUp size={18} />
-          <strong>En pedidos grandes, el costo baja automáticamente</strong>
-        </div>
-        <p className="vtz-calc-tiers__sub">
-          Si el total de un pedido supera cierto monto, el costo de todos sus productos se reduce. A más grande el pedido, más ganás.
-        </p>
-
-        <div className="vtz-calc-tiers__grid">
-          {TIERS.map((t, i) => {
-            const isActive  = data.totalVenta > 0 && data.activeTierIdx === i;
-            const isReached = data.totalVenta > 0 && data.activeTierIdx > i;
-
-            return (
-              <div
-                key={i}
-                className={[
-                  "vtz-calc-tier",
-                  isActive  ? "is-current"  : "",
-                  isReached ? "is-unlocked" : "",
-                  !isActive && !isReached ? "is-locked" : "",
-                  t.nextThreshold === null && isActive ? "is-max" : "",
-                ].filter(Boolean).join(" ")}
-              >
-                <div className="vtz-calc-tier__header">
-                  <span className="vtz-calc-tier__label">{t.label}</span>
-                  {isActive && <span className="vtz-calc-tier__badge">Este pedido</span>}
-                  {t.nextThreshold === null && isActive && <Star size={13} className="vtz-calc-tier__star" />}
-                </div>
-
-                <div className="vtz-calc-tier__range">{t.range}</div>
-
-                <div className="vtz-calc-tier__cost" style={{ marginTop: 8 }}>
-                  <span style={{
-                    fontSize: ".82rem",
-                    fontWeight: 600,
-                    color: isActive ? "var(--brand, #6366f1)" : isReached ? "var(--success, #16a34a)" : "var(--text-secondary)",
-                  }}>
-                    {t.desc}
-                  </span>
-                </div>
-
-                {isActive && t.nextThreshold && data.totalVenta > 0 && (
-                  <p style={{ margin: "8px 0 0", fontSize: ".75rem", color: "var(--text-secondary)" }}>
-                    Superá <strong>{money(t.nextThreshold)}</strong> para el siguiente tramo
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
     </main>
   );
 }
