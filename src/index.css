@@ -3021,7 +3021,6 @@ input[type="color"] {
 /* ── Page Editor Split Layout ──────────────────────────────── */
 .pe-editor {
   display: flex;
-  flex-direction: column;
   height: calc(100vh - 220px);
   min-height: 480px;
   margin: 0 -40px -36px;
@@ -3035,43 +3034,72 @@ input[type="color"] {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  width: 100%;
+}
+
+/* ── Vertical section nav ── */
+.pe-editor__section-nav {
+  flex: 0 0 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 6px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.pe-editor__section-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 10px 4px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .14s, color .14s;
+  text-align: center;
+  letter-spacing: .01em;
+  line-height: 1.2;
+}
+
+.pe-editor__section-btn:hover {
+  background: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.pe-editor__section-btn.is-active {
+  background: rgba(var(--brand-rgb), .10);
+  color: var(--brand);
+}
+
+.pe-editor__section-btn svg {
+  flex-shrink: 0;
+}
+
+/* legacy tab styles — kept for any residual references */
+.pe-editor__tabs {
+  display: none;
+}
+.pe-editor__tab {
+  display: none;
 }
 
 .pe-editor__left {
-  flex: 0 0 360px;
+  flex: 0 0 340px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
   background: var(--surface);
   overflow: hidden;
-}
-
-.pe-editor__tabs {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--bg);
-}
-
-.pe-editor__tab {
-  padding: 13px 4px;
-  font-size: .72rem;
-  font-weight: 600;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  background: transparent;
-  color: var(--text-secondary);
-  transition: all .15s;
-  text-align: center;
-  letter-spacing: .01em;
-}
-.pe-editor__tab:hover { color: var(--text-primary); background: var(--border-subtle); }
-.pe-editor__tab.is-active {
-  color: var(--brand);
-  border-bottom-color: var(--brand);
-  background: rgba(var(--brand-rgb), .04);
 }
 
 .pe-editor__fields {
@@ -4891,7 +4919,6 @@ button:disabled,
 
 .seller-products-cats button:hover,
 .seller-products-tabs button:hover,
-.pe-editor__tab:hover,
 .page-tabs a:hover,
 .page-tabs button:hover {
   transform: translateY(-1px);
@@ -5879,6 +5906,33 @@ button:active:not(:disabled),
     overflow: visible !important;
   }
 
+  /* section nav goes horizontal on mobile */
+  .pe-editor__section-nav {
+    flex-direction: row !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 4px 8px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--border) !important;
+    gap: 4px !important;
+    scrollbar-width: none !important;
+  }
+
+  .pe-editor__section-nav::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .pe-editor__section-btn {
+    flex-direction: row !important;
+    flex: 0 0 auto !important;
+    padding: 7px 10px !important;
+    gap: 6px !important;
+    font-size: .76rem !important;
+    white-space: nowrap !important;
+  }
+
   .pe-editor__left {
     width: 100% !important;
     flex: 0 0 auto !important;
@@ -5889,9 +5943,7 @@ button:active:not(:disabled),
   }
 
   .pe-editor__tabs {
-    display: flex !important;
-    grid-template-columns: none !important;
-    padding: 0 8px !important;
+    display: none !important;
   }
 
   .pe-editor__fields {
@@ -6040,14 +6092,12 @@ body,
   .pe-editor__left,
   .pe-editor__right,
   .pe-editor__fields,
-  .page-tabs,
-  .pe-editor__tabs {
+  .page-tabs {
     max-width: 100% !important;
     overflow-x: hidden !important;
   }
 
   .page-tabs,
-  .pe-editor__tabs,
   .seller-products-cats {
     overflow-x: auto !important;
     overflow-y: hidden !important;

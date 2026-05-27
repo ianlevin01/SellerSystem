@@ -187,6 +187,13 @@ function ConfigTab({ pageId }) {
   const [error,    setError]    = useState("");
   const [section,  setSection]  = useState("identidad");
 
+  function goToSection(id) {
+    setSection(id);
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "ventaz_scroll_to", section: id }, "*"
+    );
+  }
+
   function formFromData(d) {
     setForm({
       slug:                d.slug                || "",
@@ -585,19 +592,21 @@ function ConfigTab({ pageId }) {
   return (
     <div className="pe-editor">
 
-      {/* ── Full-width section tabs ──────────────────────────────── */}
-      <div className="pe-editor__tabs" data-tour="page-tabs">
-        {SECTIONS.map(s => (
-          <button key={s.id} type="button"
-            className={`pe-editor__tab ${section === s.id ? "is-active" : ""}`}
-            onClick={() => setSection(s.id)}>
-            {s.label}
+      {/* ── Body: section nav + left fields + right preview ─────── */}
+      <div className="pe-editor__body">
+
+      {/* ── Vertical section nav ────────────────────────────────── */}
+      <div className="pe-editor__section-nav" data-tour="page-tabs">
+        {CONFIG_SECTIONS.map(({ id, label, Icon }) => (
+          <button key={id} type="button"
+            className={`pe-editor__section-btn ${section === id ? "is-active" : ""}`}
+            onClick={() => goToSection(id)}
+            title={label}>
+            <Icon size={17} />
+            <span>{label}</span>
           </button>
         ))}
       </div>
-
-      {/* ── Body: left fields + right preview ───────────────────── */}
-      <div className="pe-editor__body">
 
       {/* ── Left panel ──────────────────────────────────────────── */}
       <div className="pe-editor__left">
