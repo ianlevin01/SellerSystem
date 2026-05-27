@@ -7117,15 +7117,15 @@ body,
 .contact-chat-composer__input,
 .contact-chat-composer input,
 .contact-chat-composer textarea {
-  color: var(--text-primary, #18181b) !important;
+  color: #18181b !important;
   background: #ffffff !important;
-  caret-color: var(--brand, #4db81a);
+  caret-color: #4db81a;
 }
 
 .contact-chat-composer__input::placeholder,
 .contact-chat-composer input::placeholder,
 .contact-chat-composer textarea::placeholder {
-  color: var(--text-secondary, #71717a) !important;
+  color: #71717a !important;
   opacity: 1;
 }
 
