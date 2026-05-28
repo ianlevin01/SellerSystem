@@ -10,6 +10,15 @@ import {
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
+function contrastColor(hex) {
+  if (!hex || hex.length < 4) return '#ffffff';
+  const clean = hex.replace('#','');
+  const r = parseInt(clean.slice(0,2),16);
+  const g = parseInt(clean.slice(2,4),16);
+  const b = parseInt(clean.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 155 ? '#000000' : '#ffffff';
+}
+
 function fmt(n) { return Number(n || 0).toLocaleString("es-AR", { maximumFractionDigits: 0 }); }
 function slugify(str) {
   return String(str || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
@@ -164,6 +173,15 @@ function ConfigTab({ pageId }) {
     product_detail_style: "standard",
     product_btn_text: "",
     product_show_reviews: true,
+    navbar_color: "",
+    promo_color: "",
+    card_price_color: "",
+    card_show_border: false,
+    hero_btn_color: "",
+    product_btn_color: "",
+    product_image_layout: "bottom",
+    product_price_size: "normal",
+    product_desc_style: "full",
   };
 
   const [form, setForm] = useState({
@@ -189,9 +207,23 @@ function ConfigTab({ pageId }) {
 
   function goToSection(id) {
     setSection(id);
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: "ventaz_scroll_to", section: id }, "*"
-    );
+    const onProductPage = iframeSrc.includes("/product/") || iframeSrc.includes("/combo/");
+    if (id === "producto" && !onProductPage) {
+      client.get(`/seller/store/pages/${pageId}/products?limit=1`)
+        .then(res => {
+          const items = Array.isArray(res.data) ? res.data : (res.data?.products || []);
+          const first = items[0];
+          if (first && form.slug) {
+            const pid = first.product_id || first.id;
+            setIframeSrc(productUrl(form.slug, pid, "product"));
+          }
+        })
+        .catch(() => {});
+    } else {
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: "ventaz_scroll_to", section: id }, "*"
+      );
+    }
   }
 
   function formFromData(d) {
@@ -803,6 +835,28 @@ function ConfigTab({ pageId }) {
 
           {/* ── Cabecera ────────────────────────────────── */}
           {section === "cabecera" && <>
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color del navbar</strong>
+                <span className="pe-style-control__hint">Fondo de la barra superior</span>
+              </div>
+              <ColorRow value={tc.navbar_color || ""}
+                onChange={v => setTheme("navbar_color", v)}
+                onClear={() => setTheme("navbar_color", "")} />
+            </div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color de la barra de promoción</strong>
+                <span className="pe-style-control__hint">Fondo del banner superior</span>
+              </div>
+              <ColorRow value={tc.promo_color || ""}
+                onChange={v => setTheme("promo_color", v)}
+                onClear={() => setTheme("promo_color", "")} />
+            </div>
+
+            <div className="pe-divider-title">Estilo y comportamiento</div>
+
             <Field label="Estilo del navbar" highlighted={highlightedField === "navbar"}>
               <div className="pe-option-grid pe-option-grid--3">
                 {[
@@ -928,6 +982,16 @@ function ConfigTab({ pageId }) {
                 placeholder="Envíos a todo el país, pagá con MercadoPago" maxLength={160} />
             </Field>
 
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color del botón principal</strong>
+                <span className="pe-style-control__hint">Texto se adapta automáticamente</span>
+              </div>
+              <ColorRow value={tc.hero_btn_color || ""}
+                onChange={v => setTheme("hero_btn_color", v)}
+                onClear={() => setTheme("hero_btn_color", "")} />
+            </div>
+
             <Field label="Texto del botón">
               <input className="form-input" value={tc.hero_btn_text || ""}
                 onChange={e => setTheme("hero_btn_text", e.target.value)}
@@ -1018,6 +1082,22 @@ function ConfigTab({ pageId }) {
               </div>
             </Field>
 
+            <Field label="Borde en las tarjetas">
+              <Toggle checked={!!tc.card_show_border}
+                onChange={v => setTheme("card_show_border", v)}
+                label={tc.card_show_border ? "Con borde" : "Sin borde"} />
+            </Field>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color del precio</strong>
+                <span className="pe-style-control__hint">En las tarjetas de producto</span>
+              </div>
+              <ColorRow value={tc.card_price_color || ""}
+                onChange={v => setTheme("card_price_color", v)}
+                onClear={() => setTheme("card_price_color", "")} />
+            </div>
+
             <Field label="Separación entre productos">
               <div className="pe-option-grid pe-option-grid--3">
                 {[
@@ -1098,15 +1178,32 @@ function ConfigTab({ pageId }) {
           {section === "producto" && <>
             <div className="pe-section-note">
               <strong>Página de producto</strong>
-              <span>Doble clic en un producto de la previsualización para ver cómo se ve. Configurá el layout y los textos.</span>
+              <span>Hacé clic en "Producto" para abrir un ejemplo. Doble clic en cualquier producto de la previsualización.</span>
             </div>
 
-            <Field label="Layout">
+            <div className="pe-divider-title">Layout de la página</div>
+
+            <Field label="Posición de las imágenes">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { value: "bottom", label: "Abajo", desc: "Miniaturas debajo de la imagen principal. (clásico)" },
+                  { value: "side",   label: "Al costado", desc: "Miniaturas verticales a la izquierda." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.product_image_layout || "bottom") === value)}
+                    onClick={() => setTheme("product_image_layout", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <Field label="Organización del layout">
               <div className="pe-option-grid pe-option-grid--3">
                 {[
-                  { value: "standard",   label: "Clásico",   desc: "Imagen + info, lado a lado." },
-                  { value: "fullscreen", label: "Inmersivo", desc: "Imagen grande arriba, info abajo." },
-                  { value: "minimal",    label: "Minimal",   desc: "Columna simple y limpia." },
+                  { value: "standard",   label: "Lado a lado",  desc: "Galería izq., info der." },
+                  { value: "fullscreen", label: "Imagen arriba", desc: "Foto grande, info abajo." },
+                  { value: "minimal",    label: "Centrado",      desc: "Columna simple y limpia." },
                 ].map(({ value, label, desc }) => (
                   <button key={value} type="button"
                     className={optionClass((tc.product_detail_style || "standard") === value)}
@@ -1117,10 +1214,57 @@ function ConfigTab({ pageId }) {
               </div>
             </Field>
 
+            <div className="pe-divider-title">Precio</div>
+
+            <Field label="Tamaño del precio">
+              <div className="pe-option-grid pe-option-grid--3">
+                {[
+                  { value: "normal", label: "Normal",  desc: "Tamaño estándar." },
+                  { value: "lg",     label: "Grande",  desc: "Más prominente." },
+                  { value: "xl",     label: "Enorme",  desc: "Muy destacado." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.product_price_size || "normal") === value)}
+                    onClick={() => setTheme("product_price_size", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            <div className="pe-divider-title">Botón de compra</div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color del botón</strong>
+                <span className="pe-style-control__hint">El texto se adapta automáticamente</span>
+              </div>
+              <ColorRow value={tc.product_btn_color || ""}
+                onChange={v => setTheme("product_btn_color", v)}
+                onClear={() => setTheme("product_btn_color", "")} />
+            </div>
+
             <Field label="Texto del botón de compra" hint="Aparece en el botón principal de cada producto">
               <input className="form-input" value={tc.product_btn_text || ""}
                 onChange={e => setTheme("product_btn_text", e.target.value)}
                 placeholder="Agregar al carrito" maxLength={40} />
+            </Field>
+
+            <div className="pe-divider-title">Descripción</div>
+
+            <Field label="Cómo se muestra la descripción">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { value: "full",      label: "Completa",   desc: "Se muestra todo el texto." },
+                  { value: "collapsed", label: "Colapsada",  desc: "Se expande al tocar 'Leer más'." },
+                ].map(({ value, label, desc }) => (
+                  <button key={value} type="button"
+                    className={optionClass((tc.product_desc_style || "full") === value)}
+                    onClick={() => setTheme("product_desc_style", value)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
+              </div>
             </Field>
 
             <Field label="Mostrar reseñas de clientes">
@@ -1128,13 +1272,6 @@ function ConfigTab({ pageId }) {
                 onChange={v => setTheme("product_show_reviews", v)}
                 label={tc.product_show_reviews !== false ? "Visibles" : "Ocultas"} />
             </Field>
-
-            {!isOnProductPage && (
-              <div className="pe-info-box" style={{ marginTop: 8 }}>
-                <strong>Tip:</strong>
-                <span>Hacé doble clic en cualquier producto de la previsualización para ver la página de detalle aquí.</span>
-              </div>
-            )}
           </>}
 
           {/* ── Pie de página ──────────────────────────── */}

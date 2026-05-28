@@ -476,6 +476,12 @@
   border-bottom-right-radius: 8px;
 }
 
+/* Necesario: el global "p { color: var(--text-secondary) }" de index.css
+   pisa el color heredado, así que lo sobreescribimos explícitamente. */
+.vtz-chat-bubble--seller p {
+  color: #fff;
+}
+
 .vtz-chat-bubble--seller small {
   color: rgba(255,255,255,.76);
 }
