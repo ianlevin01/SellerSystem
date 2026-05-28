@@ -2034,20 +2034,22 @@ export default function PageEditor({ tab = "config" }) {
   }, [pageId]);
 
   return (
-    <div>
-      {/* Breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: ".875rem", color: "var(--text-muted)" }}>
-        <Link to="/pages" style={{ color: "var(--text-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-          <ChevronLeft size={14} /> Mis tiendas
+    <div className="pe-fullscreen-page">
+      {/* Topbar */}
+      <div className="pe-topbar">
+        <Link to="/pages" className="pe-topbar__back">
+          <ChevronLeft size={16} />
+          <span>Mis tiendas</span>
         </Link>
-        <span>/</span>
-        <span style={{ color: "var(--text)" }}>{pageName}</span>
-        {pageSlug && (
-          <a href={storeUrl(pageSlug)} target="_blank" rel="noreferrer"
-            style={{ color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3, marginLeft: 4 }}>
-            <ExternalLink size={12} />
-          </a>
-        )}
+
+        <div className="pe-topbar__title">
+          <span>{pageName}</span>
+          {pageSlug && (
+            <a href={storeUrl(pageSlug)} target="_blank" rel="noreferrer" className="pe-topbar__ext" title="Ver tienda">
+              <ExternalLink size={13} />
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -2066,7 +2068,7 @@ export default function PageEditor({ tab = "config" }) {
         </button>
       </div>
 
-      <div style={{ marginTop: 24 }}>
+      <div style={tab !== "config" ? { padding: "24px 24px 40px" } : {}}>
         {tab === "config"       && <ConfigTab          pageId={pageId} />}
         {tab === "products"     && <PageProducts       pageId={pageId} />}
         {tab === "discounts"    && <DiscountsTab        pageId={pageId} />}

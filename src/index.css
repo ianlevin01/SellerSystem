@@ -3018,6 +3018,83 @@ input[type="color"] {
 }
 
 
+/* ── Full-screen PageEditor page wrapper (no sidebar) ───────── */
+.pe-fullscreen-page {
+  padding: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+/* Topbar del editor */
+.pe-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.pe-topbar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px 7px 10px;
+  border-radius: var(--radius-md);
+  background: var(--brand);
+  color: #fff;
+  font-size: .85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .14s, transform .1s;
+  flex-shrink: 0;
+}
+.pe-topbar__back:hover {
+  background: var(--brand-hover);
+  transform: translateX(-2px);
+}
+.pe-topbar__back svg { flex-shrink: 0; }
+
+.pe-topbar__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+}
+.pe-topbar__title span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pe-topbar__ext {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  transition: color .14s;
+  flex-shrink: 0;
+}
+.pe-topbar__ext:hover { color: var(--brand); }
+
+/* Page tabs row */
+.pe-fullscreen-page .page-tabs {
+  padding: 0 24px;
+  background: var(--surface);
+}
+
+/* pe-editor: fills remaining viewport below topbar + tabs */
+.pe-fullscreen-page .pe-editor {
+  height: calc(100vh - 98px);   /* topbar≈53px + tabs≈45px */
+  margin: 0;
+}
+
 /* ── Page Editor Split Layout ──────────────────────────────── */
 .pe-editor {
   display: flex;
@@ -4674,6 +4751,7 @@ input[type="color"] {
     width: var(--sidebar-w);
     height: 100dvh;
     overflow-y: auto;
+    transition: width .25s var(--ease);
   }
 
   .layout__main {
@@ -4681,6 +4759,7 @@ input[type="color"] {
     max-width: none;
     min-height: 100vh;
     margin: 0 0 0 var(--sidebar-w);
+    transition: width .25s var(--ease), margin-left .25s var(--ease);
   }
 }
 
@@ -5869,6 +5948,8 @@ button:active:not(:disabled),
 
 /* Configuración de tienda en celular: no debe romperse ni permitir scroll horizontal */
 @media (max-width: 920px) {
+  .pe-topbar { padding: 10px 16px; }
+  .pe-fullscreen-page .page-tabs { padding: 0 12px; }
   .page-tabs,
   .pe-editor__tabs {
     overflow-x: auto !important;

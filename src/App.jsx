@@ -59,10 +59,6 @@ export default function App() {
               <Route path="/pages/:pageId/products/:productId/edit"        element={<ProductEditor />} />
               <Route path="/pages/:pageId/combos/:comboId/edit"          element={<ComboEditor />} />
               <Route path="/pages"                         element={<Pages />} />
-              <Route path="/pages/:pageId"                 element={<PageEditor tab="config" />} />
-              <Route path="/pages/:pageId/products"        element={<PageEditor tab="products" />} />
-              <Route path="/pages/:pageId/discounts"       element={<PageEditor tab="discounts" />} />
-              <Route path="/pages/:pageId/integrations"    element={<PageEditor tab="integrations" />} />
               <Route path="/orders"                        element={<Orders />} />
               <Route path="/calculator"                    element={<Calculator />} />
               <Route path="/profile"                       element={<Profile />} />
@@ -76,6 +72,12 @@ export default function App() {
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
             </Route>
+
+            {/* Editor de tienda — pantalla completa sin sidebar */}
+            <Route path="/pages/:pageId"              element={<PageEditor tab="config" />} />
+            <Route path="/pages/:pageId/products"     element={<PageEditor tab="products" />} />
+            <Route path="/pages/:pageId/discounts"    element={<PageEditor tab="discounts" />} />
+            <Route path="/pages/:pageId/integrations" element={<PageEditor tab="integrations" />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />
