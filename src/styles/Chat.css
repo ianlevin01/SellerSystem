@@ -458,6 +458,7 @@
 
 .vtz-chat-bubble p {
   margin: 0;
+  color: #0f172a;
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
@@ -476,10 +477,8 @@
   border-bottom-right-radius: 8px;
 }
 
-/* Necesario: el global "p { color: var(--text-secondary) }" de index.css
-   pisa el color heredado, así que lo sobreescribimos explícitamente. */
 .vtz-chat-bubble--seller p {
-  color: #fff;
+  color: #fff !important;
 }
 
 .vtz-chat-bubble--seller small {
@@ -493,9 +492,8 @@
   border-bottom-left-radius: 8px;
 }
 
-/* Mismo fix que --seller: el global "p { color: var(--text-secondary) }" pisa el color heredado */
 .vtz-chat-bubble--customer p {
-  color: var(--ink);
+  color: #0f172a !important;
 }
 
 .vtz-chat-bubble--customer small {

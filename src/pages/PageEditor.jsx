@@ -209,17 +209,24 @@ function ConfigTab({ pageId }) {
   function goToSection(id) {
     setSection(id);
     const onProductPage = iframeSrc.includes("/product/") || iframeSrc.includes("/combo/");
+
     if (id === "producto" && !onProductPage) {
-      client.get(`/seller/store/pages/${pageId}/products?limit=1`)
+      // Navegar el iframe a la página de un producto
+      client.get(`/seller/store/pages/${pageId}/products`, { params: { limit: 1 } })
         .then(res => {
           const items = Array.isArray(res.data) ? res.data : (res.data?.products || []);
           const first = items[0];
-          if (first && form.slug) {
+          const slug = slugRef.current || form.slug;
+          if (first && slug) {
             const pid = first.product_id || first.id;
-            setIframeSrc(productUrl(form.slug, pid, "product"));
+            setIframeSrc(productUrl(slug, pid, "product"));
           }
         })
         .catch(() => {});
+    } else if (id !== "producto" && onProductPage) {
+      // Volver al store desde una página de producto
+      const slug = slugRef.current || form.slug;
+      if (slug) setIframeSrc(storeUrl(slug, true));
     } else {
       iframeRef.current?.contentWindow?.postMessage(
         { type: "ventaz_scroll_to", section: id }, "*"
@@ -2170,10 +2177,10 @@ export default function PageEditor({ tab = "config" }) {
     <div className="pe-fullscreen-page">
       {/* Topbar */}
       <div className="pe-topbar">
-        <Link to="/pages" className="pe-topbar__back">
+        <button type="button" className="pe-topbar__back" onClick={() => navigate("/pages")}>
           <ChevronLeft size={16} />
           <span>Mis tiendas</span>
-        </Link>
+        </button>
 
         <div className="pe-topbar__title">
           <span>{pageName}</span>

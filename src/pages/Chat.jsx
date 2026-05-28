@@ -203,7 +203,7 @@ function MessageBubble({ msg, conversationId, onQuoteAccepted }) {
           isSeller ? "vtz-chat-bubble--seller" : "vtz-chat-bubble--customer"
         }`}
       >
-        <p>{msg.body}</p>
+        <p style={{ color: isSeller ? "#fff" : "#0f172a" }}>{msg.body}</p>
         <small>{formatTime(msg.created_at)}</small>
       </div>
     </div>
@@ -292,7 +292,7 @@ function AdminChatPanel() {
                       Equipo Ventaz
                     </small>
                   )}
-                  <p>{m.body}</p>
+                  <p style={{ color: isSeller ? "#fff" : "#0f172a" }}>{m.body}</p>
                   <small>{formatTime(m.created_at)}</small>
                 </div>
               </div>
