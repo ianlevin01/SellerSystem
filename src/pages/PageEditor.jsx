@@ -179,6 +179,7 @@ function ConfigTab({ pageId }) {
     card_show_border: false,
     hero_btn_color: "",
     product_btn_color: "",
+    card_btn_color: "",
     product_image_layout: "bottom",
     product_price_size: "normal",
     product_desc_style: "full",
@@ -855,23 +856,8 @@ function ConfigTab({ pageId }) {
                 onClear={() => setTheme("promo_color", "")} />
             </div>
 
-            <div className="pe-divider-title">Estilo y comportamiento</div>
+            <div className="pe-divider-title">Comportamiento</div>
 
-            <Field label="Estilo del navbar" highlighted={highlightedField === "navbar"}>
-              <div className="pe-option-grid pe-option-grid--3">
-                {[
-                  { value: "default",     label: "Clásico",      desc: "Fondo claro." },
-                  { value: "transparent", label: "Transparente", desc: "Sobre la portada." },
-                  { value: "dark",        label: "Oscuro",       desc: "Fondo oscuro." },
-                ].map(({ value, label, desc }) => (
-                  <button key={value} type="button"
-                    className={optionClass((tc.navbar_style || "default") === value)}
-                    onClick={() => setTheme("navbar_style", value)}>
-                    <strong>{label}</strong><span>{desc}</span>
-                  </button>
-                ))}
-              </div>
-            </Field>
             <Field label="Navbar al hacer scroll">
               <Toggle checked={tc.navbar_sticky !== false}
                 onChange={v => setTheme("navbar_sticky", v)}
@@ -1096,6 +1082,16 @@ function ConfigTab({ pageId }) {
               <ColorRow value={tc.card_price_color || ""}
                 onChange={v => setTheme("card_price_color", v)}
                 onClear={() => setTheme("card_price_color", "")} />
+            </div>
+
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color del botón "Agregar al carrito"</strong>
+                <span className="pe-style-control__hint">Botón que aparece al pasar el mouse sobre la tarjeta</span>
+              </div>
+              <ColorRow value={tc.card_btn_color || ""}
+                onChange={v => setTheme("card_btn_color", v)}
+                onClear={() => setTheme("card_btn_color", "")} />
             </div>
 
             <Field label="Separación entre productos">

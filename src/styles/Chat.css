@@ -493,6 +493,11 @@
   border-bottom-left-radius: 8px;
 }
 
+/* Mismo fix que --seller: el global "p { color: var(--text-secondary) }" pisa el color heredado */
+.vtz-chat-bubble--customer p {
+  color: var(--ink);
+}
+
 .vtz-chat-bubble--customer small {
   color: #8b958d;
 }
