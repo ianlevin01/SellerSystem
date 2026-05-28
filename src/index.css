@@ -3664,6 +3664,15 @@ input[type="color"] {
   .seller-product-card__badge--desktop-only { display: none; }
 }
 
+.seller-product-card__badge--new {
+  background: #7c3aed;
+  color: #fff;
+  border-color: rgba(124,58,237,.3);
+  box-shadow: 0 2px 8px rgba(124,58,237,.35);
+  top: 9px;
+  right: 9px;
+}
+
 .seller-product-card__shipping-badge {
   position: absolute;
   top: 9px;

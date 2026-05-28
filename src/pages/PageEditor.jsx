@@ -211,8 +211,8 @@ function ConfigTab({ pageId }) {
     const onProductPage = iframeSrc.includes("/product/") || iframeSrc.includes("/combo/");
 
     if (id === "producto" && !onProductPage) {
-      // Navegar el iframe a la página de un producto
-      client.get(`/seller/store/pages/${pageId}/products`, { params: { limit: 1 } })
+      // Navegar el iframe a la página de un producto (only_mine=true: solo los que están en la tienda)
+      client.get(`/seller/store/pages/${pageId}/products`, { params: { limit: 1, only_mine: true } })
         .then(res => {
           const items = Array.isArray(res.data) ? res.data : (res.data?.products || []);
           const first = items[0];

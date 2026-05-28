@@ -996,6 +996,10 @@ export default function PageProducts({ pageId }) {
             const saving     = savingId === product.id;
             const isLowStock = product.is_low_stock === true;
             const promoPrice = Number(promos[product.id]?.promoPrice || 0);
+            const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+            const isNew = product.created_at
+              ? (Date.now() - new Date(product.created_at).getTime()) < ONE_WEEK_MS
+              : false;
             const promoPct   = promoPrice > 0 && info.sale > promoPrice
               ? Math.round(((info.sale - promoPrice) / info.sale) * 100)
               : 0;
@@ -1011,6 +1015,12 @@ export default function PageProducts({ pageId }) {
                     <span className="seller-product-card__badge seller-product-card__badge--desktop-only">
                       <BadgeCheck size={13} />
                       En tienda
+                    </span>
+                  )}
+                  {isNew && (
+                    <span className="seller-product-card__badge seller-product-card__badge--new">
+                      <Sparkles size={11} />
+                      Nuevo
                     </span>
                   )}
                   {info.inStore && (
