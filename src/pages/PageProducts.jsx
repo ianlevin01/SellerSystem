@@ -187,8 +187,9 @@ export default function PageProducts({ pageId }) {
   const [comboMode,     setComboMode]     = useState(false);
   const [comboSelected, setComboSelected] = useState(new Set());
   const [creatingCombo, setCreatingCombo] = useState(false);
-  const debounceRef = useRef(null);
-  const abortRef    = useRef(null);
+  const debounceRef  = useRef(null);
+  const abortRef     = useRef(null);
+  const sentinelRef  = useRef(null);
 
   function showToast(name) {
     clearTimeout(toastTimerRef.current);
@@ -264,6 +265,18 @@ export default function PageProducts({ pageId }) {
     debounceRef.current = setTimeout(() => fetchProducts(0), query ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
   }, [pageId, query, category, onlyMine, comboMode]);
+
+  // Infinite scroll — carga más cuando el sentinel llega al viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: "300px", threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore]);
 
   async function fetchProducts(offset = 0) {
     abortRef.current?.abort();
@@ -1042,12 +1055,6 @@ export default function PageProducts({ pageId }) {
                       <span>Sin stock · No visible en tu tienda</span>
                     </div>
                   )}
-                  {!info.inStore && (
-                    <span className="seller-product-card__not-added">
-                      Sin agregar
-                    </span>
-                  )}
-
                   {info.inStore && (
                     <Link
                       to={`/pages/${pageId}/products/${product.id}/edit`}
@@ -1219,18 +1226,11 @@ export default function PageProducts({ pageId }) {
             );
           })}
         </section>
-        {hasMore && (
+        {/* Sentinel de infinite scroll */}
+        <div ref={sentinelRef} style={{ height: 1 }} />
+        {loadingMore && (
           <div style={{ display: "flex", justifyContent: "center", padding: "24px 0" }}>
-            <button
-              type="button"
-              className="seller-product-btn seller-product-btn--add"
-              onClick={loadMore}
-              disabled={loadingMore}
-              style={{ minWidth: 220 }}
-            >
-              {loadingMore ? <Loader2 size={16} className="seller-products-spin" /> : <Plus size={16} />}
-              {loadingMore ? "Cargando..." : "Ver más productos"}
-            </button>
+            <Loader2 size={24} className="seller-products-spin" />
           </div>
         )}
         </>
