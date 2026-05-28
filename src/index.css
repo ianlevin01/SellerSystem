@@ -7177,14 +7177,14 @@ body,
   word-break: break-word;
 }
 .contact-chat-bubble--seller {
-  background: var(--primary);
+  background: linear-gradient(135deg, #57d625, #329f10);
   color: #fff;
   border-bottom-right-radius: 4px;
 }
 .contact-chat-bubble--admin {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #e4e4e7;
   border-bottom-left-radius: 4px;
 }
 .contact-chat-bubble__sender {
@@ -7199,6 +7199,13 @@ body,
   font-size: 14px;
   line-height: 1.5;
   white-space: pre-wrap;
+  color: inherit;
+}
+.contact-chat-bubble--seller .contact-chat-bubble__body {
+  color: #fff;
+}
+.contact-chat-bubble--admin .contact-chat-bubble__body {
+  color: #0f172a;
 }
 .contact-chat-bubble__time {
   font-size: 10px;
