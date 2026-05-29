@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import { ShoppingBag, Package, TrendingUp, Clock, ExternalLink, AlertTriangle } from "lucide-react";
@@ -20,10 +20,18 @@ function storeUrl(slug) {
 
 export default function Dashboard() {
   const { seller } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders]           = useState([]);
   const [productsCount, setProductsCount] = useState(0);
   const [loading, setLoading]         = useState(true);
   const [checklistShown, setChecklistShown] = useState(true);
+
+  // Primer acceso: si el vendedor no tiene ninguna tienda todavía, llevarlo a crearla
+  useEffect(() => {
+    if (seller && !seller.slug) {
+      navigate("/pages?new=true", { replace: true });
+    }
+  }, [seller]);
 
   useEffect(() => {
     Promise.all([
