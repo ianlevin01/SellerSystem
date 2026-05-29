@@ -10,16 +10,17 @@ export default function ProductEditor() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
-  const [product, setProduct]           = useState(null);
+  const [product, setProduct]       = useState(null);
   const [sellerImages, setSellerImages] = useState([]);
   const [systemImages, setSystemImages] = useState([]);
-  const [uploading, setUploading]       = useState(false);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState("");
-  const [customName, setCustomName]     = useState("");
-  const [customDesc, setCustomDesc]     = useState("");
-  const [saving, setSaving]             = useState(false);
-  const [saveMsg, setSaveMsg]           = useState("");
+  const [uploading, setUploading]   = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState("");
+  const [customName, setCustomName] = useState("");
+  const [customDesc, setCustomDesc] = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [saveMsg, setSaveMsg]       = useState("");
+  const [dirty, setDirty]           = useState(false);
 
   useEffect(() => {
     const productFetch = pageId
@@ -34,6 +35,7 @@ export default function ProductEditor() {
       setSellerImages(imagesRes.data);
       setCustomName(found?.custom_name || "");
       setCustomDesc(found?.custom_desc || "");
+      setDirty(false);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [productId, pageId]);
 
@@ -49,6 +51,7 @@ export default function ProductEditor() {
         custom_desc: descText ? customDesc : null,
       });
       setSaveMsg("Guardado");
+      setDirty(false);
       setTimeout(() => setSaveMsg(""), 2000);
     } catch (err) {
       setSaveMsg(err.response?.data?.message || "Error al guardar");
@@ -98,7 +101,8 @@ export default function ProductEditor() {
 
   return (
     <div>
-      <div className="page-header" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      {/* Header */}
+      <div className="page-header" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <button className="btn btn--ghost btn--sm" onClick={() => navigate(-1)} style={{ padding: "6px 8px" }}>
           <ArrowLeft size={16} />
         </button>
@@ -114,15 +118,15 @@ export default function ProductEditor() {
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ marginBottom: 2 }}>Personalizar nombre y descripción</h2>
-          <p style={{ fontSize: ".85rem" }}>Se muestra en tu tienda en lugar del original. Dejá el campo vacío para usar el original.</p>
+          <p style={{ fontSize: ".85rem" }}>Se muestra en tu tienda en lugar del original.</p>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
             <label style={{ display: "block", fontSize: ".85rem", marginBottom: 4, color: "var(--color-text-secondary)" }}>Nombre</label>
             <input
               className="form-input"
               value={customName}
-              onChange={e => setCustomName(e.target.value)}
+              onChange={e => { setCustomName(e.target.value); setDirty(true); }}
               placeholder={product.name}
             />
           </div>
@@ -130,13 +134,7 @@ export default function ProductEditor() {
             <label style={{ display: "block", fontSize: ".85rem", marginBottom: 6, color: "var(--color-text-secondary)" }}>
               Descripción <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(soporta texto enriquecido, imágenes y GIFs)</span>
             </label>
-            <RichEditor value={customDesc} onChange={setCustomDesc} productId={productId} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button className="btn btn--primary btn--sm" onClick={handleSaveCustom} disabled={saving}>
-              {saving ? "Guardando..." : "Guardar cambios"}
-            </button>
-            {saveMsg && <span style={{ fontSize: ".85rem", color: saveMsg === "Guardado" ? "var(--color-success)" : "var(--color-error)" }}>{saveMsg}</span>}
+            <RichEditor value={customDesc} onChange={v => { setCustomDesc(v); setDirty(true); }} productId={productId} />
           </div>
         </div>
       </div>
@@ -186,7 +184,7 @@ export default function ProductEditor() {
       </div>
 
       {/* Fotos originales */}
-      <div className="card">
+      <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ marginBottom: 16 }}>
           <h2 style={{ marginBottom: 2 }}>Fotos originales del sistema</h2>
           <p style={{ fontSize: ".85rem" }}>Se muestran cuando no tenés fotos propias.</p>
@@ -202,6 +200,24 @@ export default function ProductEditor() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Guardar cambios — al final de la página */}
+      <div className="card" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <h2 style={{ marginBottom: 1 }}>Guardar cambios</h2>
+          <p style={{ fontSize: ".82rem" }}>Nombre y descripción personalizados para tu tienda.</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {saveMsg && (
+            <span style={{ fontSize: ".82rem", fontWeight: 500, color: saveMsg === "Guardado" ? "#16a34a" : "#dc2626" }}>
+              {saveMsg}
+            </span>
+          )}
+          <button className="btn btn--primary" onClick={handleSaveCustom} disabled={saving || !dirty}>
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </div>
       </div>
     </div>
   );
