@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import client from "../api/client";
 import { trackEvent } from "../utils/pixel";
+import { useAuth } from "../auth/AuthContext";
 import "../styles/Pages.css";
 import {
   ArrowRight,
@@ -227,8 +228,10 @@ export default function Pages() {
   const [copiedId, setCopiedId] = useState(null);
 
   const navigate = useNavigate();
+  const { refreshSeller } = useAuth();
   const [searchParams] = useSearchParams();
-  const isFirstLogin = searchParams.get("new") === "true";
+  // Capturar en el montaje — la URL se limpia al abrir el modal y perdemos el valor
+  const [isFirstLogin] = useState(() => searchParams.get("new") === "true");
 
   useEffect(() => {
     client
@@ -505,7 +508,15 @@ export default function Pages() {
           onCreated={(page) => {
             setPages((prev) => [...prev, page]);
             setShowNew(false);
-            navigate(`/pages/${page.id}`);
+            if (isFirstLogin) {
+              // Actualizar AuthContext para que seller.slug quede seteado
+              // (evita que Dashboard vuelva a redirigir a ?new=true)
+              refreshSeller().catch(() => {});
+              // Tour automático de bienvenida — solo esta primera vez
+              navigate(`/pages/${page.id}?guide=true`);
+            } else {
+              navigate(`/pages/${page.id}`);
+            }
           }}
         />
       )}

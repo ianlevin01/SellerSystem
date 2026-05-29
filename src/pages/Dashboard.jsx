@@ -26,11 +26,17 @@ export default function Dashboard() {
   const [loading, setLoading]         = useState(true);
   const [checklistShown, setChecklistShown] = useState(true);
 
-  // Primer acceso: si el vendedor no tiene ninguna tienda todavía, llevarlo a crearla
+  // Primer acceso: si seller.slug es null (sin tiendas en AuthContext),
+  // verificar con la API para confirmar antes de redirigir.
+  // Esto evita un loop si el usuario acaba de crear su primera tienda
+  // pero AuthContext todavía no se actualizó.
   useEffect(() => {
-    if (seller && !seller.slug) {
-      navigate("/pages?new=true", { replace: true });
-    }
+    if (!seller || seller.slug) return;
+    client.get("/seller/store/pages").then(res => {
+      if (res.data.length === 0) {
+        navigate("/pages?new=true", { replace: true });
+      }
+    }).catch(() => {});
   }, [seller]);
 
   useEffect(() => {
