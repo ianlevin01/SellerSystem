@@ -26,13 +26,13 @@ const TOURS = {
     {
       selector: "[data-tour='page-card']",
       title: "Tus tiendas",
-      body: "Cada tarjeta es una tienda. Podés ver el nombre, el link y las acciones disponibles: Configurar (diseño y productos), Descuentos (promociones) y Ver (abrir la tienda pública).",
+      body: "Cada tarjeta es una tienda. Podés ver el nombre, el link y las acciones disponibles: Configurar (diseño), Productos (catálogo y precios), Descuentos (promociones) y Ver (abrir la tienda pública).",
       position: "bottom",
     },
     {
       selector: "[data-tour='page-card-actions']",
       title: "Acciones de la tienda",
-      body: "«Configurar» te lleva al editor de diseño y productos. «Descuentos» te permite crear promociones. «Ver» abre tu tienda en una nueva pestaña para ver lo que ven tus clientes.",
+      body: "«Configurar» te lleva al editor de diseño. «Productos» te permite agregar artículos y precios. «Descuentos» crea promociones. «Ver» abre tu tienda en una nueva pestaña.",
       position: "top",
     },
     {
@@ -43,6 +43,7 @@ const TOURS = {
     },
   ],
 
+  // Usamos los class names reales de PageProducts
   "/pages/:id/products": [
     {
       selector: null,
@@ -51,69 +52,84 @@ const TOURS = {
       position: "center",
     },
     {
-      selector: ".pp-search",
+      selector: ".seller-products-search",
       title: "Buscar productos",
-      body: "Buscá por nombre o código entre todos los productos del catálogo. Filtrá por categoría para encontrarlos más rápido.",
+      body: "Buscá por nombre o código entre todos los productos del catálogo.",
       position: "bottom",
     },
     {
-      selector: ".pp-product-row",
-      title: "Agregar un producto",
-      body: "Cada fila es un producto disponible. Hacé clic en «Agregar» para incluirlo en tu tienda. Una vez activo podés personalizar el nombre, la descripción y el precio.",
+      selector: ".seller-products-cats",
+      title: "Filtrar por categoría",
+      body: "Las categorías te ayudan a ordenar el catálogo. Hacé clic en una para ver solo los productos de esa categoría.",
       position: "bottom",
     },
     {
-      selector: ".pp-price-input",
+      selector: ".seller-product-card",
+      title: "Tarjeta de producto",
+      body: "Cada tarjeta muestra el costo, precio sugerido, tu precio de venta y la ganancia estimada. Hacé clic en «Agregar» para incluirlo en tu tienda.",
+      position: "bottom",
+    },
+    {
+      selector: ".seller-product-sale",
       title: "Definir el precio",
-      body: "El sistema te muestra el precio mínimo (calculado con tu nivel de ventas). Vos podés poner cualquier precio por encima de ese mínimo. La ganancia estimada se calcula en tiempo real.",
+      body: "Este es el precio que verá el cliente. Podés poner cualquier valor por encima del mínimo. La ganancia estimada se actualiza en tiempo real.",
       position: "top",
     },
     {
-      selector: ".pp-active-section",
-      title: "Productos activos",
-      body: "Los productos que ya agregaste aparecen acá. Podés editar el precio, el nombre, la imagen o desactivarlos para que dejen de mostrarse sin perder la configuración.",
-      position: "bottom",
+      selector: ".seller-product-btn--add, .seller-product-btn--save",
+      title: "Publicar o guardar",
+      body: "Hacé clic en «Agregar a mi tienda» para publicar el producto. Si ya está activo y modificaste el precio, el botón cambia a «Guardar precio».",
+      position: "top",
     },
   ],
 
+  // Descuentos: no hay clases específicas en los paneles internos,
+  // usamos .page-tabs y .btn--primary que sí existen
   "/pages/:id/discounts": [
     {
       selector: null,
       title: "Descuentos",
-      body: "Desde acá creás descuentos automáticos para tus tiendas. Los descuentos incentivan a los clientes a comprar más y aparecen en tiempo real en la tienda.",
+      body: "Desde acá creás descuentos automáticos para tus clientes: por cantidad de unidades o por monto del carrito. Aparecen en tiempo real en la tienda.",
       position: "center",
     },
     {
-      selector: ".disc-toggle",
-      title: "Activar descuentos",
-      body: "Usá los toggles para activar el tipo de descuento que querés usar. Podés combinar descuentos por cantidad y por monto del carrito.",
+      selector: ".page-tabs",
+      title: "Navegá por las secciones",
+      body: "Podés volver a Configuración, Productos o Integraciones desde las pestañas de arriba en cualquier momento.",
       position: "bottom",
     },
     {
-      selector: ".disc-tiers",
-      title: "Tramos de descuento",
-      body: "Definí los niveles: por ejemplo, 5% OFF al comprar 3 unidades y 10% OFF al comprar 5. Cuantos más tramos, más incentivos para que compren en cantidad.",
+      selector: ".btn--primary",
+      title: "Crear un descuento",
+      body: "Hacé clic en «Crear mi primer descuento» para configurar las reglas: elegís el tipo (cantidad o monto) y definís los tramos de porcentaje.",
       position: "bottom",
     },
     {
-      selector: ".disc-preview",
-      title: "Vista previa",
-      body: "Acá ves exactamente cómo van a ver los descuentos tus clientes en la tienda pública. Siempre podés previsualizar antes de activar.",
-      position: "top",
+      selector: null,
+      title: "Guardar los cambios",
+      body: "Cuando configures los tramos, hacé clic en «Guardar cambios» para activar el descuento en tu tienda pública.",
+      position: "center",
     },
   ],
 
+  // Config tab: los data-tour attrs existen en PageEditor
   "/pages/:id": [
     {
       selector: null,
       title: "Editor de tu tienda",
-      body: "Desde acá personalizás todo sobre tu tienda: el nombre, el diseño visual, los colores, la tipografía y mucho más. Los cambios se ven al instante en la previsualización de la derecha.",
+      body: "Desde acá personalizás todo: nombre, diseño, colores, portada y más. Los cambios se ven al instante en la previsualización de la derecha.",
       position: "center",
     },
     {
-      selector: "[data-tour='page-tabs']",
+      selector: ".page-tabs",
       title: "Secciones del editor",
-      body: "Usá las pestañas para navegar: Tienda (datos básicos), Portada (imagen y texto principal), Productos (catálogo y layout), Diseño (colores y estilo) y Contacto (WhatsApp e Instagram).",
+      body: "Usá las pestañas para navegar entre Configuración, Productos, Descuentos e Integraciones.",
+      position: "bottom",
+    },
+    {
+      selector: "[data-tour='page-tabs']",
+      title: "Opciones de personalización",
+      body: "Dentro de Configuración, estas pestañas te llevan a cada sección: identidad, colores, portada, productos, contacto y SEO.",
       position: "bottom",
     },
     {
@@ -138,43 +154,56 @@ const TOURS = {
       position: "center",
     },
     {
-      selector: ".profile-avatar-btn",
+      selector: null,
       title: "Foto de perfil",
-      body: "Hacé clic acá para subir tu foto desde tu dispositivo. Aparece en el panel y en las comunicaciones con el equipo Ventaz.",
-      position: "bottom",
+      body: "Hacé clic en el círculo con tu inicial para subir tu foto desde tu dispositivo. Aparece en el panel y en las comunicaciones con el equipo Ventaz.",
+      position: "center",
     },
     {
-      selector: ".profile-form",
+      selector: null,
       title: "Datos personales",
       body: "Completá tu nombre completo, ciudad y fecha de nacimiento. Estos datos son requeridos para verificar tu identidad y operar en la plataforma.",
-      position: "bottom",
+      position: "center",
     },
     {
-      selector: ".profile-phone-section",
+      selector: null,
       title: "Verificar tu teléfono",
       body: "Ingresá tu número de celular y hacé clic en «Enviar código». Vas a recibir un SMS con un código de 6 dígitos para confirmar tu número.",
-      position: "top",
+      position: "center",
+    },
+    {
+      selector: null,
+      title: "CVU para cobros",
+      body: "Para recibir tus ganancias, configurá tu CVU o alias bancario en la sección «Cobros» del menú lateral.",
+      position: "center",
     },
   ],
 
+  // Integrations: los cards tienen clase .card
   "/pages/:id/integrations": [
     {
       selector: null,
       title: "Integraciones",
-      body: "Las integraciones son herramientas opcionales que potencian tu tienda. Podés agregar reseñas generadas con IA, entre otras funciones.",
+      body: "Las integraciones son herramientas que potencian tu tienda: Meta Pixel para medir campañas y StarAI para generar reseñas con inteligencia artificial.",
       position: "center",
     },
     {
-      selector: ".int-card",
-      title: "StarAI — Reseñas con IA",
-      body: "Seleccioná un producto y hacé clic en «Generar reseñas». La IA crea 5 reseñas realistas basadas en el producto. Después elegís cuáles publicar en tu tienda.",
+      selector: ".page-tabs",
+      title: "Navegá por las secciones",
+      body: "Usá las pestañas para volver a Configuración, Productos o Descuentos cuando lo necesites.",
       position: "bottom",
     },
     {
-      selector: ".int-product-select",
-      title: "Seleccionar producto",
-      body: "Elegí el producto para el que querés generar reseñas. Podés generar para distintos productos y administrar todas las reseñas desde acá.",
+      selector: ".card",
+      title: "Activar una integración",
+      body: "Cada tarjeta es una integración disponible. Hacé clic en «Activar» para habilitarla y luego en «Configurar» para ingresar los datos necesarios (Pixel ID, etc.).",
       position: "bottom",
+    },
+    {
+      selector: null,
+      title: "Meta Pixel",
+      body: "Con el Pixel activo, Meta registra las visitas y conversiones en tu tienda y optimiza automáticamente a quién le muestra tus anuncios.",
+      position: "center",
     },
   ],
 };

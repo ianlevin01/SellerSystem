@@ -3,7 +3,7 @@
 // cambio hecho por Yolo
 
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import client from "../api/client";
 import { trackEvent } from "../utils/pixel";
 import "../styles/Pages.css";
@@ -227,11 +227,20 @@ export default function Pages() {
   const [copiedId, setCopiedId] = useState(null);
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isFirstLogin = searchParams.get("new") === "true";
 
   useEffect(() => {
     client
       .get("/seller/store/pages")
-      .then((res) => setPages(res.data))
+      .then((res) => {
+        setPages(res.data);
+        // Primer acceso: abrir modal de creación automáticamente
+        if (isFirstLogin && res.data.length === 0) {
+          setShowNew(true);
+          navigate("/pages", { replace: true }); // limpiar ?new=true de la URL
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 

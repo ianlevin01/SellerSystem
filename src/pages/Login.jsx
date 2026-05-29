@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { firebaseAuth } from "../firebase";
 import { trackStdEvent } from "../utils/pixel";
+import client from "../api/client";
 import "../styles/Login.css";
 import {
   ArrowRight,
@@ -87,7 +88,15 @@ export default function Login() {
       await login(form.email.trim(), form.password);
       trackStdEvent("Login", { method: "email" });
       setSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 650);
+
+      // Primer login: si no tiene tiendas, llevarlo a crear la primera
+      let dest = "/dashboard";
+      try {
+        const pagesRes = await client.get("/seller/store/pages");
+        if (pagesRes.data.length === 0) dest = "/pages?new=true";
+      } catch { /* fallback al dashboard */ }
+
+      setTimeout(() => navigate(dest), 650);
     } catch (err) {
       setError(err.response?.data?.message || "Email o contraseña incorrectos");
       setLoading(false);
@@ -102,7 +111,15 @@ export default function Login() {
       await loginWithGoogle();
       trackStdEvent("Login", { method: "google" });
       setSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 650);
+
+      // Primer login: si no tiene tiendas, llevarlo a crear la primera
+      let dest = "/dashboard";
+      try {
+        const pagesRes = await client.get("/seller/store/pages");
+        if (pagesRes.data.length === 0) dest = "/pages?new=true";
+      } catch { /* fallback al dashboard */ }
+
+      setTimeout(() => navigate(dest), 650);
     } catch (err) {
       if (err.code === "auth/popup-closed-by-user") {
         setLoading(false);

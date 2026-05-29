@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import client from "../api/client";
 import { trackEvent } from "../utils/pixel";
+import GuidedTour, { GuidedTourStyles } from "../components/GuidedTour";
 import {
   AlertTriangle, Building2, ChevronLeft,
   ExternalLink, FileText, Globe, Image as ImageIcon, LayoutGrid, Layers,
@@ -2214,6 +2215,10 @@ export default function PageEditor({ tab = "config" }) {
         {tab === "discounts"    && <DiscountsTab        pageId={pageId} />}
         {tab === "integrations" && <IntegrationsTab    pageId={pageId} />}
       </div>
+
+      {/* Tour guiado — PageEditor vive fuera del Layout, lo montamos aquí */}
+      <GuidedTour />
+      <GuidedTourStyles />
     </div>
   );
 }
