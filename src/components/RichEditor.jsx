@@ -1,7 +1,7 @@
 import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TipTapImage from "@tiptap/extension-image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Italic, List, ListOrdered, Heading2, Heading3, Link as LinkIcon, Upload } from "lucide-react";
 import client from "../api/client";
 
@@ -96,6 +96,19 @@ export default function RichEditor({ value, onChange, productId }) {
     content: value || "",
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  // Sincronizar cuando el valor cambia desde afuera (ej: IA genera descripción).
+  // Usamos una ref para evitar loops: cuando somos nosotros quienes disparamos onChange
+  // desde setContent, no volvemos a setear.
+  const settingFromOutside = useRef(false);
+  useEffect(() => {
+    if (!editor || value === undefined) return;
+    if (settingFromOutside.current) return;
+    if (value === editor.getHTML()) return;
+    settingFromOutside.current = true;
+    editor.commands.setContent(value || "");
+    settingFromOutside.current = false;
+  }, [value]);
 
   const insertUrl = useCallback(() => {
     const url = imgUrl.trim();

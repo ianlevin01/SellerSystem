@@ -1,14 +1,16 @@
 // src/pages/ProductEditor.jsx
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import client from "../api/client";
-import { Trash2, Upload, ArrowLeft, Image } from "lucide-react";
+import { Trash2, Upload, ArrowLeft, Image, Sparkles, X, Loader2 } from "lucide-react";
 import RichEditor from "../components/RichEditor";
 
 export default function ProductEditor() {
   const { productId, pageId } = useParams();
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
+  const fileInputRef      = useRef(null);
+  const nameBeforeEditRef = useRef("");
 
   const [product, setProduct]       = useState(null);
   const [sellerImages, setSellerImages] = useState([]);
@@ -21,6 +23,19 @@ export default function ProductEditor() {
   const [saving, setSaving]         = useState(false);
   const [saveMsg, setSaveMsg]       = useState("");
   const [dirty, setDirty]           = useState(false);
+
+  // IA: verificación de nombre
+  const [aiNameError, setAiNameError]     = useState("");
+  const [aiNameChecking, setAiNameChecking] = useState(false);
+
+  // IA: verificación de imagen
+  const [aiImgError, setAiImgError]       = useState("");
+
+  // IA: generación de descripción
+  const [showAiDesc, setShowAiDesc]         = useState(false);
+  const [aiDescBrief, setAiDescBrief]       = useState("");
+  const [aiDescGenerating, setAiDescGenerating] = useState(false);
+  const [aiDescError, setAiDescError]       = useState("");
 
   useEffect(() => {
     const productFetch = pageId
@@ -60,10 +75,45 @@ export default function ProductEditor() {
     }
   }
 
+  async function handleNameBlur() {
+    const val = customName.trim();
+    if (!val || val === product.name) { setAiNameError(""); return; }
+    setAiNameChecking(true);
+    setAiNameError("");
+    try {
+      const res = await client.post(`/seller/products/${productId}/ai/verify-name`, { customName: val });
+      if (!res.data.valid) {
+        setAiNameError(res.data.reason || "El nombre no coincide con el producto original.");
+        // Revertir al valor que tenía antes de empezar a editar
+        setCustomName(nameBeforeEditRef.current);
+        setDirty(nameBeforeEditRef.current !== (product?.custom_name || ""));
+      }
+    } catch { /* silencioso */ }
+    finally { setAiNameChecking(false); }
+  }
+
+  async function handleGenerateDesc() {
+    if (!aiDescBrief.trim()) return;
+    setAiDescGenerating(true);
+    setAiDescError("");
+    try {
+      const name = customName.trim() || product.name;
+      const res = await client.post("/seller/products/ai/generate-description", { productName: name, brief: aiDescBrief });
+      setCustomDesc(res.data.description);
+      setDirty(true);
+      setShowAiDesc(false);
+      setAiDescBrief("");
+    } catch (err) {
+      setAiDescError(err.response?.data?.message || "Error al generar la descripción.");
+    } finally {
+      setAiDescGenerating(false);
+    }
+  }
+
   async function handleUpload(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    setUploading(true); setError("");
+    setUploading(true); setError(""); setAiImgError("");
     try {
       for (const file of files) {
         const formData = new FormData();
@@ -72,7 +122,21 @@ export default function ProductEditor() {
         const res = await client.post(`/seller/images/${productId}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        setSellerImages(prev => [...prev, { key: res.data.key, url: res.data.url }]);
+
+        // Verificar antes de agregar al estado
+        try {
+          const verify = await client.post(`/seller/products/${productId}/ai/verify-image`, { imageUrl: res.data.url });
+          if (!verify.data.valid) {
+            // Eliminar la imagen de S3 y no agregarla al estado
+            client.delete(`/seller/images/${productId}`, { data: { key: res.data.key } }).catch(() => {});
+            setAiImgError(verify.data.reason || "La imagen no corresponde al producto original. No fue guardada.");
+          } else {
+            setSellerImages(prev => [...prev, { key: res.data.key, url: res.data.url }]);
+          }
+        } catch {
+          // Si la verificación falla por error de red, dejamos pasar la imagen
+          setSellerImages(prev => [...prev, { key: res.data.key, url: res.data.url }]);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || "Error al subir imagen");
@@ -102,13 +166,25 @@ export default function ProductEditor() {
   return (
     <div>
       {/* Header */}
-      <div className="page-header" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-        <button className="btn btn--ghost btn--sm" onClick={() => navigate(-1)} style={{ padding: "6px 8px" }}>
-          <ArrowLeft size={16} />
-        </button>
-        <div>
-          <h1 style={{ marginBottom: 2 }}>{customName || product.name}</h1>
-          <p>Editor de producto</p>
+      <div className="page-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button className="btn btn--ghost btn--sm" onClick={() => navigate(-1)} style={{ padding: "6px 8px" }}>
+            <ArrowLeft size={16} />
+          </button>
+          <div>
+            <h1 style={{ marginBottom: 2 }}>{customName || product.name}</h1>
+            <p>Editor de producto</p>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          {saveMsg && (
+            <span style={{ fontSize: ".82rem", fontWeight: 500, color: saveMsg === "Guardado" ? "#16a34a" : "#dc2626" }}>
+              {saveMsg}
+            </span>
+          )}
+          <button className="btn btn--primary btn--sm" onClick={handleSaveCustom} disabled={saving || !dirty}>
+            {saving ? "Guardando..." : "Guardar cambios"}
+          </button>
         </div>
       </div>
 
@@ -123,17 +199,51 @@ export default function ProductEditor() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
             <label style={{ display: "block", fontSize: ".85rem", marginBottom: 4, color: "var(--color-text-secondary)" }}>Nombre</label>
-            <input
-              className="form-input"
-              value={customName}
-              onChange={e => { setCustomName(e.target.value); setDirty(true); }}
-              placeholder={product.name}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                className={`form-input${aiNameError ? " form-input--error" : ""}`}
+                value={customName}
+                onChange={e => { setCustomName(e.target.value); setDirty(true); setAiNameError(""); }}
+                onFocus={() => { nameBeforeEditRef.current = customName; }}
+                onBlur={handleNameBlur}
+                placeholder={product.name}
+                style={aiNameError ? { borderColor: "#dc2626" } : {}}
+              />
+              {aiNameChecking && (
+                <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)" }}>
+                  <Loader2 size={14} style={{ animation: "spin 1s linear infinite", color: "#9ca3af" }} />
+                </span>
+              )}
+            </div>
+            {aiNameError && (
+              <p style={{ marginTop: 6, fontSize: ".8rem", color: "#dc2626", display: "flex", alignItems: "center", gap: 4 }}>
+                <span>⚠</span> {aiNameError}
+              </p>
+            )}
           </div>
           <div>
-            <label style={{ display: "block", fontSize: ".85rem", marginBottom: 6, color: "var(--color-text-secondary)" }}>
-              Descripción <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(soporta texto enriquecido, imágenes y GIFs)</span>
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: ".85rem", color: "var(--color-text-secondary)" }}>
+                Descripción <span style={{ fontWeight: 400, color: "var(--text-tertiary)" }}>(soporta texto enriquecido, imágenes y GIFs)</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => { setShowAiDesc(true); setAiDescError(""); setAiDescBrief(""); }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer",
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)",
+                  color: "#fff", fontSize: ".78rem", fontWeight: 600, letterSpacing: ".02em",
+                  boxShadow: "0 2px 12px rgba(99,102,241,.35)",
+                  transition: "opacity .15s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              >
+                <Sparkles size={13} />
+                Generar con IA
+              </button>
+            </div>
             <RichEditor value={customDesc} onChange={v => { setCustomDesc(v); setDirty(true); }} productId={productId} />
           </div>
         </div>
@@ -157,6 +267,14 @@ export default function ProductEditor() {
         </div>
 
         <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handleUpload} />
+        {aiImgError && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", marginBottom: 12 }}>
+            <span style={{ fontSize: ".85rem", color: "#dc2626", flex: 1 }}>⚠ {aiImgError}</span>
+            <button type="button" onClick={() => setAiImgError("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0 }}>
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
         {sellerImages.length === 0 ? (
           <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
@@ -219,6 +337,105 @@ export default function ProductEditor() {
           </button>
         </div>
       </div>
+
+      {/* Modal: Generar descripción con IA — renderizado en document.body con portal */}
+      {showAiDesc && createPortal(
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setShowAiDesc(false); }}
+          style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
+            background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+          }}
+        >
+          <div style={{
+            width: "100%", maxWidth: 480,
+            borderRadius: "var(--radius-xl, 20px)",
+            background: "#fff",
+            border: "1px solid var(--border, #e5e7eb)",
+            boxShadow: "0 20px 60px rgba(0,0,0,.15)",
+            overflow: "hidden",
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: "18px 20px 14px",
+              background: "var(--brand-light, #edfbe5)",
+              borderBottom: "1px solid var(--border, #e5e7eb)",
+              display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+            }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 8,
+                    background: "var(--brand, #4db81a)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 2px 8px rgba(77,184,26,.35)",
+                  }}>
+                    <Sparkles size={14} color="#fff" />
+                  </div>
+                  <span style={{ fontSize: ".95rem", fontWeight: 700, color: "var(--brand-text, #1a5e08)" }}>Generar descripción con IA</span>
+                </div>
+                <p style={{ fontSize: ".8rem", color: "var(--brand-text, #1a5e08)", opacity: .7, margin: 0, paddingLeft: 36 }}>
+                  Escribí un resumen y la IA genera la descripción completa.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiDesc(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary, #6b7280)", padding: 4 }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "18px 20px 20px" }}>
+              <p style={{ fontSize: ".82rem", color: "var(--text-secondary, #6b7280)", marginBottom: 8 }}>
+                Producto: <strong style={{ color: "var(--text-primary, #111)" }}>{customName || product.name}</strong>
+              </p>
+              <textarea
+                value={aiDescBrief}
+                onChange={e => setAiDescBrief(e.target.value)}
+                placeholder="Ej: Silla ergonómica con soporte lumbar, altura ajustable y ruedas. Ideal para oficina."
+                rows={4}
+                disabled={aiDescGenerating}
+                autoFocus
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "10px 12px", borderRadius: "var(--radius-md, 10px)",
+                  background: "#f9fafb", border: "1.5px solid var(--border, #e5e7eb)",
+                  color: "var(--text-primary, #111)", fontSize: ".88rem", lineHeight: 1.55,
+                  resize: "vertical", outline: "none", fontFamily: "inherit", transition: "border-color .15s",
+                }}
+                onFocus={e => e.target.style.borderColor = "var(--brand, #4db81a)"}
+                onBlur={e => e.target.style.borderColor = "var(--border, #e5e7eb)"}
+              />
+
+              {aiDescError && (
+                <p style={{ marginTop: 8, fontSize: ".8rem", color: "#dc2626" }}>⚠ {aiDescError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleGenerateDesc}
+                disabled={aiDescGenerating || !aiDescBrief.trim()}
+                className="btn btn--primary"
+                style={{
+                  marginTop: 14, width: "100%", padding: "11px 0",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  fontSize: ".9rem", opacity: aiDescGenerating || !aiDescBrief.trim() ? .5 : 1,
+                }}
+              >
+                {aiDescGenerating
+                  ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Generando...</>
+                  : <><Sparkles size={15} /> Generar descripción</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

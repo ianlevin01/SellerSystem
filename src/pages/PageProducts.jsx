@@ -1030,7 +1030,7 @@ export default function PageProducts({ pageId }) {
                       En tienda
                     </span>
                   )}
-                  {isNew && (
+                  {isNew && !onlyMine && (
                     <span className="seller-product-card__badge seller-product-card__badge--new">
                       <Sparkles size={11} />
                       Nuevo
