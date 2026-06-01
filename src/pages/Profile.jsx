@@ -18,7 +18,6 @@ import {
   ShieldCheck,
   Upload,
   User,
-  Wallet,
   BadgeCheck,
   Clock,
   ArrowRight,
@@ -261,8 +260,7 @@ export default function Profile() {
     }
   }
 
-  async function handleSaveCvu(e) {
-    e.preventDefault();
+  async function handleSaveCvu() {
     setCvuSaving(true);
     setCvuMsg("");
     try {
@@ -582,12 +580,32 @@ export default function Profile() {
                 )}
               </div>
             ) : cvuData?.cvu && !cvuData?.cvu_verified ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#92400e", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px" }}>
-                <Clock size={14} />
-                <span>CVU <strong>pendiente de verificación</strong>. Lo revisamos en las próximas horas.</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#92400e", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px" }}>
+                  <Clock size={14} style={{ flexShrink: 0 }} />
+                  <span>CVU <strong>pendiente de verificación</strong>. Lo revisamos en las próximas horas.</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, color: "#374151" }}>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span style={{ color: "#9ca3af", minWidth: 70 }}>CVU</span>
+                    <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{cvuData.cvu?.slice(0,4)} •••• •••• •••• {cvuData.cvu?.slice(-4)}</span>
+                  </div>
+                  {cvuData.cvu_alias && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ color: "#9ca3af", minWidth: 70 }}>Alias</span>
+                      <span style={{ fontWeight: 600 }}>{cvuData.cvu_alias}</span>
+                    </div>
+                  )}
+                  {cvuData.cvu_holder_name && (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <span style={{ color: "#9ca3af", minWidth: 70 }}>Titular</span>
+                      <span style={{ fontWeight: 600 }}>{cvuData.cvu_holder_name}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleSaveCvu} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <label className="vtz-profile-field">
                   <span>CVU / CBU <small style={{ fontWeight: 400, color: "#9ca3af" }}>(22 dígitos)</small></span>
                   <input
@@ -597,7 +615,6 @@ export default function Profile() {
                     placeholder="0000000000000000000000"
                     value={cvuForm.cvu}
                     onChange={e => setCvuForm(f => ({ ...f, cvu: e.target.value.replace(/\D/g, "").slice(0, 22) }))}
-                    required
                   />
                 </label>
                 <label className="vtz-profile-field">
@@ -607,7 +624,6 @@ export default function Profile() {
                     placeholder="Como aparece en tu cuenta"
                     value={cvuForm.holderName}
                     onChange={e => setCvuForm(f => ({ ...f, holderName: e.target.value }))}
-                    required
                   />
                 </label>
                 <label className="vtz-profile-field">
@@ -628,13 +644,14 @@ export default function Profile() {
                 )}
 
                 <button
-                  type="submit"
+                  type="button"
                   className="vtz-profile-btn vtz-profile-btn--primary"
-                  disabled={cvuSaving || cvuForm.cvu.length !== 22}
+                  onClick={handleSaveCvu}
+                  disabled={cvuSaving || cvuForm.cvu.length !== 22 || !cvuForm.holderName.trim()}
                 >
                   {cvuSaving ? <><Loader2 className="vtz-profile-spin" size={16} /> Guardando...</> : <>Guardar CVU <ArrowRight size={15} /></>}
                 </button>
-              </form>
+              </div>
             )}
           </section>
 
