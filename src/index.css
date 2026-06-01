@@ -7252,7 +7252,7 @@ body,
 /* Unread badge in sidebar link */
 .sidebar__link-badge {
   margin-left: auto;
-  background: var(--primary);
+  background: var(--brand);
   color: #fff;
   font-size: 10px;
   font-weight: 700;

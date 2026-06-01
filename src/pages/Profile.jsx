@@ -14,11 +14,14 @@ import {
   Loader2,
   Mail,
   MapPin,
-  Phone,
   Save,
   ShieldCheck,
   Upload,
   User,
+  Wallet,
+  BadgeCheck,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 
 function isSuccessMessage(message) {
@@ -82,26 +85,42 @@ export default function Profile() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpMsg, setOtpMsg] = useState("");
 
+  // CVU
+  const [cvuData, setCvuData]       = useState(null);  // { cvu, cvu_alias, cvu_holder_name, cvu_verified }
+  const [cvuForm, setCvuForm]       = useState({ cvu: "", alias: "", holderName: "" });
+  const [cvuSaving, setCvuSaving]   = useState(false);
+  const [cvuMsg, setCvuMsg]         = useState("");
+
   useEffect(() => {
-    client
-      .get("/seller/auth/profile")
-      .then((res) => {
-        const d = res.data;
-        const fallbackName = splitName(d.name || "");
+    Promise.all([
+      client.get("/seller/auth/profile"),
+      client.get("/seller/payouts/summary").catch(() => null),
+    ]).then(([profileRes, payoutsRes]) => {
+      const d = profileRes.data;
+      const fallbackName = splitName(d.name || "");
 
-        setForm({
-          first_name: d.first_name || d.firstName || fallbackName.first_name || "",
-          last_name: d.last_name || d.lastName || fallbackName.last_name || "",
-          email: d.email || d.seller_email || d.user_email || "",
-          phone: d.phone || "",
-          city: d.city || "",
-          birth_date: d.birth_date || d.birthDate || "",
-          avatar_url: d.avatar_url || "",
+      setForm({
+        first_name: d.first_name || d.firstName || fallbackName.first_name || "",
+        last_name: d.last_name || d.lastName || fallbackName.last_name || "",
+        email: d.email || d.seller_email || d.user_email || "",
+        phone: d.phone || "",
+        city: d.city || "",
+        birth_date: (d.birth_date || d.birthDate || "").toString().slice(0, 10),
+        avatar_url: d.avatar_url || "",
+      });
+
+      setPhoneVerified(!!d.phone_verified);
+
+      const cvuInfo = payoutsRes?.data?.cvu_info;
+      if (cvuInfo) {
+        setCvuData(cvuInfo);
+        setCvuForm({
+          cvu:        cvuInfo.cvu || "",
+          alias:      cvuInfo.cvu_alias || "",
+          holderName: cvuInfo.cvu_holder_name || "",
         });
-
-        setPhoneVerified(!!d.phone_verified);
-      })
-      .finally(() => setLoading(false));
+      }
+    }).finally(() => setLoading(false));
   }, []);
 
   const fullName = `${form.first_name} ${form.last_name}`.trim();
@@ -206,27 +225,12 @@ export default function Profile() {
 
     try {
       await client.put("/seller/auth/profile", payload);
-
       trackEvent("Configuracion_Perfil");
       setSaveMsg("Guardado correctamente");
       setTimeout(() => setSaveMsg(""), 3000);
       updateSeller(payload);
     } catch (err) {
-      try {
-        await client.put("/seller/auth/profile", {
-          name: fullName,
-          city: form.city.trim(),
-          phone: form.phone.trim(),
-          age,
-        });
-
-        trackEvent("Configuracion_Perfil");
-        setSaveMsg("Guardado correctamente");
-        setTimeout(() => setSaveMsg(""), 3000);
-        updateSeller(payload);
-      } catch (fallbackErr) {
-        setSaveMsg(fallbackErr.response?.data?.message || fallbackErr.message || "Error al guardar");
-      }
+      setSaveMsg(err.response?.data?.message || err.message || "Error al guardar");
     } finally {
       setSaving(false);
     }
@@ -254,6 +258,25 @@ export default function Profile() {
       setOtpMsg(err.response?.data?.message || "Error al enviar SMS");
     } finally {
       setOtpLoading(false);
+    }
+  }
+
+  async function handleSaveCvu(e) {
+    e.preventDefault();
+    setCvuSaving(true);
+    setCvuMsg("");
+    try {
+      const { data } = await client.put("/seller/payouts/cvu", {
+        cvu:          cvuForm.cvu,
+        alias:        cvuForm.alias,
+        holderName:   cvuForm.holderName,
+      });
+      setCvuData(prev => ({ ...(prev || {}), cvu: cvuForm.cvu, cvu_alias: cvuForm.alias, cvu_holder_name: cvuForm.holderName, cvu_verified: data.verified }));
+      setCvuMsg(data.verified ? "success" : "info");
+    } catch (err) {
+      setCvuMsg("error");
+    } finally {
+      setCvuSaving(false);
     }
   }
 
@@ -522,6 +545,96 @@ export default function Profile() {
               <p className={`vtz-profile-message ${isSuccessMessage(otpMsg) ? "is-success" : "is-error"}`}>
                 {otpMsg}
               </p>
+            )}
+          </section>
+
+          {/* ── CVU / CBU ── */}
+          <section className="vtz-profile-card">
+            <div className="vtz-profile-card__head">
+              <div>
+                <span>Cuenta bancaria</span>
+                <h2>CVU / CBU</h2>
+              </div>
+              {cvuData?.cvu_verified && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600, color: "var(--brand)", background: "var(--brand-light, #f0fdf4)", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 99 }}>
+                  <BadgeCheck size={13} /> Verificado
+                </span>
+              )}
+            </div>
+
+            {cvuData?.cvu_verified ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, color: "#374151" }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span style={{ color: "#9ca3af", minWidth: 70 }}>CVU</span>
+                  <span style={{ fontFamily: "monospace", fontWeight: 600 }}>{cvuData.cvu?.slice(0,4)} •••• •••• •••• {cvuData.cvu?.slice(-4)}</span>
+                </div>
+                {cvuData.cvu_alias && (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span style={{ color: "#9ca3af", minWidth: 70 }}>Alias</span>
+                    <span style={{ fontWeight: 600 }}>{cvuData.cvu_alias}</span>
+                  </div>
+                )}
+                {cvuData.cvu_holder_name && (
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span style={{ color: "#9ca3af", minWidth: 70 }}>Titular</span>
+                    <span style={{ fontWeight: 600 }}>{cvuData.cvu_holder_name}</span>
+                  </div>
+                )}
+              </div>
+            ) : cvuData?.cvu && !cvuData?.cvu_verified ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#92400e", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 14px" }}>
+                <Clock size={14} />
+                <span>CVU <strong>pendiente de verificación</strong>. Lo revisamos en las próximas horas.</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSaveCvu} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <label className="vtz-profile-field">
+                  <span>CVU / CBU <small style={{ fontWeight: 400, color: "#9ca3af" }}>(22 dígitos)</small></span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={22}
+                    placeholder="0000000000000000000000"
+                    value={cvuForm.cvu}
+                    onChange={e => setCvuForm(f => ({ ...f, cvu: e.target.value.replace(/\D/g, "").slice(0, 22) }))}
+                    required
+                  />
+                </label>
+                <label className="vtz-profile-field">
+                  <span>Nombre titular</span>
+                  <input
+                    type="text"
+                    placeholder="Como aparece en tu cuenta"
+                    value={cvuForm.holderName}
+                    onChange={e => setCvuForm(f => ({ ...f, holderName: e.target.value }))}
+                    required
+                  />
+                </label>
+                <label className="vtz-profile-field">
+                  <span>Alias <small style={{ fontWeight: 400, color: "#9ca3af" }}>(opcional)</small></span>
+                  <input
+                    type="text"
+                    placeholder="nombre.apellido.banco"
+                    value={cvuForm.alias}
+                    onChange={e => setCvuForm(f => ({ ...f, alias: e.target.value }))}
+                  />
+                </label>
+
+                {cvuMsg === "error" && (
+                  <p className="vtz-profile-message is-error">Error al guardar el CVU</p>
+                )}
+                {cvuMsg === "info" && (
+                  <p className="vtz-profile-message is-success">CVU guardado. Lo verificamos pronto.</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="vtz-profile-btn vtz-profile-btn--primary"
+                  disabled={cvuSaving || cvuForm.cvu.length !== 22}
+                >
+                  {cvuSaving ? <><Loader2 className="vtz-profile-spin" size={16} /> Guardando...</> : <>Guardar CVU <ArrowRight size={15} /></>}
+                </button>
+              </form>
             )}
           </section>
 
