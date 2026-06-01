@@ -262,6 +262,7 @@ export default function PageProducts({ pageId }) {
   // Re-fetch cuando cambian los filtros (búsqueda con debounce)
   useEffect(() => {
     clearTimeout(debounceRef.current);
+    setHasMore(false); // desconecta el observer inmediatamente para evitar loadMore con filtros viejos
     debounceRef.current = setTimeout(() => fetchProducts(0), query ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
   }, [pageId, query, category, onlyMine, comboMode]);
