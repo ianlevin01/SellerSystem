@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import client from "../api/client";
+import "../styles/Combos.css";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -164,6 +165,8 @@ export default function PageProducts({ pageId }) {
   const [products,      setProducts]      = useState([]);
   const [locallyAdded,  setLocallyAdded]  = useState({});
   const [combos,        setCombos]        = useState([]);
+  const [comboPromos,   setComboPromos]   = useState({}); // comboId → promoPrice string
+  const [savingComboPromoId, setSavingComboPromoId] = useState(null);
   const [categories,    setCategories]    = useState([]);
   const [prices,        setPrices]        = useState({});
   const [query,         setQuery]         = useState("");
@@ -255,7 +258,11 @@ export default function PageProducts({ pageId }) {
       setCategories(Array.isArray(raw) ? raw : raw?.categories || []);
     }).catch(() => {});
     client.get(`/seller/store/pages/${pageId}/combos`).then(res => {
-      setCombos(res.data || []);
+      const data = res.data || [];
+      setCombos(data);
+      const pm = {};
+      data.forEach(c => { pm[c.id] = c.promo_enabled && c.promo_price ? String(c.promo_price) : ""; });
+      setComboPromos(pm);
     }).catch(() => {});
   }, [pageId]);
 
@@ -616,6 +623,27 @@ export default function PageProducts({ pageId }) {
     } catch { /* silent */ }
   }
 
+  async function saveComboPromo(combo) {
+    const promoNum = Number(comboPromos[combo.id] || 0);
+    setSavingComboPromoId(combo.id);
+    try {
+      await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, {
+        custom_price: Number(combo.custom_price),
+        promo_price:  promoNum > 0 ? promoNum : null,
+      });
+      setCombos(prev => prev.map(c => c.id === combo.id
+        ? { ...c, promo_price: promoNum > 0 ? promoNum : null, promo_enabled: promoNum > 0 }
+        : c
+      ));
+      setMessage(promoNum > 0 ? "Precio promo guardado." : "Promo desactivada.");
+      setTimeout(() => setMessage(""), 2500);
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Error al guardar el precio promo.");
+    } finally {
+      setSavingComboPromoId(null);
+    }
+  }
+
   async function addVisibleProducts() {
     const candidates = products.filter(p => !isProductInStore(p));
     if (candidates.length === 0) { setMessage("No hay productos visibles para agregar."); return; }
@@ -891,8 +919,8 @@ export default function PageProducts({ pageId }) {
       ) : (
         <>
         <section className="seller-products-grid">
-          {/* Combos — always shown first, not affected by search/filter */}
-          {!comboMode && combos.map(combo => (
+          {/* Combos — solo visibles en la tab "En mi tienda" */}
+          {!comboMode && onlyMine && combos.map(combo => (
             <article
               key={`combo-${combo.id}`}
               className={`seller-product-card ${combo.active ? "is-in-store" : ""}`}
@@ -956,49 +984,80 @@ export default function PageProducts({ pageId }) {
                       </div>
                     </div>
 
-                    <div className="seller-product-sale-wrap">
-                      <div className="seller-product-sale">
-                        <span>Precio del combo</span>
-                        <div className="seller-product-combo-price">
-                          <b>$</b>
-                          <span>{comboPrice > 0 ? money(comboPrice) : <em style={{ color: "var(--text-tertiary)" }}>Sin precio</em>}</span>
+                    {(() => {
+                      const promoVal  = Number(comboPromos[combo.id] || 0);
+                      const promoPct2 = promoVal > 0 && comboPrice > promoVal
+                        ? Math.round(((comboPrice - promoVal) / comboPrice) * 100) : 0;
+                      const promoValid = promoVal === 0 || (promoVal < comboPrice && promoVal >= comboCost);
+                      const isSaving   = savingComboPromoId === combo.id;
+                      return (<>
+                        <div className="seller-product-sale-wrap">
+                          <div className="seller-product-sale">
+                            <span>Precio del combo</span>
+                            <div className="seller-product-combo-price">
+                              <b>$</b>
+                              <span>{comboPrice > 0 ? money(comboPrice) : <em style={{ color: "var(--text-tertiary)" }}>Sin precio</em>}</span>
+                            </div>
+                          </div>
+                          <div className={`seller-product-sale seller-product-sale--promo ${promoPct2 > 0 ? "is-active" : ""}`}>
+                            <span className="seller-product-promo-label">
+                              {promoPct2 > 0
+                                ? <span className="seller-product-promo-off-badge">{promoPct2}% OFF</span>
+                                : "Precio promocional"}
+                            </span>
+                            <div>
+                              <b>$</b>
+                              <input
+                                type="number"
+                                min={0}
+                                step="1"
+                                placeholder="Opcional"
+                                value={comboPromos[combo.id] ?? ""}
+                                onChange={e => setComboPromos(prev => ({ ...prev, [combo.id]: e.target.value }))}
+                              />
+                            </div>
+                            {promoVal > 0 && !promoValid && (
+                              <small className="seller-product-promo-hint is-warn">Debe ser menor al precio</small>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className={`seller-product-profit ${comboProfit > 0 ? "is-positive" : ""}`}>
-                      <TrendingUp size={16} />
-                      <span>Ganancia estimada</span>
-                      <strong>{comboProfit > 0 ? `${money(comboProfit)} (${comboPct}%)` : "—"}</strong>
-                    </div>
+                        <div className={`seller-product-profit ${comboProfit > 0 ? "is-positive" : ""}`}>
+                          <TrendingUp size={16} />
+                          <span>Ganancia estimada</span>
+                          <strong>{comboProfit > 0 ? money(comboProfit) : "—"}</strong>
+                        </div>
 
-                    <button
-                      type="button"
-                      className={`seller-product-btn ${combo.active ? "seller-product-btn--save" : "seller-product-btn--ghost"}`}
-                      onClick={() => toggleCombo(combo)}
-                    >
-                      <Power size={15} />
-                      {combo.active ? "Activo en tienda" : "Inactivo"}
-                    </button>
-                    <div className="seller-product-actions">
-                      <button
-                        type="button"
-                        className="seller-product-btn seller-product-btn--edit"
-                        onClick={() => navigate(`/pages/${pageId}/combos/${combo.id}/edit`)}
-                        style={{ flex: 1 }}
-                      >
-                        <Pencil size={15} />
-                        Editar combo
-                      </button>
-                      <button
-                        type="button"
-                        className="seller-product-btn seller-product-btn--remove"
-                        onClick={() => deleteCombo(combo)}
-                        style={{ flex: "0 0 auto", padding: "0 12px" }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                        <div className="seller-product-actions">
+                          <button
+                            type="button"
+                            className="seller-product-btn seller-product-btn--save"
+                            onClick={() => saveComboPromo(combo)}
+                            disabled={isSaving || (promoVal > 0 && !promoValid)}
+                            style={{ flex: 1 }}
+                          >
+                            {isSaving ? <Loader2 size={15} className="seller-products-spin" /> : <Save size={15} />}
+                            {isSaving ? "Guardando..." : "Guardar precio"}
+                          </button>
+                          <button
+                            type="button"
+                            className="seller-product-btn seller-product-btn--edit"
+                            onClick={() => navigate(`/pages/${pageId}/combos/${combo.id}/edit`)}
+                          >
+                            <Pencil size={15} />
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="seller-product-btn seller-product-btn--remove"
+                            onClick={() => deleteCombo(combo)}
+                            style={{ flex: "0 0 auto", padding: "0 12px" }}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </>);
+                    })()}
                   </>);
                 })()}
               </div>

@@ -63,11 +63,11 @@ export default function ComboEditor() {
   }, 0);
   const minPrice   = freeShipping && minRequired > 0 ? minRequired + FREE_SHIPPING_MIN_MARGIN : minRequired;
   const comboPrice = Number(price) || 0;
-  const priceOk    = comboPrice === 0 || comboPrice >= minPrice;
+  const priceOk    = comboPrice > 0 && (minPrice === 0 || comboPrice >= minPrice);
 
   const comboPriceNum = Number(promoPrice) || 0;
   const promoOk       = comboPriceNum === 0
-    || (comboPriceNum >= minPrice && (comboPrice === 0 || comboPriceNum < comboPrice));
+    || (comboPriceNum >= minPrice && comboPriceNum < comboPrice);
 
   function setProductQty(productId, qty) {
     setProducts(prev => prev.map(p =>
@@ -79,7 +79,11 @@ export default function ComboEditor() {
 
   async function handleSave() {
     if (!name.trim()) { setSaveMsg("El nombre es requerido."); return; }
-    if (comboPrice > 0 && !priceOk) {
+    if (comboPrice <= 0) {
+      setSaveMsg("El precio del combo es requerido.");
+      return;
+    }
+    if (!priceOk) {
       setSaveMsg(`El precio mínimo para este combo es ${money(minPrice)}.`);
       return;
     }
@@ -205,12 +209,14 @@ export default function ComboEditor() {
                 style={{ maxWidth: 200 }}
               />
             </div>
-            {minPrice > 0 && (
+            {(minPrice > 0 || comboPrice > 0) && (
               <p style={{ marginTop: 6, fontSize: ".8rem", display: "flex", alignItems: "center", gap: 5,
                 color: priceOk ? "var(--color-success, #16a34a)" : "var(--color-error, #dc2626)" }}>
-                {priceOk
-                  ? <><CheckCircle2 size={13} /> Precio válido · Mínimo: {money(minPrice)}{freeShipping && minRequired > 0 ? " (incluye margen de envío)" : ""}</>
-                  : <><AlertTriangle size={13} /> El mínimo es {money(minPrice)}{freeShipping ? " (incluye margen de envío gratis)" : " (suma de costos de los productos)"}</>
+                {comboPrice <= 0
+                  ? <><AlertTriangle size={13} /> El precio del combo es requerido.</>
+                  : priceOk
+                    ? <><CheckCircle2 size={13} /> Precio válido · Mínimo: {money(minPrice)}{freeShipping && minRequired > 0 ? " (incluye margen de envío)" : ""}</>
+                    : <><AlertTriangle size={13} /> El mínimo es {money(minPrice)}{freeShipping ? " (incluye margen de envío gratis)" : " (suma de costos de los productos)"}</>
                 }
               </p>
             )}

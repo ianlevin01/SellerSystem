@@ -144,6 +144,16 @@
   border: 1px solid #dfe8d7;
 }
 
+.vtz-pages-btn--share {
+  color: #1a5276;
+  background: #eaf4fd;
+  border: 1px solid #aed6f1;
+}
+.vtz-pages-btn--share:hover {
+  background: #d6eaf8;
+  border-color: #7fb3d3;
+}
+
 .vtz-pages-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -412,7 +422,7 @@
 
 .vtz-page-card__actions {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr;
   gap: 9px;
   padding: 16px;
   border-top: 1px solid #edf2e8;
