@@ -1167,7 +1167,7 @@ export default function PageProducts({ pageId }) {
                   </div>
 
                   <div className="seller-product-prices">
-                    <div className={`seller-product-price seller-product-price--cost ${!info.inStore ? "seller-product-price--cost-solo" : ""}`}>
+                    <div className={`seller-product-price seller-product-price--cost ${(!info.inStore || comboMode) ? "seller-product-price--cost-solo" : ""}`}>
                       <span>Costo</span>
                       <strong>{money(info.cost)}</strong>
                     </div>

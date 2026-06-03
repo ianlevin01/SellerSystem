@@ -4067,7 +4067,6 @@ input[type="color"] {
 .seller-product-card.is-not-in-store .seller-product-card__body h3 {
   color: var(--text-secondary);
 }
-.seller-product-card.is-not-in-store .seller-product-prices,
 .seller-product-card.is-not-in-store .seller-product-profit {
   opacity: .6;
 }
@@ -4160,28 +4159,19 @@ input[type="color"] {
 }
 
 .seller-product-price--cost strong {
-  color: var(--brand);
+  color: #4db81a;
 }
 
 /* Costo solo (sin precio sugerido al lado) — ocupa todo el ancho */
 .seller-product-price--cost-solo {
   grid-column: 1 / -1;
-  padding: 13px 16px;
-  background: #4db81a;
-  border-color: #3ea214;
   text-align: center;
-  border-radius: 12px;
-}
-.seller-product-price--cost-solo span {
-  color: rgba(255,255,255,.8);
-  font-size: .65rem;
-  letter-spacing: .06em;
 }
 .seller-product-price--cost-solo strong {
-  color: #fff;
-  font-size: 1.3rem;
-  letter-spacing: -.04em;
+  color: #4db81a;
+  font-size: 1.2rem;
   font-weight: 800;
+  letter-spacing: -.04em;
 }
 
 .seller-product-price--suggested {
