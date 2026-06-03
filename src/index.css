@@ -2942,6 +2942,32 @@ input[type="color"] {
   .twm-modal { padding: 28px 18px 22px; }
 }
 
+/* ── WhatsApp FAB ────────────────────────────────────────────── */
+.whatsapp-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #25d366;
+  color: #fff;
+  border-radius: 99px;
+  font-size: .84rem;
+  font-weight: 700;
+  box-shadow: 0 4px 18px rgba(37,211,102,.35);
+  transition: background .15s, box-shadow .15s, transform .15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.whatsapp-fab:hover {
+  background: #1da851;
+  box-shadow: 0 6px 24px rgba(37,211,102,.45);
+  transform: translateY(-2px);
+}
+
 .sidebar__trial-days {
   background: #d97706;
   color: #fff;
@@ -2974,9 +3000,13 @@ input[type="color"] {
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
 }
 
-.welcome-banner__content { position: relative; z-index: 1; }
+.welcome-banner__content { position: relative; z-index: 1; flex: 1; }
 
 .welcome-banner__greeting {
   font-size: .8125rem;
@@ -3013,6 +3043,39 @@ input[type="color"] {
   background: rgba(77,184,26,.28);
   color: #a8f060;
 }
+
+.welcome-banner__social {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.welcome-banner__social-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-size: .8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .15s, transform .12s;
+  white-space: nowrap;
+}
+.welcome-banner__social-btn:hover { transform: translateY(-1px); }
+.welcome-banner__social-btn--wa {
+  background: #25d366;
+  color: #fff;
+}
+.welcome-banner__social-btn--wa:hover { background: #1da851; color: #fff; }
+.welcome-banner__social-btn--ig {
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  color: #fff;
+}
+.welcome-banner__social-btn--ig:hover { filter: brightness(1.1); color: #fff; }
 
 .welcome-banner__shapes { position: absolute; inset: 0; pointer-events: none; }
 

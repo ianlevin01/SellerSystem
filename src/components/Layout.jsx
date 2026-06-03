@@ -335,6 +335,7 @@ export default function Layout() {
       <GuidedTourStyles />
       {showWelcome && <TrialWelcomeModal days={welcomeDays} onClose={() => setShowWelcome(false)} />}
       {showExpired && <TrialExpiredModal onClose={() => setShowExpired(false)} />}
+
     </div>
   );
 }
