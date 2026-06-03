@@ -1106,7 +1106,7 @@ export default function PageProducts({ pageId }) {
             return (
               <article
                 key={product.id}
-                className={`seller-product-card ${info.inStore ? "is-in-store" : "is-not-in-store"} ${!info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
+                className={`seller-product-card ${info.inStore && !comboMode ? "is-in-store" : "is-not-in-store"} ${!info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
                 style={{ animationDelay: `${index * 22}ms` }}
               >
                 <div className="seller-product-card__media">
@@ -1171,7 +1171,7 @@ export default function PageProducts({ pageId }) {
                       <span>Costo</span>
                       <strong>{money(info.cost)}</strong>
                     </div>
-                    {info.inStore && (
+                    {info.inStore && !comboMode && (
                       <button
                         type="button"
                         className="seller-product-price seller-product-price--suggested"
@@ -1186,7 +1186,7 @@ export default function PageProducts({ pageId }) {
                   </div>
 
                   <div className="seller-product-sale-wrap">
-                    {info.inStore && (
+                    {info.inStore && !comboMode && (
                       <label className="seller-product-sale">
                         <span>Tu precio</span>
                         <div>
@@ -1248,7 +1248,7 @@ export default function PageProducts({ pageId }) {
                     )}
                   </div>
 
-                  {info.inStore && (
+                  {info.inStore && !comboMode && (
                     <div className={`seller-product-profit ${info.profit > 0 ? "is-positive" : ""}`}>
                       <TrendingUp size={16} />
                       <span>Ganancia estimada</span>

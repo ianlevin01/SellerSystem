@@ -4167,15 +4167,18 @@ input[type="color"] {
 .seller-product-price--cost-solo {
   grid-column: 1 / -1;
   padding: 12px 14px;
-  background: var(--brand);
-  border-color: var(--brand);
+  background: #fff;
+  border-color: var(--border);
+  text-align: center;
 }
 .seller-product-price--cost-solo span {
-  color: rgba(255,255,255,.75);
+  color: var(--text-secondary);
+  font-size: .65rem;
 }
 .seller-product-price--cost-solo strong {
-  color: #fff;
-  font-size: 1.1rem;
+  color: var(--brand);
+  font-size: 1.25rem;
+  letter-spacing: -.04em;
 }
 
 .seller-product-price--suggested {
