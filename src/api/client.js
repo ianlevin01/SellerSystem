@@ -13,11 +13,13 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// Si el token expiró, limpiar sesión
+// Si el token expiró, limpiar sesión (excluir rutas de auth para no interferir con errores de credenciales)
 client.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const url = err.config?.url || "";
+    const isAuthRoute = url.includes("/auth/login") || url.includes("/auth/register");
+    if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem("seller_token");
       localStorage.removeItem("seller_user");
       window.location.href = "/login";

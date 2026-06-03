@@ -7,7 +7,7 @@ import {
   AlertTriangle, Building2, ChevronLeft,
   ExternalLink, FileText, Globe, Image as ImageIcon, LayoutGrid, Layers,
   Loader2, Monitor, MousePointerClick, Package, Palette, PanelBottom, Pencil, Percent, Plus,
-  RefreshCw, Save, Share2, Smartphone, Star, Tag, TrendingDown, Trash2, Truck, Upload, X, Zap,
+  RefreshCw, Save, Share2, Smartphone, Sparkles, Star, Tag, TrendingDown, Trash2, Truck, Upload, X, Zap,
 } from "lucide-react";
 import PageProducts from "./PageProducts";
 
@@ -2161,6 +2161,114 @@ function IntegrationsTab({ pageId }) {
 
 // ── Main ──────────────────────────────────────────────────────
 
+// ── AiTab ──────────────────────────────────────────────────────
+
+function AiTab({ pageId }) {
+  const [plan, setPlan]       = useState(null);
+  const [request, setRequest] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult]   = useState(null);
+  const [error, setError]     = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    client.get("/seller/subscriptions/status").then(res => {
+      const current = res.data.current || res.data;
+      setPlan(current.plan_id || "inicial");
+    }).catch(() => setPlan("inicial"));
+  }, []);
+
+  // "cancelled" sigue siendo Pro hasta que vence el período
+  const canUseAI = plan === "pro" || plan === "max";
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!request.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setError(null);
+    try {
+      const res = await client.post(`/seller/store/pages/${pageId}/ai-build`, { request });
+      setResult(res.data);
+      setRequest("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Ocurrió un error. Intentá de nuevo.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (plan === null) {
+    return <div className="ai-tab__loading"><Loader2 size={24} className="spin" /> Cargando...</div>;
+  }
+
+  if (!canUseAI) {
+    return (
+      <div className="ai-tab ai-tab--locked">
+        <div className="ai-tab__lock-icon"><Sparkles size={40} /></div>
+        <h2 className="ai-tab__lock-title">Configuración con IA</h2>
+        <p className="ai-tab__lock-desc">
+          Contale a la IA cómo querés que sea tu tienda y ella configura los colores, textos, tipografía y más automáticamente.<br /><br />
+          Esta función está disponible en <strong>Plan Pro</strong> y <strong>Plan Max</strong>.
+        </p>
+        <button className="ai-tab__upgrade-btn" onClick={() => navigate("/subscription")}>
+          Actualizar plan
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ai-tab">
+      <div className="ai-tab__header">
+        <Sparkles size={22} />
+        <div>
+          <h2 className="ai-tab__title">Configuración con IA</h2>
+          <p className="ai-tab__subtitle">Describí cómo querés tu tienda y la IA aplica los cambios automáticamente.</p>
+        </div>
+      </div>
+
+      <form className="ai-tab__form" onSubmit={handleSubmit}>
+        <textarea
+          className="ai-tab__textarea"
+          placeholder="Ej: Quiero una tienda de ropa deportiva. Usá colores oscuros, tipografía moderna y un tono enérgico para los textos."
+          value={request}
+          onChange={e => setRequest(e.target.value)}
+          rows={5}
+          disabled={loading}
+        />
+        <button type="submit" className="ai-tab__submit" disabled={loading || !request.trim()}>
+          {loading ? <><Loader2 size={16} className="spin" /> Generando...</> : <><Sparkles size={16} /> Aplicar con IA</>}
+        </button>
+      </form>
+
+      {error && (
+        <div className="ai-tab__error">
+          <AlertTriangle size={16} /> {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="ai-tab__result">
+          <div className="ai-tab__result-title">Cambios aplicados</div>
+          <p className="ai-tab__result-msg">{result.message}</p>
+          <div className="ai-tab__result-list">
+            {Object.entries(result.applied).map(([key, val]) => (
+              <div key={key} className="ai-tab__result-item">
+                <span className="ai-tab__result-key">{key}</span>
+                <span className="ai-tab__result-val">{String(val)}</span>
+              </div>
+            ))}
+          </div>
+          <button className="ai-tab__preview-btn" onClick={() => navigate(`/pages/${pageId}`)}>
+            Ver cambios en la tienda
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PageEditor({ tab = "config" }) {
   const { pageId } = useParams();
   const navigate   = useNavigate();
@@ -2207,6 +2315,9 @@ export default function PageEditor({ tab = "config" }) {
         <button type="button" className={`page-tab ${tab === "integrations" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/integrations`)}>
           Integraciones
         </button>
+        <button type="button" className={`page-tab page-tab--ai ${tab === "ai" ? "page-tab--active" : ""}`} onClick={() => navigate(`/pages/${pageId}/ai`)}>
+          <Sparkles size={13} /> IA
+        </button>
       </div>
 
       <div style={tab !== "config" ? { padding: "24px 24px 40px" } : {}}>
@@ -2214,6 +2325,7 @@ export default function PageEditor({ tab = "config" }) {
         {tab === "products"     && <PageProducts       pageId={pageId} />}
         {tab === "discounts"    && <DiscountsTab        pageId={pageId} />}
         {tab === "integrations" && <IntegrationsTab    pageId={pageId} />}
+        {tab === "ai"           && <AiTab              pageId={pageId} />}
       </div>
 
       {/* Tour guiado — PageEditor vive fuera del Layout, lo montamos aquí */}

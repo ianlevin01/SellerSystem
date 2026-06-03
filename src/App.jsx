@@ -20,7 +20,9 @@ import Profile      from "./pages/Profile";
 import Chat         from "./pages/Chat";
 import Payouts      from "./pages/Payouts";
 import Integrations from "./pages/Integrations";
-import ComboEditor  from "./pages/ComboEditor";
+import ComboEditor    from "./pages/ComboEditor";
+import Subscription  from "./pages/Subscription";
+import Academia      from "./pages/Academia";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
 import Legal          from "./pages/Legal";
@@ -68,6 +70,8 @@ export default function App() {
               <Route path="/about"                         element={<About />} />
               <Route path="/contact"                       element={<Contact />} />
               <Route path="/legal"                         element={<Legal />} />
+              <Route path="/subscription"                  element={<Subscription />} />
+              <Route path="/academia"                      element={<Academia />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
@@ -78,6 +82,7 @@ export default function App() {
             <Route path="/pages/:pageId/products"     element={<PageEditor tab="products" />} />
             <Route path="/pages/:pageId/discounts"    element={<PageEditor tab="discounts" />} />
             <Route path="/pages/:pageId/integrations" element={<PageEditor tab="integrations" />} />
+            <Route path="/pages/:pageId/ai"           element={<PageEditor tab="ai" />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,6 +1,7 @@
 // src/components/Layout.jsx
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import AiAssistant from "./AiAssistant";
+import TrialWelcomeModal, { TrialExpiredModal } from "./TrialWelcomeModal";
 import HowToUse from "./HowToUse";
 import GuidedTour, { GuidedTourStyles } from "./GuidedTour";
 import { useState, useEffect, useRef } from "react";
@@ -9,8 +10,10 @@ import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
   Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
-  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText
+  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap
 } from "lucide-react";
+
+const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "http://localhost:5175";
 
 const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
@@ -45,6 +48,10 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [adminUnread, setAdminUnread]   = useState(0);
   const [collapsed, setCollapsed]       = useState(() => localStorage.getItem("sidebar-collapsed") === "true");
+  const [planInfo,       setPlanInfo]       = useState(null);
+  const [showWelcome,    setShowWelcome]    = useState(false);
+  const [welcomeDays,    setWelcomeDays]    = useState(15);
+  const [showExpired,    setShowExpired]    = useState(false);
   const storeRef                        = useRef(null);
 
   function toggleCollapse() {
@@ -54,8 +61,39 @@ export default function Layout() {
     });
   }
 
+  function isPlanBlocked(current) {
+    if (!current) return false;
+    if (current.plan_status === "expired") return true;
+    if (current.plan_status === "trial" && current.trial_ends_at && new Date(current.trial_ends_at) < new Date()) return true;
+    return false;
+  }
+
   useEffect(() => {
     client.get("/seller/store/pages").then(r => setPages(r.data)).catch(() => {});
+    client.get("/seller/subscriptions/status").then(r => {
+      const current = r.data?.current;
+      setPlanInfo(current);
+      // Popup de bienvenida: trial activo, primera vez en este dispositivo
+      if (current?.plan_status === "trial" && !localStorage.getItem("ventaz_welcome_shown")) {
+        const days = current.trial_ends_at
+          ? Math.max(0, Math.ceil((new Date(current.trial_ends_at) - new Date()) / 86400000))
+          : 15;
+        setWelcomeDays(days);
+        setShowWelcome(true);
+        localStorage.setItem("ventaz_welcome_shown", "1");
+      }
+      // Popup de expirado: trial vencido, primera vez en este dispositivo
+      const trialExpired = current?.plan_status === "expired" ||
+        (current?.plan_status === "trial" && current?.trial_ends_at && new Date(current.trial_ends_at) < new Date());
+      if (trialExpired && !localStorage.getItem("ventaz_expired_shown")) {
+        setShowExpired(true);
+        localStorage.setItem("ventaz_expired_shown", "1");
+      }
+      const freeRoutes = ["/subscription", "/contact"];
+      if (isPlanBlocked(current) && !freeRoutes.includes(location.pathname)) {
+        navigate("/subscription", { replace: true });
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -72,7 +110,11 @@ export default function Layout() {
   useEffect(() => {
     setMobileOpen(false);
     setStoreOpen(false);
-  }, [location.pathname]);
+    const freeRoutes = ["/subscription", "/contact"];
+    if (isPlanBlocked(planInfo) && !freeRoutes.includes(location.pathname)) {
+      navigate("/subscription", { replace: true });
+    }
+  }, [location.pathname, planInfo]);
 
   useEffect(() => {
     document.body.classList.toggle("mobile-menu-open", mobileOpen);
@@ -149,9 +191,6 @@ export default function Layout() {
               {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
             </button>
           </div>
-          <div className="sidebar__store-name">
-            {seller?.store_name || seller?.name || "Mi tienda"}
-          </div>
         </div>
 
         <div className="sidebar__avatar">
@@ -171,6 +210,33 @@ export default function Layout() {
           </div>
         </div>
 
+        {/* ── Plan widget ──────────────────────────── */}
+        {planInfo && (
+          <NavLink
+            to="/subscription"
+            onClick={() => setMobileOpen(false)}
+            className="sidebar__plan-widget"
+            title={collapsed ? `Plan: ${planInfo.plan_name || "Inicial"}` : undefined}
+          >
+            <div className="sidebar__plan-info">
+              <span className="sidebar__plan-name">{planInfo.plan_name || "Plan Inicial"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span className={`sidebar__plan-status sidebar__plan-status--${planInfo.plan_status}`}>
+                  {planInfo.plan_status === "trial"           && "En período de prueba"}
+                  {planInfo.plan_status === "active"          && "Activo"}
+                  {planInfo.plan_status === "cancelled"       && "Cancelado"}
+                  {planInfo.plan_status === "expired"         && "Expirado"}
+                  {planInfo.plan_status === "pending_payment" && "Pago pendiente"}
+                </span>
+                {planInfo.plan_status === "trial" && planInfo.trial_ends_at && (() => {
+                  const days = Math.max(0, Math.ceil((new Date(planInfo.trial_ends_at) - new Date()) / 86400000));
+                  return <span className="sidebar__trial-days">{days} días</span>;
+                })()}
+              </div>
+            </div>
+          </NavLink>
+        )}
+
         <nav className="sidebar__nav">
           {nav.map(({ to, label, icon: Icon }) => (
             <NavLink
@@ -186,6 +252,16 @@ export default function Layout() {
               <span className="sidebar__label">{label}</span>
             </NavLink>
           ))}
+          {/* Academia — provisoriamente dentro de Ventaz */}
+          <NavLink
+            to="/academia"
+            onClick={() => setMobileOpen(false)}
+            className={({ isActive }) => "sidebar__link" + (isActive ? " active" : "")}
+            title={collapsed ? "Academia" : undefined}
+          >
+            <GraduationCap size={15} />
+            <span className="sidebar__label">Academia</span>
+          </NavLink>
         </nav>
 
         <div className="sidebar__footer">
@@ -257,6 +333,8 @@ export default function Layout() {
       <HowToUse />
       <GuidedTour />
       <GuidedTourStyles />
+      {showWelcome && <TrialWelcomeModal days={welcomeDays} onClose={() => setShowWelcome(false)} />}
+      {showExpired && <TrialExpiredModal onClose={() => setShowExpired(false)} />}
     </div>
   );
 }

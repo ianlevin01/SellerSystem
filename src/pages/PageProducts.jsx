@@ -179,6 +179,7 @@ export default function PageProducts({ pageId }) {
   const [promos,        setPromos]        = useState({});
   const [savingId,      setSavingId]      = useState(null);
   const [bulkSaving,    setBulkSaving]    = useState(false);
+  const [sellerPlan,    setSellerPlan]    = useState(null);
   const [message,       setMessage]       = useState("");
   const [toast,         setToast]         = useState(null);
   const [infoTip,       setInfoTip]       = useState(null);
@@ -252,6 +253,12 @@ export default function PageProducts({ pageId }) {
   }, []);
 
   // Cargar categorías y combos
+  useEffect(() => {
+    client.get("/seller/subscriptions/status")
+      .then(r => setSellerPlan(r.data?.current?.plan_id || "inicial"))
+      .catch(() => setSellerPlan("inicial"));
+  }, []);
+
   useEffect(() => {
     client.get("/seller/store/categories").then(res => {
       const raw = res.data;
@@ -854,10 +861,21 @@ export default function PageProducts({ pageId }) {
             <button type="button" className="btn btn--combo-cta" onClick={enterComboMode}>
               <Layers size={16} /> Crear combo
             </button>
-            <button type="button" className="btn btn--primary btn--sm" onClick={addVisibleProducts} disabled={bulkSaving}>
-              {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
-              {bulkSaving ? "Agregando..." : "Agregar a mi tienda todos los productos visibles"}
-            </button>
+            {sellerPlan === "inicial" ? (
+              <button
+                type="button"
+                className="btn btn--ghost btn--sm"
+                title="Disponible en Plan Pro y Max"
+                onClick={() => alert("La carga masiva de productos está disponible en el Plan Pro y Plan Max. Actualizá tu plan en la sección de suscripciones.")}
+              >
+                <PackagePlus size={16} /> Agregar todos los productos visibles
+              </button>
+            ) : (
+              <button type="button" className="btn btn--primary btn--sm" onClick={addVisibleProducts} disabled={bulkSaving}>
+                {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
+                {bulkSaving ? "Agregando..." : "Agregar a mi tienda todos los productos visibles"}
+              </button>
+            )}
           </div>
         </section>
       )}
