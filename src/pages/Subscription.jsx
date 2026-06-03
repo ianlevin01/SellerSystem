@@ -717,7 +717,7 @@ export default function Subscription() {
         )}
       </div>
 
-      {confirmPlan && getPlanOrder(confirmPlan) > getPlanOrder(current?.plan_id) && (
+      {confirmPlan && !isActive && (
         <UpgradeModal
           plan={plans.find(p => p.id === confirmPlan)}
           onConfirm={handleSubscribe}
@@ -725,19 +725,19 @@ export default function Subscription() {
           loading={actionLoading}
         />
       )}
-      {confirmPlan && getPlanOrder(confirmPlan) < getPlanOrder(current?.plan_id) && (
+      {confirmPlan && isActive && getPlanOrder(confirmPlan) > getPlanOrder(current?.plan_id) && (
+        <UpgradeModal
+          plan={plans.find(p => p.id === confirmPlan)}
+          onConfirm={handleSubscribe}
+          onCancel={() => setConfirmPlan(null)}
+          loading={actionLoading}
+        />
+      )}
+      {confirmPlan && isActive && getPlanOrder(confirmPlan) < getPlanOrder(current?.plan_id) && (
         <DowngradeModal
           plan={plans.find(p => p.id === confirmPlan)}
           currentPlanId={current?.plan_id}
           periodEnd={current?.plan_period_end}
-          onConfirm={handleSubscribe}
-          onCancel={() => setConfirmPlan(null)}
-          loading={actionLoading}
-        />
-      )}
-      {confirmPlan && !isActive && (
-        <UpgradeModal
-          plan={plans.find(p => p.id === confirmPlan)}
           onConfirm={handleSubscribe}
           onCancel={() => setConfirmPlan(null)}
           loading={actionLoading}
