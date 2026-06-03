@@ -563,22 +563,22 @@ export default function Subscription() {
   const isExpired= current?.plan_status === "expired";
   const daysLeft = trialDaysLeft(current?.trial_ends_at);
 
+  // pending_plan_id solo es relevante si el plan está activo/pago
+  const hasPending = isActive && !!current?.pending_plan_id;
+
   function planBtnLabel(plan) {
-    // Plan pendiente de activación (downgrade programado)
-    if (current?.pending_plan_id === plan.id) return `Activo el ${current.plan_period_end ? fmtDate(current.plan_period_end) : "fin del período"}`;
-    // Plan activo sin cambios pendientes
-    if (current?.plan_id === plan.id && isActive && !current?.pending_plan_id) return "Tu plan actual";
-    if (current?.plan_id === plan.id && isTrial)  return "Elegir este plan";
-    if (isExpired || isTrial) return `Activar ${plan.name}`;
+    if (hasPending && current?.pending_plan_id === plan.id)
+      return `Activo el ${fmtDate(current.plan_period_end)}`;
+    if (current?.plan_id === plan.id && isActive && !hasPending) return "Tu plan actual";
+    if (isTrial || isExpired) return `Activar ${plan.name}`;
     if (getPlanOrder(plan.id) > getPlanOrder(current?.plan_id)) return `Subir a ${plan.name}`;
     return `Bajar a ${plan.name}`;
   }
 
   function planBtnDisabled(plan) {
     if (actionLoading) return true;
-    // Deshabilitar solo: (1) plan actual sin cambios pendientes, (2) plan ya pendiente
-    if (current?.pending_plan_id === plan.id) return true;
-    if (current?.plan_id === plan.id && isActive && !current?.pending_plan_id) return true;
+    if (hasPending && current?.pending_plan_id === plan.id) return true;
+    if (current?.plan_id === plan.id && isActive && !hasPending) return true;
     return false;
   }
 
@@ -632,8 +632,8 @@ export default function Subscription() {
         </div>
       )}
 
-      {/* Pending downgrade */}
-      {current?.pending_plan_id && (
+      {/* Pending downgrade — solo si el plan está activo/pago */}
+      {hasPending && (
         <div className="sub-pending-downgrade">
           Tu plan cambiará a <strong>{plans.find(p=>p.id===current.pending_plan_id)?.name}</strong> el {current.plan_period_end ? fmtDate(current.plan_period_end) : "fin del período"}.
         </div>
@@ -643,8 +643,8 @@ export default function Subscription() {
       <div className="sub-plans-section">
         <div className="sub-plans-grid">
           {plans.map(plan => {
-            const isCurrent = current?.plan_id === plan.id && isActive;
-            const isPending  = current?.pending_plan_id === plan.id;
+            const isCurrent = current?.plan_id === plan.id && isActive && !hasPending;
+            const isPending  = hasPending && current?.pending_plan_id === plan.id;
             const highlights = PLAN_HIGHLIGHTS[plan.id] || [];
             return (
               <div key={plan.id} className={`spc ${plan.id === "pro" ? "spc--pro" : plan.id === "max" ? "spc--max" : ""} ${isCurrent ? "spc--current" : ""}`}>
