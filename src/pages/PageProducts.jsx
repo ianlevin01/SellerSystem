@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import client from "../api/client";
 import "../styles/Combos.css";
 import {
@@ -162,6 +162,7 @@ const FREE_SHIPPING_MIN_MARGIN = 15000;
 
 export default function PageProducts({ pageId }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [products,      setProducts]      = useState([]);
   const [locallyAdded,  setLocallyAdded]  = useState({});
   const [combos,        setCombos]        = useState([]);
@@ -171,7 +172,7 @@ export default function PageProducts({ pageId }) {
   const [prices,        setPrices]        = useState({});
   const [query,         setQuery]         = useState("");
   const [category,      setCategory]      = useState("all");
-  const [onlyMine,      setOnlyMine]      = useState(false);
+  const [onlyMine,      setOnlyMine]      = useState(() => location.state?.returnToMine === true);
   const [loading,       setLoading]       = useState(true);
   const [loadingMore,   setLoadingMore]   = useState(false);
   const [hasMore,       setHasMore]       = useState(false);
@@ -397,7 +398,11 @@ export default function PageProducts({ pageId }) {
       Boolean(promoState.promoEnabled) !== Boolean(product.promo_enabled)
     );
     const changed = priceChanged || promoChanged;
-    return { cost, suggested, sale, saved, profit, valid, changed, inStore, minPrice,
+    // Ganancia efectiva: usa precio promo si está activo y es válido
+    const promoPrice   = Number(promoState.promoPrice) || 0;
+    const promoActive  = promoPrice > 0 && promoPrice < sale && promoPrice >= minPrice;
+    const effectiveProfit = promoActive ? promoPrice - cost : profit;
+    return { cost, suggested, sale, saved, profit, effectiveProfit, valid, changed, inStore, minPrice,
              profitPct: cost > 0 ? Math.round((profit / cost) * 100) : 0 };
   }
 
@@ -1136,6 +1141,7 @@ export default function PageProducts({ pageId }) {
                   {info.inStore && (
                     <Link
                       to={`/pages/${pageId}/products/${product.id}/edit`}
+                      state={{ returnToMine: true }}
                       className="seller-product-card__edit-media"
                       title="Editar imagen y descripción"
                     >
@@ -1161,16 +1167,18 @@ export default function PageProducts({ pageId }) {
                       <span>Costo</span>
                       <strong>{money(info.cost)}</strong>
                     </div>
-                    <button
-                      type="button"
-                      className="seller-product-price seller-product-price--suggested"
-                      onClick={() => useSuggested(product)}
-                      title="Usar precio sugerido"
-                    >
-                      <span>Precio sugerido</span>
-                      <strong>{money(info.suggested)}</strong>
-                      <small>Usar sugerido</small>
-                    </button>
+                    {info.inStore && (
+                      <button
+                        type="button"
+                        className="seller-product-price seller-product-price--suggested"
+                        onClick={() => useSuggested(product)}
+                        title="Usar precio sugerido"
+                      >
+                        <span>Precio sugerido</span>
+                        <strong>{money(info.suggested)}</strong>
+                        <small>Usar sugerido</small>
+                      </button>
+                    )}
                   </div>
 
                   <div className="seller-product-sale-wrap">
@@ -1183,7 +1191,9 @@ export default function PageProducts({ pageId }) {
                           min={info.cost || 0}
                           step="1"
                           value={prices[product.id] ?? ""}
-                          onChange={e => setPrice(product.id, e.target.value)}
+                          onChange={e => info.inStore && setPrice(product.id, e.target.value)}
+                          readOnly={!info.inStore}
+                          style={!info.inStore ? { opacity: .55, cursor: "not-allowed", background: "#f8f8f8" } : undefined}
                         />
                       </div>
                     </label>
@@ -1234,11 +1244,13 @@ export default function PageProducts({ pageId }) {
                     )}
                   </div>
 
-                  <div className={`seller-product-profit ${info.profit > 0 ? "is-positive" : ""}`}>
-                    <TrendingUp size={16} />
-                    <span>Ganancia estimada</span>
-                    <strong>{info.valid && info.profit >= 0 ? money(info.profit) : "—"}</strong>
-                  </div>
+                  {info.inStore && (
+                    <div className={`seller-product-profit ${info.profit > 0 ? "is-positive" : ""}`}>
+                      <TrendingUp size={16} />
+                      <span>Ganancia estimada</span>
+                      <strong>{info.valid && info.profit >= 0 ? money(info.effectiveProfit) : "—"}</strong>
+                    </div>
+                  )}
 
                   {!info.valid && info.sale > 0 && (
                     <div className="seller-product-warning">
