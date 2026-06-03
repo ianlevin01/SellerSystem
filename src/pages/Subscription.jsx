@@ -83,7 +83,10 @@ function money(n) {
 }
 
 function fmtDate(d) {
-  return new Date(d).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  if (!d) return "—";
+  const date = new Date(d);
+  if (isNaN(date.getTime()) || date.getFullYear() < 2000) return "—";
+  return date.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function daysUntil(date) {
