@@ -4162,12 +4162,20 @@ input[type="color"] {
 .seller-product-price--cost strong {
   color: var(--brand);
 }
+
+/* Costo solo (sin precio sugerido al lado) — ocupa todo el ancho */
 .seller-product-price--cost-solo {
-  flex: 1;
-  padding: 10px 12px;
+  grid-column: 1 / -1;
+  padding: 12px 14px;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.seller-product-price--cost-solo span {
+  color: rgba(255,255,255,.75);
 }
 .seller-product-price--cost-solo strong {
-  font-size: 1.15rem;
+  color: #fff;
+  font-size: 1.1rem;
 }
 
 .seller-product-price--suggested {

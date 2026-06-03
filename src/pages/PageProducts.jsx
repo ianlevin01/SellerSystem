@@ -172,7 +172,7 @@ export default function PageProducts({ pageId }) {
   const [prices,        setPrices]        = useState({});
   const [query,         setQuery]         = useState("");
   const [category,      setCategory]      = useState("all");
-  const [onlyMine,      setOnlyMine]      = useState(() => location.state?.returnToMine === true);
+  const [onlyMine,      setOnlyMine]      = useState(false);
   const [loading,       setLoading]       = useState(true);
   const [loadingMore,   setLoadingMore]   = useState(false);
   const [hasMore,       setHasMore]       = useState(false);
@@ -259,6 +259,10 @@ export default function PageProducts({ pageId }) {
       .then(r => setSellerPlan(r.data?.current?.plan_id || "inicial"))
       .catch(() => setSellerPlan("inicial"));
   }, []);
+
+  useEffect(() => {
+    if (location.state?.returnToMine) setOnlyMine(true);
+  }, [location.state]);
 
   useEffect(() => {
     client.get("/seller/store/categories").then(res => {
