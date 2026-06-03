@@ -1201,7 +1201,7 @@ export default function PageProducts({ pageId }) {
                         </div>
                       </label>
                     )}
-                    {info.inStore && (
+                    {info.inStore && !comboMode && (
                       <div className={`seller-product-sale seller-product-sale--promo ${promoPct > 0 ? "is-active" : ""}`}>
                         <span className="seller-product-promo-label">
                           {promoPct > 0 ? (

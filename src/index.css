@@ -4166,19 +4166,22 @@ input[type="color"] {
 /* Costo solo (sin precio sugerido al lado) — ocupa todo el ancho */
 .seller-product-price--cost-solo {
   grid-column: 1 / -1;
-  padding: 12px 14px;
-  background: #fff;
-  border-color: var(--border);
+  padding: 13px 16px;
+  background: #4db81a;
+  border-color: #3ea214;
   text-align: center;
+  border-radius: 12px;
 }
 .seller-product-price--cost-solo span {
-  color: var(--text-secondary);
+  color: rgba(255,255,255,.8);
   font-size: .65rem;
+  letter-spacing: .06em;
 }
 .seller-product-price--cost-solo strong {
-  color: var(--brand);
-  font-size: 1.25rem;
+  color: #fff;
+  font-size: 1.3rem;
   letter-spacing: -.04em;
+  font-weight: 800;
 }
 
 .seller-product-price--suggested {
