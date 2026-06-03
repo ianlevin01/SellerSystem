@@ -4162,6 +4162,13 @@ input[type="color"] {
 .seller-product-price--cost strong {
   color: var(--brand);
 }
+.seller-product-price--cost-solo {
+  flex: 1;
+  padding: 10px 12px;
+}
+.seller-product-price--cost-solo strong {
+  font-size: 1.15rem;
+}
 
 .seller-product-price--suggested {
   cursor: pointer;

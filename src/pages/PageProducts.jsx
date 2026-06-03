@@ -1163,7 +1163,7 @@ export default function PageProducts({ pageId }) {
                   </div>
 
                   <div className="seller-product-prices">
-                    <div className="seller-product-price seller-product-price--cost">
+                    <div className={`seller-product-price seller-product-price--cost ${!info.inStore ? "seller-product-price--cost-solo" : ""}`}>
                       <span>Costo</span>
                       <strong>{money(info.cost)}</strong>
                     </div>
@@ -1182,21 +1182,21 @@ export default function PageProducts({ pageId }) {
                   </div>
 
                   <div className="seller-product-sale-wrap">
-                    <label className="seller-product-sale">
-                      <span>Tu precio</span>
-                      <div>
-                        <b>$</b>
-                        <input
-                          type="number"
-                          min={info.cost || 0}
-                          step="1"
-                          value={prices[product.id] ?? ""}
-                          onChange={e => info.inStore && setPrice(product.id, e.target.value)}
-                          readOnly={!info.inStore}
-                          style={!info.inStore ? { opacity: .55, cursor: "not-allowed", background: "#f8f8f8" } : undefined}
-                        />
-                      </div>
-                    </label>
+                    {info.inStore && (
+                      <label className="seller-product-sale">
+                        <span>Tu precio</span>
+                        <div>
+                          <b>$</b>
+                          <input
+                            type="number"
+                            min={info.cost || 0}
+                            step="1"
+                            value={prices[product.id] ?? ""}
+                            onChange={e => setPrice(product.id, e.target.value)}
+                          />
+                        </div>
+                      </label>
+                    )}
                     {info.inStore && (
                       <div className={`seller-product-sale seller-product-sale--promo ${promoPct > 0 ? "is-active" : ""}`}>
                         <span className="seller-product-promo-label">
