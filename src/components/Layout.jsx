@@ -10,7 +10,7 @@ import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
   Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
-  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap
+  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2
 } from "lucide-react";
 
 const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "http://localhost:5175";
@@ -19,6 +19,7 @@ const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
   { to: "/pages",        label: "Mis tiendas",    icon: Layers },
   { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
+  { to: "/estadisticas", label: "Estadísticas",   icon: BarChart2   },
   { to: "/cobros",       label: "Cobros",         icon: Wallet },
   { to: "/integrations", label: "Integraciones",  icon: Puzzle },
   { to: "/chat",         label: "Chat",           icon: MessageSquare },

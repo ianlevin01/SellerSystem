@@ -22,6 +22,7 @@ import Payouts      from "./pages/Payouts";
 import Integrations from "./pages/Integrations";
 import ComboEditor    from "./pages/ComboEditor";
 import Subscription  from "./pages/Subscription";
+import Estadisticas  from "./pages/Estadisticas";
 import Academia      from "./pages/Academia";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
@@ -65,6 +66,7 @@ export default function App() {
               <Route path="/calculator"                    element={<Calculator />} />
               <Route path="/profile"                       element={<Profile />} />
               <Route path="/chat"                          element={<Chat />} />
+              <Route path="/estadisticas"                  element={<Estadisticas />} />
               <Route path="/cobros"                        element={<Payouts />} />
               <Route path="/integrations"                  element={<Integrations />} />
               <Route path="/about"                         element={<About />} />

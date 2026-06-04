@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import client from "../api/client";
-import { AlertTriangle, ArrowLeft, CheckCircle2, Image, Loader2, Trash2, Truck, Upload } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Image, Loader2, Sparkles, Trash2, Truck, Upload, X } from "lucide-react";
 import RichEditor from "../components/RichEditor";
 
 function fmt(n) {
@@ -15,8 +16,11 @@ function money(n) {
 
 export default function ComboEditor() {
   const { pageId, comboId } = useParams();
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
+  const location   = useLocation();
   const fileInputRef = useRef(null);
+
+  const isNew = location.state?.isNew === true;
 
   const [combo,        setCombo]        = useState(null);
   const [products,     setProducts]     = useState([]); // products in combo with qty
@@ -32,6 +36,11 @@ export default function ComboEditor() {
   const [saving,       setSaving]       = useState(false);
   const [saveMsg,      setSaveMsg]      = useState("");
   const [uploading,    setUploading]    = useState(false);
+
+  const [showAiDesc,       setShowAiDesc]       = useState(false);
+  const [aiDescBrief,      setAiDescBrief]      = useState("");
+  const [aiDescGenerating, setAiDescGenerating] = useState(false);
+  const [aiDescError,      setAiDescError]      = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -85,14 +94,14 @@ export default function ComboEditor() {
   }
 
   async function handleSave() {
-    if (!name.trim()) { setSaveMsg("El nombre es requerido."); return; }
+    if (!name.trim()) { setSaveMsg("El nombre es requerido."); return false; }
     if (comboPrice <= 0) {
       setSaveMsg("El precio del combo es requerido.");
-      return;
+      return false;
     }
     if (!priceOk) {
       setSaveMsg(`El precio mínimo para este combo es ${money(minPrice)}.`);
-      return;
+      return false;
     }
     if (comboPriceNum > 0 && !promoOk) {
       if (comboPriceNum < minPrice) {
@@ -100,7 +109,7 @@ export default function ComboEditor() {
       } else {
         setSaveMsg("El precio promo debe ser menor al precio regular.");
       }
-      return;
+      return false;
     }
     setSaving(true); setSaveMsg("");
     try {
@@ -114,10 +123,36 @@ export default function ComboEditor() {
       });
       setSaveMsg("Guardado");
       setTimeout(() => setSaveMsg(""), 2500);
+      return true;
     } catch (err) {
       setSaveMsg(err.response?.data?.message || "Error al guardar.");
+      return false;
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleFinish() {
+    const ok = await handleSave();
+    if (ok) navigate(`/pages/${pageId}/products`, { state: { returnToMine: true } });
+  }
+
+  async function handleGenerateDesc() {
+    if (!aiDescBrief.trim()) return;
+    setAiDescGenerating(true);
+    setAiDescError("");
+    try {
+      const res = await client.post("/seller/products/ai/generate-description", {
+        productName: name || "Combo",
+        brief: aiDescBrief,
+      });
+      setDesc(res.data.description);
+      setShowAiDesc(false);
+      setAiDescBrief("");
+    } catch (err) {
+      setAiDescError(err.response?.data?.message || "Error al generar la descripción.");
+    } finally {
+      setAiDescGenerating(false);
     }
   }
 
@@ -176,6 +211,23 @@ export default function ComboEditor() {
           <p>Editor de combo</p>
         </div>
       </div>
+
+      {isNew && (
+        <div style={{ position: "sticky", top: 0, zIndex: 50, background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: "var(--radius-lg)", padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, boxShadow: "0 2px 12px rgba(22,163,74,.12)" }}>
+          <div>
+            <strong style={{ color: "#15803d", fontSize: ".9rem" }}>Combo creado correctamente</strong>
+            <p style={{ fontSize: ".8rem", color: "#166534", margin: "2px 0 0", lineHeight: 1.4 }}>Completá el nombre, precio y descripción. Cuando termines hacé clic en "Terminar".</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            style={{ flexShrink: 0 }}
+            onClick={handleFinish}
+          >
+            <CheckCircle2 size={14} /> Guardar y terminar
+          </button>
+        </div>
+      )}
 
       {error && <div className="alert alert--error" style={{ marginBottom: 20 }}>{error}</div>}
 
@@ -291,12 +343,24 @@ export default function ComboEditor() {
 
           {/* Description */}
           <div>
-            <label style={{ display: "block", fontSize: ".85rem", marginBottom: 6, color: "var(--color-text-secondary)" }}>
-              Descripción{" "}
-              <span style={{ fontWeight: 400, color: "var(--color-text-tertiary, #9ca3af)" }}>
-                (opcional · soporta texto enriquecido)
-              </span>
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: ".85rem", color: "var(--color-text-secondary)" }}>
+                Descripción{" "}
+                <span style={{ fontWeight: 400, color: "var(--color-text-tertiary, #9ca3af)" }}>
+                  (opcional · soporta texto enriquecido)
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={() => { setShowAiDesc(true); setAiDescError(""); setAiDescBrief(""); }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, border: "none", cursor: "pointer", background: "linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)", color: "#fff", fontSize: ".8rem", fontWeight: 600, flexShrink: 0 }}
+                onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
+                onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              >
+                <Sparkles size={13} />
+                Generar con IA
+              </button>
+            </div>
             <RichEditor value={desc} onChange={setDesc} productId={comboId} />
           </div>
 
@@ -423,6 +487,64 @@ export default function ComboEditor() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal: Generar descripción con IA */}
+      {showAiDesc && createPortal(
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setShowAiDesc(false); }}
+          style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div style={{ background: "#fff", borderRadius: 18, maxWidth: 480, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,.2)" }}>
+            <div style={{ padding: "20px 24px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: "linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(77,184,26,.35)" }}>
+                    <Sparkles size={14} color="#fff" />
+                  </div>
+                  <span style={{ fontSize: ".95rem", fontWeight: 700, color: "var(--brand-text, #1a5e08)" }}>Generar descripción con IA</span>
+                </div>
+                <button type="button" onClick={() => setShowAiDesc(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary, #6b7280)", padding: 4 }}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div style={{ background: "var(--brand-light, #edfbe5)", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+                <p style={{ fontSize: ".82rem", color: "var(--brand-text, #1a5e08)", opacity: .7, margin: 0 }}>
+                  Escribí un resumen del combo y la IA genera la descripción completa.
+                </p>
+              </div>
+              <p style={{ fontSize: ".82rem", color: "var(--text-secondary, #6b7280)", marginBottom: 8 }}>
+                Combo: <strong style={{ color: "var(--text-primary, #111)" }}>{name || "Combo"}</strong>
+              </p>
+              <textarea
+                value={aiDescBrief}
+                onChange={e => setAiDescBrief(e.target.value)}
+                placeholder="Ej: Pack ideal para el hogar, incluye set de sartenes + organizadores. Perfecto para regalo."
+                rows={4}
+                disabled={aiDescGenerating}
+                autoFocus
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "var(--radius-md, 10px)", border: "1.5px solid var(--border, #e5e7eb)", fontSize: ".9rem", resize: "vertical", fontFamily: "inherit", outline: "none" }}
+                onFocus={e => e.target.style.borderColor = "var(--brand, #4db81a)"}
+                onBlur={e => e.target.style.borderColor = "var(--border, #e5e7eb)"}
+              />
+              {aiDescError && <p style={{ marginTop: 8, fontSize: ".8rem", color: "#dc2626" }}>⚠ {aiDescError}</p>}
+              <button
+                type="button"
+                onClick={handleGenerateDesc}
+                disabled={aiDescGenerating || !aiDescBrief.trim()}
+                className="btn btn--primary"
+                style={{ marginTop: 14, width: "100%", padding: "11px 0", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: ".9rem", opacity: aiDescGenerating || !aiDescBrief.trim() ? .5 : 1 }}
+              >
+                {aiDescGenerating
+                  ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Generando...</>
+                  : <><Sparkles size={15} /> Generar descripción</>
+                }
+              </button>
+            </div>
+            <div style={{ height: 24 }} />
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

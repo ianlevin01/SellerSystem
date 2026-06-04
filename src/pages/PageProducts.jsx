@@ -166,8 +166,10 @@ export default function PageProducts({ pageId }) {
   const [products,      setProducts]      = useState([]);
   const [locallyAdded,  setLocallyAdded]  = useState({});
   const [combos,        setCombos]        = useState([]);
-  const [comboPromos,   setComboPromos]   = useState({}); // comboId → promoPrice string
+  const [comboPromos,     setComboPromos]     = useState({}); // comboId → promoPrice string
+  const [comboPriceEdits, setComboPriceEdits] = useState({}); // comboId → mainPrice string
   const [savingComboPromoId, setSavingComboPromoId] = useState(null);
+  const [confirmDelete,  setConfirmDelete]  = useState(null); // null | { product }
   const [categories,    setCategories]    = useState([]);
   const [prices,        setPrices]        = useState({});
   const [query,         setQuery]         = useState("");
@@ -496,6 +498,7 @@ export default function PageProducts({ pageId }) {
   }
 
   async function removeProduct(product) {
+
     setSavingId(product.id);
     setMessage("");
     try {
@@ -508,12 +511,9 @@ export default function PageProducts({ pageId }) {
         delete next[productKey(product.id)];
         return next;
       });
-      setProducts(prev => prev.map(item =>
-        sameProductId(item.id, product.id)
-          ? { ...item, in_my_store: false, seller_product_id: null, in_store: false, in_page: false, is_in_page: false, selected: false, is_selected: false, page_product_id: null, store_product_id: null, custom_price: null, precio_venta: null }
-          : item,
-      ));
-      setPrices(prev => ({ ...prev, [product.id]: String(suggestedPrice(product)) }));
+      // Eliminar de la lista local para que desaparezca de "En mi tienda" inmediatamente
+      setProducts(prev => prev.filter(item => !sameProductId(item.id, product.id)));
+      setTotal(prev => Math.max(0, prev - 1));
       setMessage("Producto quitado de tu tienda.");
       return true;
     } catch (err) {
@@ -640,21 +640,28 @@ export default function PageProducts({ pageId }) {
   }
 
   async function saveComboPromo(combo) {
-    const promoNum = Number(comboPromos[combo.id] || 0);
+    const promoNum   = Number(comboPromos[combo.id] ?? (combo.promo_price || 0));
+    const newPrice   = comboPriceEdits[combo.id] !== undefined
+      ? Number(comboPriceEdits[combo.id])
+      : Number(combo.custom_price);
+    if (newPrice <= 0) { setMessage("El precio del combo debe ser mayor a 0."); return; }
     setSavingComboPromoId(combo.id);
     try {
       await client.patch(`/seller/store/pages/${pageId}/combos/${combo.id}`, {
-        custom_price: Number(combo.custom_price),
+        custom_price: newPrice,
         promo_price:  promoNum > 0 ? promoNum : null,
       });
       setCombos(prev => prev.map(c => c.id === combo.id
-        ? { ...c, promo_price: promoNum > 0 ? promoNum : null, promo_enabled: promoNum > 0 }
+        ? { ...c, custom_price: newPrice, promo_price: promoNum > 0 ? promoNum : null, promo_enabled: promoNum > 0 }
         : c
       ));
-      setMessage(promoNum > 0 ? "Precio promo guardado." : "Promo desactivada.");
+      // Limpiar edits → botón vuelve a gris
+      setComboPromos(prev => { const n = { ...prev }; delete n[combo.id]; return n; });
+      setComboPriceEdits(prev => { const n = { ...prev }; delete n[combo.id]; return n; });
+      setMessage("Cambios guardados.");
       setTimeout(() => setMessage(""), 2500);
     } catch (err) {
-      setMessage(err.response?.data?.message || "Error al guardar el precio promo.");
+      setMessage(err.response?.data?.message || "Error al guardar.");
     } finally {
       setSavingComboPromoId(null);
     }
@@ -698,7 +705,7 @@ export default function PageProducts({ pageId }) {
         products: Array.from(comboSelected).map(id => ({ product_id: id, quantity: 1 })),
         custom_price: 0,
       });
-      navigate(`/pages/${pageId}/combos/${res.data.id}/edit`);
+      navigate(`/pages/${pageId}/combos/${res.data.id}/edit`, { state: { isNew: true } });
     } catch (err) {
       setMessage(err.response?.data?.message || "Error al crear el combo.");
       setCreatingCombo(false);
@@ -817,6 +824,64 @@ export default function PageProducts({ pageId }) {
                   ? `Ajustar precio a ${money(fsModal.minRequired)} y activar`
                   : "Activar envío gratis"}
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── Modal confirmar quitar producto ──────────────────── */}
+      {confirmDelete && createPortal(
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", backdropFilter: "blur(3px)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          onClick={() => setConfirmDelete(null)}
+        >
+          <div
+            style={{ background: "#fff", borderRadius: 20, maxWidth: 420, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,.2)", overflow: "hidden" }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header rojo */}
+            <div style={{ background: "linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)", borderBottom: "1px solid #fecaca", padding: "24px 24px 20px", textAlign: "center" }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: "#fee2e2", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                <Trash2 size={22} color="#dc2626" />
+              </div>
+              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#111" }}>
+                ¿Quitar de tu tienda?
+              </h3>
+            </div>
+            {/* Cuerpo */}
+            <div style={{ padding: "20px 24px 24px" }}>
+              <p style={{ margin: "0 0 6px", fontSize: ".9rem", color: "#374151", textAlign: "center" }}>
+                Vas a quitar <strong style={{ color: "#111" }}>
+                  {confirmDelete.product.custom_name || confirmDelete.product.name}
+                </strong> de tu tienda.
+              </p>
+              <p style={{ margin: "0 0 22px", fontSize: ".82rem", color: "#9ca3af", textAlign: "center" }}>
+                Podés volver a agregarlo cuando quieras desde la sección Todos.
+              </p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  style={{ flex: 1 }}
+                  onClick={() => setConfirmDelete(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--danger"
+                  style={{ flex: 1, background: "#dc2626", color: "#fff", border: "none" }}
+                  onClick={() => {
+                    const prod = confirmDelete.product;
+                    setConfirmDelete(null);
+                    removeProduct(prod);
+                  }}
+                >
+                  <Trash2 size={15} />
+                  Quitar de mi tienda
+                </button>
+              </div>
             </div>
           </div>
         </div>,
@@ -1012,20 +1077,50 @@ export default function PageProducts({ pageId }) {
                     </div>
 
                     {(() => {
-                      const promoVal  = Number(comboPromos[combo.id] || 0);
-                      const promoPct2 = promoVal > 0 && comboPrice > promoVal
-                        ? Math.round(((comboPrice - promoVal) / comboPrice) * 100) : 0;
-                      const promoValid = promoVal === 0 || (promoVal < comboPrice && promoVal >= comboCost);
-                      const isSaving   = savingComboPromoId === combo.id;
+                      // Precio principal: usa el edit local si existe, sino el guardado
+                      const editedPriceStr = comboPriceEdits[combo.id] !== undefined
+                        ? comboPriceEdits[combo.id]
+                        : (comboPrice > 0 ? String(comboPrice) : "");
+                      const displayPrice = Number(editedPriceStr) || comboPrice;
+
+                      // Promo: muestra el guardado si el usuario no tocó el campo
+                      const savedPromoStr = combo.promo_price
+                        ? String(Math.round(Number(combo.promo_price))) : "";
+                      const promoInputVal = comboPromos[combo.id] !== undefined
+                        ? comboPromos[combo.id] : savedPromoStr;
+                      const promoVal    = Number(promoInputVal || 0);
+                      const promoPct2   = promoVal > 0 && displayPrice > promoVal
+                        ? Math.round(((displayPrice - promoVal) / displayPrice) * 100) : 0;
+                      const promoValid  = promoVal === 0 || (promoVal < displayPrice && promoVal >= comboCost);
+                      const isSaving    = savingComboPromoId === combo.id;
+
+                      // "changed" si el precio o la promo difieren de los valores guardados
+                      const savedPromoNum = combo.promo_price ? Math.round(Number(combo.promo_price)) : 0;
+                      const priceChanged  = comboPriceEdits[combo.id] !== undefined
+                        && Math.round(Number(comboPriceEdits[combo.id] || 0)) !== comboPrice;
+                      const promoChanged  = comboPromos[combo.id] !== undefined
+                        && Math.round(Number(comboPromos[combo.id] || 0)) !== savedPromoNum;
+                      const comboChanged  = priceChanged || promoChanged;
+
                       return (<>
                         <div className="seller-product-sale-wrap">
-                          <div className="seller-product-sale">
-                            <span>Precio del combo</span>
-                            <div className="seller-product-combo-price">
+                          <label className="seller-product-sale">
+                            <span>Tu precio</span>
+                            <div>
                               <b>$</b>
-                              <span>{comboPrice > 0 ? money(comboPrice) : <em style={{ color: "var(--text-tertiary)" }}>Sin precio</em>}</span>
+                              <input
+                                type="number"
+                                min={comboCost > 0 ? comboCost : 0}
+                                step="1"
+                                placeholder={comboCost > 0 ? String(comboCost) : "0"}
+                                value={editedPriceStr}
+                                onChange={e => setComboPriceEdits(prev => ({ ...prev, [combo.id]: e.target.value }))}
+                              />
                             </div>
-                          </div>
+                            {comboCost > 0 && displayPrice > 0 && displayPrice < comboCost && (
+                              <small className="seller-product-promo-hint is-warn">Mínimo {money(comboCost)}</small>
+                            )}
+                          </label>
                           <div className={`seller-product-sale seller-product-sale--promo ${promoPct2 > 0 ? "is-active" : ""}`}>
                             <span className="seller-product-promo-label">
                               {promoPct2 > 0
@@ -1039,7 +1134,7 @@ export default function PageProducts({ pageId }) {
                                 min={0}
                                 step="1"
                                 placeholder="Opcional"
-                                value={comboPromos[combo.id] ?? ""}
+                                value={promoInputVal}
                                 onChange={e => setComboPromos(prev => ({ ...prev, [combo.id]: e.target.value }))}
                               />
                             </div>
@@ -1049,18 +1144,24 @@ export default function PageProducts({ pageId }) {
                           </div>
                         </div>
 
-                        <div className={`seller-product-profit ${comboProfit > 0 ? "is-positive" : ""}`}>
-                          <TrendingUp size={16} />
-                          <span>Ganancia estimada</span>
-                          <strong>{comboProfit > 0 ? money(comboProfit) : "—"}</strong>
-                        </div>
+                        {(() => {
+                          const effectivePrice = promoVal > 0 && promoValid ? promoVal : displayPrice;
+                          const liveProfit = effectivePrice > 0 && comboCost > 0 ? effectivePrice - comboCost : null;
+                          return (
+                            <div className={`seller-product-profit ${liveProfit > 0 ? "is-positive" : ""}`}>
+                              <TrendingUp size={16} />
+                              <span>Ganancia estimada</span>
+                              <strong>{liveProfit !== null && liveProfit > 0 ? money(liveProfit) : "—"}</strong>
+                            </div>
+                          );
+                        })()}
 
                         <div className="seller-product-actions">
                           <button
                             type="button"
                             className="seller-product-btn seller-product-btn--save"
                             onClick={() => saveComboPromo(combo)}
-                            disabled={isSaving || (promoVal > 0 && !promoValid)}
+                            disabled={isSaving || !comboChanged || (promoVal > 0 && !promoValid)}
                             style={{ flex: 1 }}
                           >
                             {isSaving ? <Loader2 size={15} className="seller-products-spin" /> : <Save size={15} />}
@@ -1106,7 +1207,7 @@ export default function PageProducts({ pageId }) {
             return (
               <article
                 key={product.id}
-                className={`seller-product-card ${info.inStore && !comboMode ? "is-in-store" : "is-not-in-store"} ${!info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
+                className={`seller-product-card ${info.inStore && !comboMode ? "is-in-store" : "is-not-in-store"} ${info.inStore && !info.valid && info.sale > 0 ? "has-price-error" : ""} ${isLowStock ? "is-low-stock" : ""}`.trim()}
                 style={{ animationDelay: `${index * 22}ms` }}
               >
                 <div className="seller-product-card__media">
@@ -1256,7 +1357,7 @@ export default function PageProducts({ pageId }) {
                     </div>
                   )}
 
-                  {!info.valid && info.sale > 0 && (
+                  {info.inStore && !info.valid && info.sale > 0 && (
                     <div className="seller-product-warning">
                       <AlertTriangle size={14} />
                       No puede ser menor a {money(info.minPrice)}
@@ -1306,10 +1407,10 @@ export default function PageProducts({ pageId }) {
                         <button
                           type="button"
                           className="seller-product-btn seller-product-btn--remove"
-                          onClick={() => removeProduct(product)}
+                          onClick={() => setConfirmDelete({ product })}
                           disabled={saving}
                         >
-                          {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Trash2 size={16} />}
+                          <Trash2 size={16} />
                           Quitar
                         </button>
                       </>
