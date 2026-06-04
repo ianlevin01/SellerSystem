@@ -436,20 +436,18 @@ export default function Pages() {
                       <ExternalLink size={16} />
                     </a>
 
-                    {pages.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(page)}
-                        disabled={deleting === page.id}
-                        title="Eliminar tienda"
-                      >
-                        {deleting === page.id ? (
-                          <Loader2 size={16} className="vtz-pages-spin" />
-                        ) : (
-                          <Trash2 size={16} />
-                        )}
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(page)}
+                      disabled={deleting === page.id}
+                      title="Eliminar tienda"
+                    >
+                      {deleting === page.id ? (
+                        <Loader2 size={16} className="vtz-pages-spin" />
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </button>
                   </div>
                 </div>
 
