@@ -2814,6 +2814,37 @@ input[type="color"] {
 .sidebar__plan-status--cancelled       { color: #6b7280; }
 .sidebar__plan-status--expired         { color: #dc2626; }
 .sidebar__plan-status--pending_payment { color: #ea580c; }
+/* ── Plan warning banner ─────────────────────────────────────── */
+.plan-warning-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 40px;
+  background: #fed7aa;
+  color: #7c2d12;
+  font-size: .875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin: -36px -40px 28px;
+}
+.plan-warning-banner__text { flex: 1; }
+.plan-warning-banner__btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  background: #ea580c;
+  color: #fff;
+  border-radius: 99px;
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .13s;
+  flex-shrink: 0;
+}
+.plan-warning-banner__btn:hover { background: #c2410c; color: #fff; }
+
 /* ── Trial Welcome Modal ─────────────────────────────────────── */
 .twm-overlay {
   position: fixed; inset: 0; z-index: 9999;

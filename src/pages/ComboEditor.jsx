@@ -57,13 +57,20 @@ export default function ComboEditor() {
 
   const FREE_SHIPPING_MIN_MARGIN = 15000;
 
+  // Desglose de costos por producto
+  const costBreakdown = products.map(p => ({
+    name:     p.name,
+    quantity: p.quantity || 1,
+    unitCost: productPrices[p.product_id] || 0,
+    total:    (productPrices[p.product_id] || 0) * (p.quantity || 1),
+  }));
+
   // Price floor: sum of precio_1 × quantity for each product
-  const minRequired = products.reduce((sum, p) => {
-    return sum + (productPrices[p.product_id] || 0) * (p.quantity || 1);
-  }, 0);
+  const minRequired = costBreakdown.reduce((sum, p) => sum + p.total, 0);
   const minPrice   = freeShipping && minRequired > 0 ? minRequired + FREE_SHIPPING_MIN_MARGIN : minRequired;
   const comboPrice = Number(price) || 0;
   const priceOk    = comboPrice > 0 && (minPrice === 0 || comboPrice >= minPrice);
+  const comboProfit = comboPrice > 0 && minRequired > 0 ? comboPrice - minRequired : null;
 
   const comboPriceNum = Number(promoPrice) || 0;
   const promoOk       = comboPriceNum === 0
@@ -209,6 +216,33 @@ export default function ComboEditor() {
                 style={{ maxWidth: 200 }}
               />
             </div>
+            {/* Desglose de costos */}
+            {costBreakdown.length > 0 && (
+              <div style={{ background: "var(--color-bg-secondary, #f8fafc)", borderRadius: 10, padding: "12px 14px", fontSize: ".82rem" }}>
+                <p style={{ fontWeight: 700, marginBottom: 8, color: "var(--color-text-secondary)", fontSize: ".75rem", textTransform: "uppercase", letterSpacing: ".05em" }}>
+                  Costo de los productos incluidos
+                </p>
+                {costBreakdown.map((p, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: i < costBreakdown.length - 1 ? "1px solid var(--border)" : "none" }}>
+                    <span style={{ color: "var(--color-text)" }}>
+                      {p.quantity > 1 ? `${p.quantity}× ` : ""}{p.name}
+                    </span>
+                    <span style={{ fontWeight: 700, color: "var(--color-text)" }}>{money(p.total)}</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, paddingTop: 8, borderTop: "1.5px solid var(--border)", fontWeight: 800 }}>
+                  <span>Costo total</span>
+                  <span style={{ color: "#dc2626" }}>{money(minRequired)}</span>
+                </div>
+                {comboProfit !== null && comboPrice > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontWeight: 800 }}>
+                    <span>Ganancia estimada</span>
+                    <span style={{ color: comboProfit > 0 ? "#16a34a" : "#dc2626" }}>{money(comboProfit)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {(minPrice > 0 || comboPrice > 0) && (
               <p style={{ marginTop: 6, fontSize: ".8rem", display: "flex", alignItems: "center", gap: 5,
                 color: priceOk ? "var(--color-success, #16a34a)" : "var(--color-error, #dc2626)" }}>

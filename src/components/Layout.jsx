@@ -326,6 +326,30 @@ export default function Layout() {
       </aside>
 
       <main className="layout__main">
+        {(() => {
+          if (!planInfo) return null;
+          const { plan_status, trial_ends_at, plan_period_end } = planInfo;
+          let days = null;
+          let msg  = null;
+
+          if (plan_status === "trial" && trial_ends_at) {
+            days = Math.max(0, Math.ceil((new Date(trial_ends_at) - new Date()) / 86400000));
+            if (days > 0) msg = `Estás en el período de prueba. Te quedan ${days} día${days === 1 ? "" : "s"} gratis del Plan Inicial.`;
+          } else if (plan_status === "cancelled" && plan_period_end) {
+            days = Math.max(0, Math.ceil((new Date(plan_period_end) - new Date()) / 86400000));
+            if (days <= 30 && days > 0) msg = `Cancelaste tu suscripción. Perdés el acceso en ${days} día${days === 1 ? "" : "s"}.`;
+          }
+
+          if (!msg) return null;
+          return (
+            <div className="plan-warning-banner">
+              <span className="plan-warning-banner__text">{msg}</span>
+              <NavLink to="/subscription" className="plan-warning-banner__btn">
+                Actualizar plan
+              </NavLink>
+            </div>
+          );
+        })()}
         <Outlet />
       </main>
 
