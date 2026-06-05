@@ -155,7 +155,7 @@ export default function Profile() {
       {
         key: "phone",
         label: "Teléfono",
-        done: form.phone.trim().length >= 6 && phoneVerified,
+        done: form.phone.trim().length >= 6, // verificación desactivada temporalmente
       },
     ],
     [form, phoneVerified]
@@ -491,59 +491,31 @@ export default function Profile() {
               />
             </label>
 
+            {/* Verificación de teléfono desactivada temporalmente — código preservado para uso futuro
             {phoneVerified ? (
               <div className="vtz-profile-ok">
                 <CheckCircle2 size={18} />
                 <span>Teléfono verificado</span>
               </div>
             ) : (
-              <button
-                type="button"
-                className="vtz-profile-btn vtz-profile-btn--secondary"
-                onClick={handleRequestOtp}
-                disabled={otpLoading}
-              >
+              <button type="button" className="vtz-profile-btn vtz-profile-btn--secondary" onClick={handleRequestOtp} disabled={otpLoading}>
                 {otpLoading ? <Loader2 className="vtz-profile-spin" size={18} /> : null}
                 {otpLoading ? "Enviando..." : "Enviar código por SMS"}
               </button>
             )}
-
             {otpMode && !phoneVerified && (
               <div className="vtz-profile-otp">
-                <input
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="Código de 6 dígitos"
-                  maxLength={6}
-                />
-
+                <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="Código de 6 dígitos" maxLength={6} />
                 <div>
-                  <button
-                    type="button"
-                    className="vtz-profile-btn vtz-profile-btn--primary"
-                    onClick={handleVerifyOtp}
-                    disabled={otpLoading || !otpCode}
-                  >
+                  <button type="button" className="vtz-profile-btn vtz-profile-btn--primary" onClick={handleVerifyOtp} disabled={otpLoading || !otpCode}>
                     {otpLoading ? "Verificando..." : "Confirmar"}
                   </button>
-
-                  <button
-                    type="button"
-                    className="vtz-profile-btn vtz-profile-btn--ghost"
-                    onClick={handleRequestOtp}
-                    disabled={otpLoading}
-                  >
-                    Reenviar
-                  </button>
+                  <button type="button" className="vtz-profile-btn vtz-profile-btn--ghost" onClick={handleRequestOtp} disabled={otpLoading}>Reenviar</button>
                 </div>
               </div>
             )}
-
-            {otpMsg && (
-              <p className={`vtz-profile-message ${isSuccessMessage(otpMsg) ? "is-success" : "is-error"}`}>
-                {otpMsg}
-              </p>
-            )}
+            {otpMsg && <p className={`vtz-profile-message ${isSuccessMessage(otpMsg) ? "is-success" : "is-error"}`}>{otpMsg}</p>}
+            */}
           </section>
 
           {/* ── CVU / CBU ── */}

@@ -13,7 +13,7 @@ import {
   Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2
 } from "lucide-react";
 
-const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "http://localhost:5175";
+const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "https://academia.ventaz.com.ar";
 
 const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },

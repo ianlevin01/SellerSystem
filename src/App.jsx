@@ -1,5 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
+
+// Si alguien accede directamente a academia.ventaz.com.ar sin estar logueado,
+// redirigirlo a ventaz.com.ar (el panel principal).
+if (
+  window.location.hostname === "academia.ventaz.com.ar" &&
+  !localStorage.getItem("seller_token")
+) {
+  window.location.replace("https://ventaz.com.ar");
+}
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import LoadingScreen from "./components/LoadingScreen";
 import ProtectedRoute from "./components/ProtectedRoute";

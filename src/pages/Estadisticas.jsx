@@ -1,7 +1,7 @@
 // src/pages/Estadisticas.jsx
 import { useEffect, useState, useMemo } from "react";
 import client from "../api/client";
-import { BarChart2, ShoppingBag, TrendingUp, Users, Eye, ChevronDown } from "lucide-react";
+import { BarChart2, ShoppingBag, TrendingUp, Users, Eye, ChevronDown, ShoppingCart } from "lucide-react";
 import "../styles/Estadisticas.css";
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -277,10 +277,10 @@ export default function Estadisticas() {
         <>
           {/* Stat cards */}
           <div className="est-stats-grid">
-            <StatCard icon={Eye}       label="Visitas"      value={loading ? "—" : fmt(totals.visits)}   sub={`Últimos ${RANGES[rangeIdx].days} días`} color="#6366f1" />
-            <StatCard icon={ShoppingBag} label="Pedidos"   value={loading ? "—" : fmt(totals.orders)}   sub="Pagados + pendientes"                       color="#4db81a" />
-            <StatCard icon={TrendingUp} label="Facturación" value={loading ? "—" : fmtMoney(totals.revenue)} sub="Total del período"                   color="#f59e0b" />
-            <StatCard icon={Users}     label="Conversión"  value={loading ? "—" : `${totals.conversion ?? 0}%`} sub="Pedidos / visitas"              color="#ec4899" />
+            <StatCard icon={Eye}          label="Visitas"          value={loading ? "—" : fmt(totals.visits)}          sub={`Últimos ${RANGES[rangeIdx].days} días`} color="#6366f1" />
+            <StatCard icon={ShoppingCart} label="Carritos creados" value={loading ? "—" : fmt(totals.carts)}           sub="Sesiones con al menos 1 producto"         color="#0ea5e9" />
+            <StatCard icon={ShoppingBag}  label="Pedidos"          value={loading ? "—" : fmt(totals.orders)}          sub="Pagados + pendientes"                     color="#4db81a" />
+            <StatCard icon={TrendingUp}   label="Facturación"      value={loading ? "—" : fmtMoney(totals.revenue)}    sub="Total del período"                        color="#f59e0b" />
           </div>
 
           {/* Chart type toggle */}
