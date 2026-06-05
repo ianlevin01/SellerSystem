@@ -253,16 +253,18 @@ export default function Layout() {
               <span className="sidebar__label">{label}</span>
             </NavLink>
           ))}
-          {/* Academia — provisoriamente dentro de Ventaz */}
-          <NavLink
-            to="/academia"
+          {/* Academia — enlace externo con token */}
+          <a
+            href={`${ACADEMY_URL}?token=${localStorage.getItem("seller_token") || ""}`}
+            target="_blank"
+            rel="noreferrer"
             onClick={() => setMobileOpen(false)}
-            className={({ isActive }) => "sidebar__link" + (isActive ? " active" : "")}
+            className="sidebar__link"
             title={collapsed ? "Academia" : undefined}
           >
             <GraduationCap size={15} />
             <span className="sidebar__label">Academia</span>
-          </NavLink>
+          </a>
         </nav>
 
         <div className="sidebar__footer">
