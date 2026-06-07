@@ -159,6 +159,16 @@ export default function ComboEditor() {
   async function handleUpload(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
+
+    const MAX_MB = 10;
+    const oversized = files.find(f => f.size > MAX_MB * 1024 * 1024);
+    if (oversized) {
+      const mb = (oversized.size / (1024 * 1024)).toFixed(1);
+      setError(`La imagen "${oversized.name}" pesa ${mb} MB y supera el tamaño máximo permitido (${MAX_MB} MB). Comprimila o usá una imagen más liviana.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     setUploading(true); setError("");
     try {
       for (const file of files) {
@@ -409,7 +419,7 @@ export default function ComboEditor() {
           <div className="upload-zone" onClick={() => fileInputRef.current?.click()}>
             <Image className="upload-zone__icon" />
             <div className="upload-zone__title">Hacé clic para subir fotos del combo</div>
-            <div className="upload-zone__sub">JPG, PNG, WEBP · máx. 8MB por imagen</div>
+            <div className="upload-zone__sub">JPG, PNG, WEBP · máx. 10MB por imagen</div>
           </div>
         ) : (
           <div className="image-grid">
