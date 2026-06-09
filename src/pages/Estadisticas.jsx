@@ -20,12 +20,17 @@ function buildDateRange(from, to) {
   const cur = new Date(from + "T12:00:00");
   const end = new Date(to + "T12:00:00");
   while (cur <= end) {
-    dates.push(cur.toISOString().slice(0, 10));
+    dates.push(toLocalISO(cur));
     cur.setDate(cur.getDate() + 1);
   }
   return dates;
 }
-function toISO(d) { return d.toISOString().slice(0, 10); }
+function toLocalISO(d) {
+  const y   = d.getFullYear();
+  const m   = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 
 // ─── SVG bar chart ────────────────────────────────────────────
 function BarChartSVG({ data, color = "#4db81a", height = 140, tooltip }) {
@@ -165,7 +170,7 @@ export default function Estadisticas() {
     const now  = new Date();
     const days = RANGES[rangeIdx]?.days || 30;
     const f    = new Date(now); f.setDate(f.getDate() - days + 1);
-    return { from: toISO(f), to: toISO(now) };
+    return { from: toLocalISO(f), to: toLocalISO(now) };
   }, [rangeIdx]);
 
   useEffect(() => {
