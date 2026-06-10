@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import client from "../api/client";
-import { Trash2, Upload, ArrowLeft, Image, Sparkles, X, Loader2 } from "lucide-react";
+import { Trash2, Upload, ArrowLeft, Image, Sparkles, X, Loader2, Plus, Palette } from "lucide-react";
 import RichEditor from "../components/RichEditor";
 
 export default function ProductEditor() {
@@ -23,6 +23,8 @@ export default function ProductEditor() {
   const [saving, setSaving]         = useState(false);
   const [saveMsg, setSaveMsg]       = useState("");
   const [dirty, setDirty]           = useState(false);
+  const [colorsEnabled, setColorsEnabled] = useState(false);
+  const [colors, setColors]               = useState([]);
 
   // IA: verificación de nombre
   const [aiNameError, setAiNameError]     = useState("");
@@ -50,6 +52,8 @@ export default function ProductEditor() {
       setSellerImages(imagesRes.data);
       setCustomName(found?.custom_name || "");
       setCustomDesc(found?.custom_desc || "");
+      setColorsEnabled(found?.colors_enabled ?? false);
+      setColors(Array.isArray(found?.colors) ? found.colors : []);
       setDirty(false);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [productId, pageId]);
@@ -62,8 +66,10 @@ export default function ProductEditor() {
         ? `/seller/store/pages/${pageId}/products/${productId}/customize`
         : `/seller/products/${productId}/customize`;
       await client.patch(endpoint, {
-        custom_name: customName.trim() || null,
-        custom_desc: descText ? customDesc : null,
+        custom_name:    customName.trim() || null,
+        custom_desc:    descText ? customDesc : null,
+        colors_enabled: colorsEnabled,
+        colors:         colorsEnabled ? colors.filter(c => c.name.trim()) : [],
       });
       setSaveMsg("Guardado");
       setDirty(false);
@@ -326,6 +332,97 @@ export default function ProductEditor() {
                 <img src={key} alt={`Original ${idx + 1}`} />
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Colores disponibles */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: colorsEnabled ? 20 : 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Palette size={15} color="#6366f1" />
+            </div>
+            <div>
+              <h2 style={{ marginBottom: 1 }}>Colores disponibles</h2>
+              <p style={{ fontSize: ".82rem" }}>El comprador podrá elegir el color antes de agregar al carrito.</p>
+            </div>
+          </div>
+          {/* Toggle switch */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
+            <span style={{ fontSize: ".85rem", color: "var(--color-text-secondary)" }}>
+              {colorsEnabled ? "Activo" : "Inactivo"}
+            </span>
+            <div
+              onClick={() => { setColorsEnabled(v => !v); setDirty(true); }}
+              style={{
+                width: 40, height: 22, borderRadius: 11, position: "relative", cursor: "pointer",
+                background: colorsEnabled ? "var(--brand, #4db81a)" : "#d1d5db",
+                transition: "background .2s",
+              }}
+            >
+              <div style={{
+                position: "absolute", top: 3, left: colorsEnabled ? 21 : 3,
+                width: 16, height: 16, borderRadius: "50%", background: "#fff",
+                boxShadow: "0 1px 3px rgba(0,0,0,.2)", transition: "left .2s",
+              }} />
+            </div>
+          </label>
+        </div>
+
+        {colorsEnabled && (
+          <div>
+            {colors.length === 0 && (
+              <p style={{ fontSize: ".85rem", color: "var(--color-text-secondary)", marginBottom: 12 }}>
+                No hay colores agregados. Usá el botón de abajo para agregar.
+              </p>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {colors.map((color, idx) => (
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="color"
+                    value={color.hex || "#000000"}
+                    onChange={e => {
+                      const next = [...colors];
+                      next[idx] = { ...next[idx], hex: e.target.value };
+                      setColors(next); setDirty(true);
+                    }}
+                    style={{ width: 40, height: 36, padding: 2, border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", background: "none" }}
+                  />
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: color.hex || "#000", border: "2px solid #e5e7eb", flexShrink: 0 }} />
+                  <input
+                    className="form-input"
+                    value={color.name}
+                    onChange={e => {
+                      const next = [...colors];
+                      next[idx] = { ...next[idx], name: e.target.value };
+                      setColors(next); setDirty(true);
+                    }}
+                    placeholder="Nombre del color (ej: Rojo, Azul marino...)"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setColors(colors.filter((_, i) => i !== idx)); setDirty(true); }}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#dc2626", padding: 4, borderRadius: 6, display: "flex", alignItems: "center" }}
+                    title="Eliminar color"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => { setColors([...colors, { hex: "#000000", name: "" }]); setDirty(true); }}
+              style={{ display: "flex", alignItems: "center", gap: 6 }}
+            >
+              <Plus size={13} /> Agregar color
+            </button>
           </div>
         )}
       </div>
