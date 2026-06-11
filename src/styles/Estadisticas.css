@@ -402,3 +402,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Layout de dos columnas: gráficos + carritos abandonados ── */
+@media (max-width: 1100px) {
+  .est-root > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}

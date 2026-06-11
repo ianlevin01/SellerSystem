@@ -315,7 +315,10 @@ export default function Estadisticas() {
       )}
 
       {pageId && !error && (
-        <>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 20, alignItems: "start" }}>
+
+          {/* ── COLUMNA IZQUIERDA — gráficos y tabla ──────────────── */}
+          <div>
           {/* Stat cards */}
           <div className="est-stats-grid">
             <StatCard icon={Eye}          label="Visitas"          value={loading ? "—" : fmt(totals.visits)}          sub={`Últimos ${RANGES[rangeIdx].days} días`} color="#6366f1" />
@@ -425,8 +428,10 @@ export default function Estadisticas() {
               );
             })()
           )}
-          {/* ── Recuperación de carritos abandonados ─────────────── */}
-          <div className="card" style={{ marginTop: 24, padding: 0, overflow: "hidden" }}>
+          </div>{/* fin columna izquierda */}
+
+          {/* ── COLUMNA DERECHA — carritos abandonados ────────────── */}
+          <div className="card" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 20 }}>
             {/* Header */}
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "space-between" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -563,8 +568,9 @@ export default function Estadisticas() {
                 </table>
               </div>
             )}
-          </div>
-        </>
+          </div>{/* fin columna derecha */}
+
+        </div>
       )}
     </div>
   );
