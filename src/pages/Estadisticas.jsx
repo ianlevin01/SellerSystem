@@ -1,7 +1,7 @@
 // src/pages/Estadisticas.jsx
 import { useEffect, useState, useMemo } from "react";
 import client from "../api/client";
-import { BarChart2, ShoppingBag, TrendingUp, Users, Eye, ChevronDown, ShoppingCart } from "lucide-react";
+import { BarChart2, ShoppingBag, TrendingUp, Eye, ChevronDown, ShoppingCart, Mail, Package, ChevronRight } from "lucide-react";
 import "../styles/Estadisticas.css";
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -157,14 +157,41 @@ const RANGES = [
 ];
 
 // ─── Main ─────────────────────────────────────────────────────
+const STATUS_LABEL = { iniciado: "Iniciado", contactado: "Contactado", pagado: "Pagado" };
+const STATUS_COLOR = { iniciado: "#f59e0b", contactado: "#6366f1", pagado: "#4db81a" };
+const STATUS_BG    = { iniciado: "#fef3c7", contactado: "#ede9fe", pagado: "#dcfce7" };
+
+function CartStatusBadge({ status }) {
+  return (
+    <span style={{
+      display: "inline-block", padding: "2px 10px", borderRadius: 99,
+      fontSize: 11, fontWeight: 700, letterSpacing: ".02em",
+      background: STATUS_BG[status]   || "#f3f4f6",
+      color:      STATUS_COLOR[status] || "#6b7280",
+    }}>
+      {STATUS_LABEL[status] || status}
+    </span>
+  );
+}
+
+function itemsSummary(items) {
+  if (!items?.length) return "—";
+  const first = items.slice(0, 2).map(i => `${i.name} ×${i.quantity}`).join(", ");
+  return items.length > 2 ? `${first} +${items.length - 2} más` : first;
+}
+
 export default function Estadisticas() {
-  const [pages,     setPages]     = useState([]);
-  const [pageId,    setPageId]    = useState("");
-  const [rangeIdx,  setRangeIdx]  = useState(2);
-  const [loading,   setLoading]   = useState(false);
-  const [data,      setData]      = useState(null);
-  const [error,     setError]     = useState("");
-  const [chartMode, setChartMode] = useState("bars");
+  const [pages,          setPages]          = useState([]);
+  const [pageId,         setPageId]         = useState("");
+  const [rangeIdx,       setRangeIdx]       = useState(2);
+  const [loading,        setLoading]        = useState(false);
+  const [data,           setData]           = useState(null);
+  const [error,          setError]          = useState("");
+  const [chartMode,      setChartMode]      = useState("bars");
+  const [abandonedCarts, setAbandonedCarts] = useState([]);
+  const [acLoading,      setAcLoading]      = useState(false);
+  const [expandedCart,   setExpandedCart]   = useState(null);
+  const [acFilter,       setAcFilter]       = useState("all");
 
   const { from, to } = useMemo(() => {
     const now  = new Date();
@@ -209,6 +236,15 @@ export default function Estadisticas() {
     const map = Object.fromEntries((data.orders || []).map(o => [o.date, o.revenue]));
     return allDates.map(date => ({ date, value: map[date] || 0 }));
   }, [data, allDates]);
+
+  useEffect(() => {
+    if (!pageId) { setAbandonedCarts([]); return; }
+    setAcLoading(true);
+    client.get(`/seller/store/pages/${pageId}/abandoned-carts`)
+      .then(r => setAbandonedCarts(r.data || []))
+      .catch(() => setAbandonedCarts([]))
+      .finally(() => setAcLoading(false));
+  }, [pageId]);
 
   const totals       = data?.totals || {};
   const selectedPage = pages.find(p => p.id === pageId);
@@ -389,6 +425,145 @@ export default function Estadisticas() {
               );
             })()
           )}
+          {/* ── Recuperación de carritos abandonados ─────────────── */}
+          <div className="card" style={{ marginTop: 24, padding: 0, overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <ShoppingCart size={15} color="#f59e0b" />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Recuperación de carritos abandonados</h2>
+                  <p style={{ margin: 0, fontSize: 12, color: "var(--text-tertiary)" }}>Compradores que ingresaron sus datos pero no completaron la compra</p>
+                </div>
+              </div>
+              {/* Contadores */}
+              {!acLoading && abandonedCarts.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {["iniciado", "contactado", "pagado"].map(s => {
+                    const n = abandonedCarts.filter(c => c.status === s).length;
+                    if (!n) return null;
+                    return (
+                      <span key={s} style={{
+                        padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                        background: STATUS_BG[s], color: STATUS_COLOR[s], cursor: "pointer",
+                        outline: acFilter === s ? `2px solid ${STATUS_COLOR[s]}` : "none",
+                      }} onClick={() => setAcFilter(f => f === s ? "all" : s)}>
+                        {n} {STATUS_LABEL[s]}{n !== 1 ? "s" : ""}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Body */}
+            {acLoading ? (
+              <div style={{ padding: "32px 24px" }}>
+                {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 44, borderRadius: 8, marginBottom: 8 }} />)}
+              </div>
+            ) : abandonedCarts.length === 0 ? (
+              <div className="empty-state" style={{ padding: "48px 20px" }}>
+                <div className="empty-state__icon"><ShoppingCart size={28} /></div>
+                <h3>Sin carritos abandonados</h3>
+                <p>Cuando un comprador llene sus datos y no complete la compra, aparecerá aquí.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="est-table" style={{ minWidth: 680 }}>
+                  <thead>
+                    <tr>
+                      {["Cliente", "Contacto", "Productos", "Total", "Estado", "Fecha", ""].map(h => (
+                        <th key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {abandonedCarts
+                      .filter(c => acFilter === "all" || c.status === acFilter)
+                      .map(cart => {
+                        const items  = typeof cart.items === "string" ? JSON.parse(cart.items) : (cart.items || []);
+                        const isOpen = expandedCart === cart.id;
+                        return [
+                          <tr key={cart.id} style={{ cursor: "pointer" }} onClick={() => setExpandedCart(isOpen ? null : cart.id)}>
+                            <td>
+                              <span style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: 13 }}>{cart.customer_name || "—"}</span>
+                            </td>
+                            <td style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                              <div>{cart.customer_email}</div>
+                              {cart.customer_phone && <div style={{ color: "var(--text-tertiary)" }}>{cart.customer_phone}</div>}
+                            </td>
+                            <td style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 200 }}>
+                              {itemsSummary(items)}
+                            </td>
+                            <td style={{ fontWeight: 700, color: "#4db81a", fontSize: 13, whiteSpace: "nowrap" }}>
+                              {fmtMoney(cart.total)}
+                            </td>
+                            <td><CartStatusBadge status={cart.status} /></td>
+                            <td className="est-table__date" style={{ whiteSpace: "nowrap" }}>
+                              {fmtDate(cart.created_at?.slice(0, 10))}
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <ChevronRight size={14} style={{ color: "var(--text-tertiary)", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .15s" }} />
+                            </td>
+                          </tr>,
+                          isOpen && (
+                            <tr key={`${cart.id}-detail`}>
+                              <td colSpan={7} style={{ padding: "0 16px 16px", background: "var(--bg-secondary)" }}>
+                                <div style={{ background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", marginTop: 4 }}>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                                    <div>
+                                      <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Datos del cliente</p>
+                                      <p style={{ margin: "0 0 2px", fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{cart.customer_name}</p>
+                                      <p style={{ margin: "0 0 2px", fontSize: 13, color: "var(--text-secondary)" }}>{cart.customer_email}</p>
+                                      {cart.customer_phone     && <p style={{ margin: "0 0 2px", fontSize: 13, color: "var(--text-secondary)" }}>{cart.customer_phone}</p>}
+                                      {cart.customer_doc_type  && <p style={{ margin: 0, fontSize: 12, color: "var(--text-tertiary)" }}>{cart.customer_doc_type}: {cart.customer_doc_number}</p>}
+                                    </div>
+                                    <div>
+                                      <p style={{ margin: "0 0 4px", fontSize: 11, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".05em" }}>Resumen</p>
+                                      <p style={{ margin: "0 0 2px", fontSize: 13, color: "var(--text-secondary)" }}>{items.length} producto{items.length !== 1 ? "s" : ""}</p>
+                                      <p style={{ margin: "0 0 2px", fontSize: 15, fontWeight: 800, color: "#4db81a" }}>{fmtMoney(cart.total)}</p>
+                                      {cart.contacted_at && <p style={{ margin: 0, fontSize: 11, color: "var(--text-tertiary)" }}>Contactado: {fmtDate(cart.contacted_at?.slice(0, 10))}</p>}
+                                    </div>
+                                  </div>
+                                  {items.length > 0 && (
+                                    <table width="100%" cellPadding={0} cellSpacing={0} style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+                                      <thead>
+                                        <tr style={{ background: "var(--bg-secondary)" }}>
+                                          <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textAlign: "left", textTransform: "uppercase" }}>Producto</th>
+                                          <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textAlign: "center", textTransform: "uppercase" }}>Cant.</th>
+                                          <th style={{ padding: "8px 12px", fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", textAlign: "right", textTransform: "uppercase" }}>Precio unit.</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {items.map((item, idx) => (
+                                          <tr key={idx}>
+                                            <td style={{ padding: "8px 12px", fontSize: 13, color: "var(--text-primary)", borderTop: "1px solid var(--border)" }}>{item.name}</td>
+                                            <td style={{ padding: "8px 12px", fontSize: 13, color: "var(--text-secondary)", textAlign: "center", borderTop: "1px solid var(--border)" }}>×{item.quantity}</td>
+                                            <td style={{ padding: "8px 12px", fontSize: 13, fontWeight: 600, color: "var(--text-primary)", textAlign: "right", borderTop: "1px solid var(--border)" }}>{fmtMoney(item.unit_price ?? item.price ?? 0)}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                  {cart.status === "iniciado" && (
+                                    <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#fef3c7", borderRadius: 8, border: "1px solid #fde68a" }}>
+                                      <Mail size={13} color="#f59e0b" />
+                                      <span style={{ fontSize: 12, color: "#92400e" }}>El cron enviará un email de recuperación automáticamente cuando venza el plazo configurado.</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ),
+                        ];
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
