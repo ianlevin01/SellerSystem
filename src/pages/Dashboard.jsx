@@ -59,13 +59,13 @@ export default function Dashboard() {
     { label: "Ganancia total",     value: `$${fmt(totalGanancia)}`,   icon: TrendingUp,  color: "#16a34a", bg: "#f0fdf4" },
   ];
 
-  const profileIncomplete = !seller?.city || (!seller?.birth_date && !seller?.age) || !seller?.phone_verified;
+  const profileIncomplete = !seller?.cvu;
 
   return (
     <div>
       {profileIncomplete && (
         <Link
-          to="/profile"
+          to="/cobros"
           style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "#fffbeb", border: "1px solid #fde68a",
@@ -75,7 +75,7 @@ export default function Dashboard() {
           }}
         >
           <AlertTriangle size={16} color="#d97706" />
-          <span><strong>Completá tu perfil</strong> — falta información requerida para operar.</span>
+          <span><strong>Configurá tu CVU</strong> — necesitás un CVU para poder recibir cobros.</span>
           <span style={{ marginLeft: "auto", fontWeight: 500 }}>Completar →</span>
         </Link>
       )}
