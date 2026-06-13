@@ -65,7 +65,7 @@ export default function Dashboard() {
     <div>
       {profileIncomplete && (
         <Link
-          to="/cobros"
+          to="/profile"
           style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "#fffbeb", border: "1px solid #fde68a",
