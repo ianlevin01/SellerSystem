@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "https://academia.ventaz.com.ar";
+const ACADEMY_TOOLTIP_KEY = "academy_new_courses_v1";
 
 const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
@@ -53,7 +54,9 @@ export default function Layout() {
   const [showWelcome,    setShowWelcome]    = useState(false);
   const [welcomeDays,    setWelcomeDays]    = useState(15);
   const [showExpired,    setShowExpired]    = useState(false);
+  const [showAcademyTip, setShowAcademyTip] = useState(() => !localStorage.getItem(ACADEMY_TOOLTIP_KEY));
   const storeRef                        = useRef(null);
+  const academyRef                      = useRef(null);
 
   function toggleCollapse() {
     setCollapsed(prev => {
@@ -255,16 +258,36 @@ export default function Layout() {
           ))}
           {/* Academia — enlace externo con token */}
           <a
+            ref={academyRef}
             href={`${ACADEMY_URL}?token=${localStorage.getItem("seller_token") || ""}`}
             target="_blank"
             rel="noreferrer"
-            onClick={() => setMobileOpen(false)}
+            onClick={() => { setMobileOpen(false); setShowAcademyTip(false); localStorage.setItem(ACADEMY_TOOLTIP_KEY, "1"); }}
             className="sidebar__link"
             title={collapsed ? "Academia" : undefined}
           >
             <GraduationCap size={15} />
             <span className="sidebar__label">Academia</span>
           </a>
+          {showAcademyTip && !collapsed && (() => {
+            const rect = academyRef.current?.getBoundingClientRect();
+            if (!rect) return null;
+            return (
+              <div className="academy-tip" style={{ top: rect.top + rect.height / 2, left: rect.right + 12 }}>
+                <span className="academy-tip__arrow" />
+                <div className="academy-tip__body">
+                  <span className="academy-tip__badge">¡Nuevo!</span>
+                  <p className="academy-tip__text">Los primeros cursos ya están disponibles</p>
+                  <button
+                    className="academy-tip__close"
+                    onClick={() => { setShowAcademyTip(false); localStorage.setItem(ACADEMY_TOOLTIP_KEY, "1"); }}
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </nav>
 
         <div className="sidebar__footer">

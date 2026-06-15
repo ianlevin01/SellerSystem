@@ -2932,20 +2932,7 @@ input[type="color"] {
 }
 .academia-hero__sub { font-size: .9rem; color: rgba(255,255,255,.6); margin: 0; }
 
-.academia-body { padding: 0 36px 48px; }
-.academia-soon {
-  text-align: center; padding: 40px 24px 36px;
-  background: linear-gradient(135deg, #f0fdf4, #fff);
-  border: 1.5px solid #bbf7d0; border-radius: 16px; margin-bottom: 32px;
-}
-.academia-soon__badge {
-  display: inline-block; background: var(--brand); color: #fff;
-  font-size: .72rem; font-weight: 800; padding: 4px 14px; border-radius: 99px;
-  letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px;
-}
-.academia-soon__title { font-size: 1.5rem; font-weight: 900; color: var(--text-primary); letter-spacing: -.03em; margin-bottom: 10px; }
-.academia-soon__desc  { font-size: .9rem; color: var(--text-secondary); max-width: 500px; margin: 0 auto; line-height: 1.65; }
-.academia-preview-title { font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1.5px solid var(--border-color); }
+.academia-preview-title { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,.85); margin-top: 28px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1.5px solid rgba(255,255,255,.15); }
 .academia-preview-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
 }
@@ -2972,6 +2959,51 @@ input[type="color"] {
   .twm-plans { grid-template-columns: 1fr; }
   .twm-modal { padding: 28px 18px 22px; }
 }
+
+/* ── Academy new-courses tooltip ────────────────────────────── */
+.academy-tip {
+  position: fixed;
+  transform: translateY(-50%);
+  z-index: 9999;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,.22));
+}
+.academy-tip__arrow {
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 6px solid #fff;
+}
+.academy-tip__body {
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  width: 180px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.academy-tip__badge {
+  display: inline-block; align-self: flex-start;
+  background: var(--brand); color: #fff;
+  font-size: .65rem; font-weight: 800;
+  padding: 2px 8px; border-radius: 99px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.academy-tip__text {
+  font-size: .78rem; color: var(--text-primary);
+  line-height: 1.4; margin: 0;
+}
+.academy-tip__close {
+  align-self: flex-end;
+  background: var(--brand); color: #fff;
+  border: none; border-radius: 6px;
+  font-size: .72rem; font-weight: 700;
+  padding: 4px 10px; cursor: pointer;
+  margin-top: 2px;
+}
+.academy-tip__close:hover { opacity: .85; }
 
 /* ── WhatsApp FAB ────────────────────────────────────────────── */
 .whatsapp-fab {
@@ -7476,6 +7508,41 @@ body,
   .pe-choice-grid--3 {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Layout Picker ────────────────────────────────────────── */
+.pe-layout-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pe-layout-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+  background: var(--surface);
+  min-width: 0;
+}
+.pe-layout-card:hover { border-color: var(--brand); }
+.pe-layout-card--active { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(var(--brand-rgb), .15); }
+.pe-layout-card__preview {
+  background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px;
+}
+.pe-layout-card__preview svg { width: 100%; height: auto; display: block; }
+.pe-layout-card__info {
+  padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.pe-layout-card__name { font-size: .8rem; font-weight: 700; color: var(--text-primary); }
+.pe-layout-card__tagline { font-size: .68rem; color: var(--text-tertiary, #888); line-height: 1.3; }
+.pe-layout-card__badge {
+  font-size: .68rem; font-weight: 700;
+  color: var(--brand); margin-top: 2px;
 }
 
 /* ── Theme Picker ─────────────────────────────────────────── */
