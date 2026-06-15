@@ -474,17 +474,13 @@ function ConfigTab({ pageId }) {
     setForm(prev => {
       const next = {
         ...prev,
-        banner_color:    theme.banner_color,
-        color_bg:        theme.color_bg,
-        color_text:      theme.color_text,
-        color_secondary: theme.color_secondary || "",
+        banner_color: theme.banner_color,
+        color_bg: theme.color_bg,
+        color_text: theme.color_text,
         theme_config: {
           ...(prev.theme_config || {}),
           ...theme.theme_config,
-          theme_id:    theme.id,
-          // Reset per-section color overrides so the new theme shows correctly
-          navbar_color: theme.theme_config?.navbar_color ?? "",
-          promo_color:  theme.theme_config?.promo_color  ?? "",
+          theme_id: theme.id,
         },
       };
       requestAnimationFrame(() => sendPreview(next));
@@ -493,20 +489,6 @@ function ConfigTab({ pageId }) {
   }
 
   function applyStylePreset(preset) { applyThemePreset(preset); }
-
-  function applyLayout(layoutId) {
-    setForm(prev => {
-      const next = {
-        ...prev,
-        theme_config: {
-          ...(prev.theme_config || {}),
-          layout: layoutId || null,
-        },
-      };
-      requestAnimationFrame(() => sendPreview(next));
-      return next;
-    });
-  }
 
   function setDensity(value) {
     const densityMap = {
@@ -764,202 +746,13 @@ function ConfigTab({ pageId }) {
                 onChange={e => set("store_description", e.target.value)}
                 placeholder="Los mejores productos..." rows={2} />
             </Field>
-
-            <div className="pe-divider-title">Contacto</div>
-
-            <Field label="WhatsApp" hint="Con código de país, sin +. Agrega un botón flotante en tu tienda.">
-              <div style={{ position: "relative" }}>
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: ".85rem", color: "var(--text-tertiary)" }}>+</span>
-                <input className="form-input" value={form.whatsapp}
-                  onChange={e => set("whatsapp", e.target.value)}
-                  placeholder="5491112345678" maxLength={30}
-                  style={{ paddingLeft: 24 }} />
-              </div>
-              {form.whatsapp && (
-                <p style={{ fontSize: ".76rem", color: "var(--text-tertiary)", marginTop: 4 }}>
-                  El botón flotante de WhatsApp ya está visible en tu tienda.
-                </p>
-              )}
-            </Field>
           </>}
 
           {/* ── Tema ────────────────────────────────────── */}
           {section === "tema" && <>
-            {/* ── Layout estructural ── */}
             <div className="pe-section-note">
-              <strong>Estructura de tienda</strong>
-              <span>Define el layout completo: navbar, hero, grilla de productos y página de categoría.</span>
-            </div>
-
-            <div className="pe-layout-picker">
-              {[
-                {
-                  id: null,
-                  name: "Estándar",
-                  tagline: "Layout clásico · navbar + hero + grilla",
-                  svg: (
-                    <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="120" height="80" fill="#f5f5f5"/>
-                      <rect y="0" width="120" height="12" fill="#333"/>
-                      <rect x="8" y="3" width="20" height="6" rx="2" fill="#888"/>
-                      <rect x="42" y="3" width="36" height="6" rx="3" fill="#fff" opacity=".3"/>
-                      <rect x="98" y="3" width="14" height="6" rx="2" fill="#4db81a" opacity=".9"/>
-                      <rect y="12" width="120" height="22" fill="#4db81a" opacity=".7"/>
-                      <rect x="30" y="17" width="60" height="7" rx="2" fill="#fff" opacity=".8"/>
-                      <rect x="44" y="26" width="32" height="5" rx="2" fill="#fff" opacity=".5"/>
-                      <rect x="5" y="40" width="24" height="32" rx="3" fill="#fff"/>
-                      <rect x="35" y="40" width="24" height="32" rx="3" fill="#fff"/>
-                      <rect x="65" y="40" width="24" height="32" rx="3" fill="#fff"/>
-                      <rect x="95" y="40" width="20" height="32" rx="3" fill="#fff"/>
-                    </svg>
-                  ),
-                },
-                {
-                  id: "recife",
-                  name: "Recife",
-                  tagline: "Beauty · 3 capas de header, sidebar, badges verticales",
-                  svg: (
-                    <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="120" height="80" fill="#f5f5f5"/>
-                      <rect y="0" width="120" height="7" fill="#c8ba8a"/>
-                      <rect y="7" width="120" height="13" fill="#111"/>
-                      <rect x="8" y="10" width="22" height="4" rx="1" fill="#fff" opacity=".25"/>
-                      <rect x="44" y="10" width="32" height="5" rx="1" fill="#fff" opacity=".5"/>
-                      <rect x="102" y="10" width="10" height="4" rx="1" fill="#fff" opacity=".3"/>
-                      <rect y="20" width="120" height="8" fill="#1a1a1a"/>
-                      <rect x="10" y="23" width="14" height="2" rx="1" fill="#fff" opacity=".5"/>
-                      <rect x="30" y="23" width="14" height="2" rx="1" fill="#fff" opacity=".5"/>
-                      <rect x="50" y="23" width="14" height="2" rx="1" fill="#fff" opacity=".5"/>
-                      <rect y="28" width="120" height="22" fill="#888" opacity=".4"/>
-                      <rect x="30" y="31" width="60" height="8" rx="1" fill="#fff" opacity=".7"/>
-                      <rect x="0" y="51" width="4" height="26" fill="#9b2335" opacity=".9"/>
-                      <rect x="5" y="51" width="26" height="26" rx="0" fill="#fff"/>
-                      <rect x="33" y="51" width="4" height="26" fill="#9b2335" opacity=".9"/>
-                      <rect x="38" y="51" width="26" height="26" rx="0" fill="#fff"/>
-                      <rect x="66" y="51" width="4" height="26" fill="#9b2335" opacity=".9"/>
-                      <rect x="71" y="51" width="26" height="26" rx="0" fill="#fff"/>
-                      <rect x="99" y="51" width="4" height="26" fill="#9b2335" opacity=".9"/>
-                      <rect x="104" y="51" width="14" height="26" rx="0" fill="#fff"/>
-                    </svg>
-                  ),
-                },
-                {
-                  id: "brasilia",
-                  name: "Brasilia",
-                  tagline: "Tech · Barra promo, hero split, carouseles por categoría",
-                  svg: (
-                    <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="120" height="80" fill="#fff"/>
-                      <rect y="0" width="120" height="6" fill="#e8185c"/>
-                      <rect x="30" y="1.5" width="60" height="3" rx="1" fill="#fff" opacity=".7"/>
-                      <rect y="6" width="120" height="13" fill="#1a1a1a"/>
-                      <rect x="8" y="9" width="26" height="5" rx="2" fill="#fff" opacity=".2"/>
-                      <rect x="42" y="9" width="36" height="5" rx="2" fill="#fff" opacity=".4"/>
-                      <rect x="100" y="9" width="12" height="5" rx="2" fill="#e8185c" opacity=".9"/>
-                      <rect y="19" width="120" height="7" fill="#2a2a2a"/>
-                      <rect x="6" y="21" width="12" height="3" rx="1" fill="#fff" opacity=".5"/>
-                      <rect x="24" y="21" width="12" height="3" rx="1" fill="#fff" opacity=".35"/>
-                      <rect x="42" y="21" width="12" height="3" rx="1" fill="#fff" opacity=".35"/>
-                      <rect y="26" width="59" height="24" fill="#444"/>
-                      <rect x="61" y="26" width="59" height="24" fill="#222"/>
-                      <rect x="6" y="41" width="24" height="7" rx="1" fill="#fff" opacity=".7"/>
-                      <rect x="66" y="41" width="24" height="7" rx="1" fill="#fff" opacity=".7"/>
-                      <rect x="5" y="54" width="22" height="24" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="32" y="54" width="22" height="24" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="59" y="54" width="22" height="24" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="86" y="54" width="22" height="24" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="110" y="63" width="8" height="15" rx="2" fill="#f5f5f5" opacity=".5"/>
-                    </svg>
-                  ),
-                },
-                {
-                  id: "lima",
-                  name: "Lima",
-                  tagline: "Joyería · Navbar minimalista, logo centrado, cards portrait",
-                  svg: (
-                    <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="120" height="80" fill="#fff"/>
-                      <rect y="0" width="120" height="13" fill="#fff" stroke="#eee"/>
-                      <rect x="6" y="4" width="8" height="5" rx="1" fill="#bbb"/>
-                      <rect x="40" y="3" width="40" height="7" rx="2" fill="#111" opacity=".15"/>
-                      <rect x="106" y="3" width="8" height="7" rx="3" fill="#fff" stroke="#111" strokeWidth="1"/>
-                      <rect y="13" width="120" height="8" fill="#fff"/>
-                      <rect x="18" y="15" width="12" height="3" rx="1" fill="#888" opacity=".6"/>
-                      <rect x="36" y="15" width="12" height="3" rx="1" fill="#888" opacity=".6"/>
-                      <rect x="54" y="15" width="12" height="3" rx="1" fill="#888" opacity=".6"/>
-                      <rect x="72" y="15" width="12" height="3" rx="1" fill="#888" opacity=".6"/>
-                      <rect y="21" width="120" height="6" fill="#1c2b4a"/>
-                      <rect x="25" y="23" width="70" height="2" rx="1" fill="#fff" opacity=".7"/>
-                      <rect y="27" width="120" height="20" fill="#1c2b4a" opacity=".3"/>
-                      <rect x="30" y="31" width="60" height="5" rx="1" fill="#fff" opacity=".8"/>
-                      <rect x="5" y="51" width="26" height="26" rx="4" fill="#f5f5f5" stroke="#e8e8e8"/>
-                      <rect x="36" y="51" width="26" height="26" rx="4" fill="#f5f5f5" stroke="#e8e8e8"/>
-                      <rect x="67" y="51" width="26" height="26" rx="4" fill="#f5f5f5" stroke="#e8e8e8"/>
-                      <rect x="98" y="51" width="17" height="26" rx="4" fill="#f5f5f5" stroke="#e8e8e8" opacity=".5"/>
-                    </svg>
-                  ),
-                },
-                {
-                  id: "amazonas",
-                  name: "Amazonas",
-                  tagline: "Marketplace · Logo grande, búsqueda central, secciones por categoría",
-                  svg: (
-                    <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="120" height="80" fill="#fff"/>
-                      <rect y="0" width="120" height="6" fill="#f5c518"/>
-                      <rect x="4" y="1.5" width="12" height="3" rx="1" fill="#555" opacity=".5"/>
-                      <rect y="6" width="120" height="14" fill="#1a1a1a"/>
-                      <rect x="4" y="8" width="22" height="8" rx="2" fill="#fff" opacity=".5"/>
-                      <rect x="30" y="9" width="58" height="6" rx="2" fill="#fff"/>
-                      <rect x="86" y="9" width="6" height="6" rx="0" fill="#f5c518"/>
-                      <rect x="94" y="8" width="7" height="4" rx="1" fill="#fff" opacity=".3"/>
-                      <rect x="94" y="13" width="7" height="2" rx="1" fill="#fff" opacity=".2"/>
-                      <rect x="103" y="8" width="7" height="4" rx="1" fill="#fff" opacity=".3"/>
-                      <rect x="103" y="13" width="7" height="2" rx="1" fill="#fff" opacity=".2"/>
-                      <rect x="112" y="8" width="7" height="4" rx="1" fill="#f5c518" opacity=".6"/>
-                      <rect x="112" y="13" width="7" height="2" rx="1" fill="#fff" opacity=".2"/>
-                      <rect y="20" width="120" height="7" fill="#2a2a2a"/>
-                      <rect x="6" y="22" width="14" height="3" rx="1" fill="#fff" opacity=".4"/>
-                      <rect x="26" y="22" width="14" height="3" rx="1" fill="#fff" opacity=".4"/>
-                      <rect x="46" y="22" width="14" height="3" rx="1" fill="#fff" opacity=".4"/>
-                      <rect y="27" width="120" height="16" fill="#aaa" opacity=".25"/>
-                      <rect x="6" y="30" width="40" height="8" rx="1" fill="#fff" opacity=".6"/>
-                      <rect x="5" y="46" width="4" height="30" rx="2" fill="#eee"/>
-                      <rect x="14" y="46" width="24" height="13" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="42" y="46" width="24" height="13" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="70" y="46" width="24" height="13" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="98" y="46" width="18" height="13" rx="2" fill="#f5f5f5" stroke="#eee" opacity=".5"/>
-                      <rect x="14" y="63" width="24" height="13" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="42" y="63" width="24" height="13" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="70" y="63" width="24" height="13" rx="2" fill="#f5f5f5" stroke="#eee"/>
-                      <rect x="98" y="63" width="18" height="13" rx="2" fill="#f5f5f5" stroke="#eee" opacity=".5"/>
-                    </svg>
-                  ),
-                },
-              ].map(item => {
-                const isActive = (tc.layout || null) === item.id;
-                return (
-                  <div
-                    key={String(item.id)}
-                    className={`pe-layout-card${isActive ? " pe-layout-card--active" : ""}`}
-                    onClick={() => applyLayout(item.id)}
-                  >
-                    <div className="pe-layout-card__preview">{item.svg}</div>
-                    <div className="pe-layout-card__info">
-                      <strong className="pe-layout-card__name">{item.name}</strong>
-                      <span className="pe-layout-card__tagline">{item.tagline}</span>
-                      {isActive && <span className="pe-layout-card__badge">✓ Activo</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="pe-divider-title" style={{ marginTop: 24 }}>Estilo visual</div>
-
-            <div className="pe-section-note" style={{ marginBottom: 12 }}>
-              <strong>Paleta y diseño</strong>
-              <span>Aplicá colores, tipografías y detalles sobre el layout elegido.</span>
+              <strong>Plantilla visual</strong>
+              <span>Elegí un estilo completo. Después podés ajustar colores, botones y más.</span>
             </div>
 
             <div className="theme-picker">
@@ -1115,10 +908,10 @@ function ConfigTab({ pageId }) {
                 label={tc.navbar_sticky !== false ? "Fijo (siempre visible)" : "Estático"} />
             </Field>
             <Field label="Mostrar categorías en el navbar">
-              <Toggle checked={tc.navbar_show_categories !== false}
+              <Toggle checked={!!tc.navbar_show_categories}
                 onChange={v => setTheme("navbar_show_categories", v)}
-                label={tc.navbar_show_categories !== false ? "Activado" : "Desactivado"} />
-              <p style={{ fontSize: ".77rem", color: "var(--text-tertiary)", marginTop: 4 }}>Muestra la barra de categorías debajo del header.</p>
+                label={tc.navbar_show_categories ? "Activado" : "Desactivado"} />
+              <p style={{ fontSize: ".77rem", color: "var(--text-tertiary)", marginTop: 4 }}>Muestra las categorías del catálogo como links en el navbar.</p>
             </Field>
 
             <div className="pe-divider-title">Barra de promoción</div>
@@ -1140,11 +933,23 @@ function ConfigTab({ pageId }) {
 
           {/* ── Portada ─────────────────────────────────── */}
           {section === "portada" && <>
+            <Field label="Tipo de fondo" highlighted={highlightedField === "hero"}>
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { val: "color", label: "Color de marca", desc: "Usa el color configurado en Tema." },
+                  { val: "image", label: "Foto de fondo",  desc: "Subís una imagen para el hero." },
+                ].map(({ val, label, desc }) => (
+                  <button key={val} type="button"
+                    className={optionClass((tc.hero_bg_type || "color") === val)}
+                    onClick={() => setTheme("hero_bg_type", val)}>
+                    <strong>{label}</strong><span>{desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
 
-            {/* Structural themes always use image when set — no toggle needed */}
-            {tc.layout ? (<>
-              <Field label="Imagen de portada" hint="PNG, JPG o WEBP · máx. 2 MB"
-                highlighted={highlightedField === "hero"}>
+            {tc.hero_bg_type === "image" ? (<>
+              <Field label="Imagen de fondo" hint="PNG, JPG o WEBP · máx. 2 MB">
                 {form.hero_image_url && (
                   <img src={assetPreviewSrc(form.hero_image_url)} alt="hero preview"
                     style={{ marginBottom: 8, width: "100%", maxHeight: 80, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
@@ -1166,11 +971,6 @@ function ConfigTab({ pageId }) {
                 <input ref={heroRef} type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   style={{ display: "none" }} onChange={handleHeroUpload} />
-                {!form.hero_image_url && (
-                  <p style={{ fontSize: ".76rem", color: "var(--text-tertiary)", marginTop: 4 }}>
-                    Sin imagen, el hero usa el color de marca.
-                  </p>
-                )}
               </Field>
               <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
                 <input type="range" min={0} max={90} step={5}
@@ -1178,77 +978,27 @@ function ConfigTab({ pageId }) {
                   onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
                   style={{ width: "100%", accentColor: "var(--brand)" }} />
               </Field>
-            </>) : (<>
-              {/* Standard layout: color vs image toggle */}
-              <Field label="Tipo de fondo" highlighted={highlightedField === "hero"}>
-                <div className="pe-option-grid pe-option-grid--2">
-                  {[
-                    { val: "color", label: "Color de marca", desc: "Usa el color configurado en Tema." },
-                    { val: "image", label: "Foto de fondo",  desc: "Subís una imagen para el hero." },
-                  ].map(({ val, label, desc }) => (
-                    <button key={val} type="button"
-                      className={optionClass((tc.hero_bg_type || "color") === val)}
-                      onClick={() => setTheme("hero_bg_type", val)}>
-                      <strong>{label}</strong><span>{desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </Field>
-              {tc.hero_bg_type === "image" ? (<>
-                <Field label="Imagen de fondo" hint="PNG, JPG o WEBP · máx. 2 MB">
-                  {form.hero_image_url && (
-                    <img src={assetPreviewSrc(form.hero_image_url)} alt="hero preview"
-                      style={{ marginBottom: 8, width: "100%", maxHeight: 80, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
-                      onError={e => { e.target.style.display = "none"; }} />
-                  )}
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <button type="button" className="btn btn--ghost btn--sm"
-                      onClick={() => heroRef.current?.click()} disabled={uploadingHero}>
-                      {uploadingHero ? <Loader2 size={13} className="spin" /> : <Upload size={13} />}
-                      {uploadingHero ? "Subiendo..." : "Subir imagen"}
-                    </button>
-                    {form.hero_image_url && (
-                      <button type="button" className="btn btn--ghost btn--sm"
-                        onClick={() => set("hero_image_url", "")}>
-                        <Trash2 size={13} /> Quitar
-                      </button>
-                    )}
-                  </div>
-                  <input ref={heroRef} type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    style={{ display: "none" }} onChange={handleHeroUpload} />
-                </Field>
-                <Field label="Oscuridad del overlay" hint={`${tc.hero_overlay_opacity ?? 50}%`}>
-                  <input type="range" min={0} max={90} step={5}
-                    value={tc.hero_overlay_opacity ?? 50}
-                    onChange={e => setTheme("hero_overlay_opacity", Number(e.target.value))}
-                    style={{ width: "100%", accentColor: "var(--brand)" }} />
-                </Field>
-              </>) : (
-                <div className="pe-info-box">
-                  <strong>La portada usa el color de marca.</strong>
-                  <span>Cambialo en la pestaña Tema → Color de marca.</span>
-                </div>
-              )}
-            </>)}
-
-            {/* Alignment: not applicable to Brasilia (fixed split panels) */}
-            {tc.layout !== "brasilia" && (
-              <Field label="Alineación del contenido">
-                <div className="pe-option-grid pe-option-grid--2">
-                  {[
-                    { value: "center", label: "Centrada",  desc: "Texto al centro." },
-                    { value: "left",   label: "Izquierda", desc: "Tipo marca premium." },
-                  ].map(item => (
-                    <button key={item.value} type="button"
-                      className={optionClass((tc.hero_layout || "center") === item.value)}
-                      onClick={() => setTheme("hero_layout", item.value)}>
-                      <strong>{item.label}</strong><span>{item.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </Field>
+            </>) : (
+              <div className="pe-info-box">
+                <strong>La portada usa el color de marca.</strong>
+                <span>Cambialo en la pestaña Tema → Color de marca.</span>
+              </div>
             )}
+
+            <Field label="Alineación del contenido">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { value: "center", label: "Centrada",  desc: "Texto al centro." },
+                  { value: "left",   label: "Izquierda", desc: "Tipo marca premium." },
+                ].map(item => (
+                  <button key={item.value} type="button"
+                    className={optionClass((tc.hero_layout || "center") === item.value)}
+                    onClick={() => setTheme("hero_layout", item.value)}>
+                    <strong>{item.label}</strong><span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
 
             <Field label="Título principal">
               <input className="form-input" value={form.hero_headline}
@@ -1262,18 +1012,15 @@ function ConfigTab({ pageId }) {
                 placeholder="Envíos a todo el país, pagá con MercadoPago" maxLength={160} />
             </Field>
 
-            {/* Button color: Brasilia uses split panels, no CTA button styled this way */}
-            {tc.layout !== "brasilia" && (
-              <div className="pe-style-control">
-                <div className="pe-style-control__head">
-                  <strong>Color del botón principal</strong>
-                  <span className="pe-style-control__hint">Texto se adapta automáticamente</span>
-                </div>
-                <ColorRow value={tc.hero_btn_color || ""}
-                  onChange={v => setTheme("hero_btn_color", v)}
-                  onClear={() => setTheme("hero_btn_color", "")} />
+            <div className="pe-style-control">
+              <div className="pe-style-control__head">
+                <strong>Color del botón principal</strong>
+                <span className="pe-style-control__hint">Texto se adapta automáticamente</span>
               </div>
-            )}
+              <ColorRow value={tc.hero_btn_color || ""}
+                onChange={v => setTheme("hero_btn_color", v)}
+                onClear={() => setTheme("hero_btn_color", "")} />
+            </div>
 
             <Field label="Texto del botón">
               <input className="form-input" value={tc.hero_btn_text || ""}
@@ -1281,50 +1028,47 @@ function ConfigTab({ pageId }) {
                 placeholder="Ver productos" />
             </Field>
 
-            {/* Trust badges, wave shape and bg pattern: Standard layout only */}
-            {!tc.layout && <>
-              <Field label="Badges de confianza">
-                <Toggle checked={tc.show_trust_badges !== false}
-                  onChange={v => setTheme("show_trust_badges", v)}
-                  label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
-              </Field>
+            <Field label="Badges de confianza">
+              <Toggle checked={tc.show_trust_badges !== false}
+                onChange={v => setTheme("show_trust_badges", v)}
+                label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
+            </Field>
 
-              <Field label="Forma del separador inferior">
+            <Field label="Forma del separador inferior">
+              <div className="pe-option-grid pe-option-grid--2">
+                {[
+                  { value: "wave",     label: "Ola",       desc: "Transición suave." },
+                  { value: "straight", label: "Recto",     desc: "Borde limpio." },
+                  { value: "diagonal", label: "Diagonal",  desc: "Corte inclinado." },
+                  { value: "double",   label: "Doble ola", desc: "Más dinamismo." },
+                ].map(item => (
+                  <button key={item.value} type="button"
+                    className={optionClass((tc.hero_wave_shape || "wave") === item.value)}
+                    onClick={() => setTheme("hero_wave_shape", item.value)}>
+                    <strong>{item.label}</strong><span>{item.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            {tc.hero_bg_type !== "image" && (
+              <Field label="Patrón de fondo">
                 <div className="pe-option-grid pe-option-grid--2">
                   {[
-                    { value: "wave",     label: "Ola",       desc: "Transición suave." },
-                    { value: "straight", label: "Recto",     desc: "Borde limpio." },
-                    { value: "diagonal", label: "Diagonal",  desc: "Corte inclinado." },
-                    { value: "double",   label: "Doble ola", desc: "Más dinamismo." },
+                    { value: "circles",   label: "Círculos",   desc: "Formas redondeadas flotantes." },
+                    { value: "bubbles",   label: "Burbujas",   desc: "Burbujeo sutil." },
+                    { value: "gradient",  label: "Gradiente",  desc: "Resplandor suave." },
+                    { value: "geometric", label: "Geométrico", desc: "Polígonos angulares." },
                   ].map(item => (
                     <button key={item.value} type="button"
-                      className={optionClass((tc.hero_wave_shape || "wave") === item.value)}
-                      onClick={() => setTheme("hero_wave_shape", item.value)}>
+                      className={optionClass((tc.hero_bg_pattern || "circles") === item.value)}
+                      onClick={() => setTheme("hero_bg_pattern", item.value)}>
                       <strong>{item.label}</strong><span>{item.desc}</span>
                     </button>
                   ))}
                 </div>
               </Field>
-
-              {tc.hero_bg_type !== "image" && (
-                <Field label="Patrón de fondo">
-                  <div className="pe-option-grid pe-option-grid--2">
-                    {[
-                      { value: "circles",   label: "Círculos",   desc: "Formas redondeadas flotantes." },
-                      { value: "bubbles",   label: "Burbujas",   desc: "Burbujeo sutil." },
-                      { value: "gradient",  label: "Gradiente",  desc: "Resplandor suave." },
-                      { value: "geometric", label: "Geométrico", desc: "Polígonos angulares." },
-                    ].map(item => (
-                      <button key={item.value} type="button"
-                        className={optionClass((tc.hero_bg_pattern || "circles") === item.value)}
-                        onClick={() => setTheme("hero_bg_pattern", item.value)}>
-                        <strong>{item.label}</strong><span>{item.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </Field>
-              )}
-            </>}
+            )}
           </>}
 
           {/* ── Catálogo ────────────────────────────────── */}
