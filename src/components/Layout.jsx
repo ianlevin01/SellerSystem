@@ -1,4 +1,4 @@
-// src/components/Layout.jsx
+// src/components/Layout.jsx — trigger deploy
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import AiAssistant from "./AiAssistant";
 import TrialWelcomeModal, { TrialExpiredModal } from "./TrialWelcomeModal";
