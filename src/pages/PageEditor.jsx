@@ -298,10 +298,14 @@ function ConfigTab({ pageId }) {
     logo:           "identidad",
     hero:           "portada",
     promo_bar:      "cabecera",
+    promo_topbar:   "estilo",
     products:       "catalogo",
     categories:     "catalogo",
     footer:         "pie",
     product_detail: "producto",
+  };
+  const FIELD_TO_ID = {
+    promo_topbar: "field-promo-color",
   };
 
   useEffect(() => {
@@ -311,6 +315,12 @@ function ConfigTab({ pageId }) {
         if (target) {
           setSection(target);
           setHighlightedField(e.data.field);
+          const elemId = FIELD_TO_ID[e.data.field];
+          if (elemId) {
+            setTimeout(() => {
+              document.getElementById(elemId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 80);
+          }
           setTimeout(() => setHighlightedField(null), 2000);
         }
       } else if (e.data?.type === "ventaz_product_enter") {
@@ -377,7 +387,7 @@ function ConfigTab({ pageId }) {
       category: "General · Revendedores nuevos",
       desc: "Limpio, confiable y moderno. El estilo base recomendado.",
       banner_color: "#4db81a", color_bg: "#f6f9f5", color_text: "#18181b",
-      theme_config: { theme_id: "ventaz_clasico", card_style: "default", card_density: "normal", button_style: "soft", btn_radius: 14, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#0a1a08", footer_text_color: "#ffffff", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "ventaz_clasico", navbar_color: "#0a1a08", card_style: "default", card_density: "normal", button_style: "soft", btn_radius: 14, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#0a1a08", footer_text_color: "#ffffff", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#f6f9f5", navBg:"#fff", navBorder:"2px solid #d4edca", searchBg:"#f0faea", searchBorder:"#b8dea0", searchRadius:"99px", btnRadius:"8px", heroBg:"linear-gradient(135deg,#4db81a 0%,#2d8f0a 100%)", heroHeight:60, heroRadius:"0", heroText:"#fff", heroSubText:"rgba(255,255,255,.7)", heroBtnBg:"#fff", heroBtnRadius:"99px", heroBtnText:"#2d7f09", cardBg:"#fff", cardRadius:"10px", cardBorder:"1px solid #ddeecf", cardShadow:"0 2px 8px rgba(77,184,26,.1)", imgBg:"#f4faf0", cardText:"#c0dca8", footerBg:"#0a1a08", footerText:"rgba(255,255,255,.45)" },
     },
     {
@@ -385,7 +395,7 @@ function ConfigTab({ pageId }) {
       category: "Tecnología · Gadgets · Electrónica",
       desc: "Oscuro, digital y eléctrico. Para productos tecnológicos.",
       banner_color: "#6366f1", color_bg: "#0f0f23", color_text: "#e2e8f0",
-      theme_config: { theme_id: "tech_neon", card_style: "minimal", card_density: "normal", button_style: "soft", btn_radius: 12, hero_btn_radius: 12, hero_layout: "center", products_cols: 3, footer_bg: "#04041a", footer_text_color: "#475569", hero_wave_shape: "straight", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "tech_neon", navbar_color: "#04041a", card_style: "minimal", card_density: "normal", button_style: "soft", btn_radius: 12, hero_btn_radius: 12, hero_layout: "center", products_cols: 3, footer_bg: "#04041a", footer_text_color: "#475569", hero_wave_shape: "straight", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#0f0f23", navBg:"rgba(10,10,30,.95)", navBorder:"1px solid rgba(99,102,241,.35)", searchBg:"rgba(255,255,255,.07)", searchBorder:"rgba(99,102,241,.3)", searchRadius:"10px", btnRadius:"8px", heroBg:"radial-gradient(ellipse at 30% 50%,rgba(99,102,241,.28) 0%,transparent 60%),linear-gradient(180deg,#080820 0%,#0f0f2e 100%)", heroHeight:70, heroRadius:"0", heroText:"#f1f5f9", heroSubText:"#64748b", heroBtnBg:"#6366f1", heroBtnRadius:"10px", heroBtnText:"#fff", cardBg:"rgba(255,255,255,.04)", cardRadius:"14px", cardBorder:"1px solid rgba(99,102,241,.22)", cardShadow:"0 4px 20px rgba(0,0,0,.4)", imgBg:"rgba(0,0,0,.35)", cardText:"rgba(100,116,139,.7)", footerBg:"#04041a", footerText:"rgba(71,85,105,.5)" },
     },
     {
@@ -393,7 +403,7 @@ function ConfigTab({ pageId }) {
       category: "Bazar · Cocina · Hogar",
       desc: "Familiar, cálido y práctico. Ideal para el hogar.",
       banner_color: "#d97706", color_bg: "#faf8f5", color_text: "#2c1810",
-      theme_config: { theme_id: "bazar_calido", card_style: "default", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#2c1810", footer_text_color: "#f5e6d8", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "bazar_calido", navbar_color: "#2c1810", card_style: "default", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#2c1810", footer_text_color: "#f5e6d8", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#faf8f5", navBg:"#fff", navBorder:"1px solid #ede0d0", searchBg:"#f5ede0", searchBorder:"#e0c8b0", searchRadius:"99px", btnRadius:"99px", heroBg:"linear-gradient(135deg,#f5e6d0 0%,#edd5b8 100%)", heroHeight:65, heroRadius:"0 0 20px 20px", heroText:"#2c1810", heroSubText:"#7a5040", heroBtnBg:"#d97706", heroBtnRadius:"99px", heroBtnText:"#fff", cardBg:"#fff", cardRadius:"14px", cardBorder:"1px solid #ede0d0", cardShadow:"0 2px 10px rgba(180,100,30,.07)", imgBg:"#f9f0e5", cardText:"#d0b8a0", footerBg:"#2c1810", footerText:"rgba(245,230,216,.4)" },
     },
     {
@@ -401,7 +411,7 @@ function ConfigTab({ pageId }) {
       category: "Decoración · Hogar moderno",
       desc: "Minimalista, elegante y aireado. Tipo revista de deco.",
       banner_color: "#1e293b", color_bg: "#ffffff", color_text: "#111111",
-      theme_config: { theme_id: "hogar_minimal", card_style: "minimal", card_density: "wide", button_style: "square", btn_radius: 2, hero_btn_radius: 2, hero_layout: "left", products_cols: 3, footer_bg: "#111111", footer_text_color: "#999999", hero_wave_shape: "straight", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "hogar_minimal", navbar_color: "#111111", card_style: "minimal", card_density: "wide", button_style: "square", btn_radius: 2, hero_btn_radius: 2, hero_layout: "left", products_cols: 3, footer_bg: "#111111", footer_text_color: "#999999", hero_wave_shape: "straight", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#fff", navBg:"#fff", navBorder:"1px solid #e5e5e5", searchBg:"#fff", searchBorder:"#e5e5e5", searchRadius:"3px", btnRadius:"2px", heroBg:"#f8f8f8", heroHeight:72, heroRadius:"0", heroText:"#000", heroSubText:"#888", heroBtnBg:"#111", heroBtnRadius:"1px", heroBtnText:"#fff", cardBg:"#fff", cardRadius:"0px", cardBorder:"none", cardShadow:"none", imgBg:"#f5f5f5", cardText:"#ddd", footerBg:"#111", footerText:"rgba(180,180,180,.35)" },
     },
     {
@@ -409,7 +419,7 @@ function ConfigTab({ pageId }) {
       category: "Regalos · Novedades · Accesorios",
       desc: "Divertida y colorida. Para productos virales y regalos.",
       banner_color: "#ec4899", color_bg: "#fff7ff", color_text: "#1f1f1f",
-      theme_config: { theme_id: "regaleria_pop", card_style: "bordered", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#ec4899", footer_text_color: "#ffffff", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "regaleria_pop", navbar_color: "#db2777", card_style: "bordered", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#ec4899", footer_text_color: "#ffffff", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#fff7ff", navBg:"#fff", navBorder:"2px solid #fbcfe8", searchBg:"#fdf2f8", searchBorder:"#fbcfe8", searchRadius:"99px", btnRadius:"99px", heroBg:"linear-gradient(135deg,#ec4899 0%,#d946ef 100%)", heroHeight:65, heroRadius:"0 0 20px 20px", heroText:"#fff", heroSubText:"rgba(255,255,255,.85)", heroBtnBg:"#fff", heroBtnRadius:"99px", heroBtnText:"#db2777", cardBg:"#fff", cardRadius:"18px", cardBorder:"2px solid #fbcfe8", cardShadow:"4px 4px 0 #fbcfe8", imgBg:"#fdf2f8", cardText:"#f0b8d0", footerBg:"#ec4899", footerText:"rgba(255,255,255,.5)" },
     },
     {
@@ -417,7 +427,7 @@ function ConfigTab({ pageId }) {
       category: "Belleza · Cosmética · Cuidado personal",
       desc: "Suave, elegante y delicado. Para tiendas de belleza.",
       banner_color: "#c9956c", color_bg: "#fdfcfb", color_text: "#1a0f0a",
-      theme_config: { theme_id: "beauty_soft", card_style: "minimal", card_density: "normal", button_style: "square", btn_radius: 4, hero_btn_radius: 4, hero_layout: "center", products_cols: 3, footer_bg: "#f7f0e8", footer_text_color: "#8a6a5a", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "beauty_soft", navbar_color: "#f7f0e8", card_style: "minimal", card_density: "normal", button_style: "square", btn_radius: 4, hero_btn_radius: 4, hero_layout: "center", products_cols: 3, footer_bg: "#f7f0e8", footer_text_color: "#8a6a5a", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#fdfcfb", navBg:"#fdfcfb", navBorder:"1px solid #efe9e0", searchBg:"#faf6f0", searchBorder:"#e8ddd0", searchRadius:"3px", btnRadius:"3px", heroBg:"linear-gradient(160deg,#fdf6ef 0%,#f5ebe0 100%)", heroHeight:68, heroRadius:"0", heroText:"#1a0f0a", heroSubText:"#7a5a4a", heroBtnBg:"#1a0f0a", heroBtnRadius:"3px", heroBtnText:"#fdf6ef", cardBg:"#fff", cardRadius:"3px", cardBorder:"none", cardShadow:"0 1px 0 #efe9e0,0 4px 16px rgba(0,0,0,.04)", imgBg:"#faf6f0", cardText:"#c8a898", footerBg:"#f7f0e8", footerText:"rgba(138,106,90,.35)" },
     },
     {
@@ -425,7 +435,7 @@ function ConfigTab({ pageId }) {
       category: "Mascotas · Accesorios · Alimentos",
       desc: "Amigable, alegre y confiable. Para tiendas de mascotas.",
       banner_color: "#0ea5e9", color_bg: "#f0f9ff", color_text: "#0c4a6e",
-      theme_config: { theme_id: "mascotas", card_style: "bordered", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#0369a1", footer_text_color: "#ffffff", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "mascotas", navbar_color: "#075985", card_style: "bordered", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#0369a1", footer_text_color: "#ffffff", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#f0f9ff", navBg:"#fff", navBorder:"2px solid #bae6fd", searchBg:"#e0f2fe", searchBorder:"#bae6fd", searchRadius:"99px", btnRadius:"99px", heroBg:"linear-gradient(135deg,#e0f2fe 0%,#cffafe 100%)", heroHeight:65, heroRadius:"0 0 22px 22px", heroText:"#0c4a6e", heroSubText:"#0e7490", heroBtnBg:"#0ea5e9", heroBtnRadius:"99px", heroBtnText:"#fff", cardBg:"#fff", cardRadius:"18px", cardBorder:"2px solid #bae6fd", cardShadow:"0 4px 16px rgba(8,145,178,.1)", imgBg:"#f0f9ff", cardText:"#a0cce0", footerBg:"#0369a1", footerText:"rgba(255,255,255,.45)" },
     },
     {
@@ -433,7 +443,7 @@ function ConfigTab({ pageId }) {
       category: "Fitness · Deporte · Bienestar",
       desc: "Enérgico y de alto contraste. Para productos deportivos.",
       banner_color: "#16a34a", color_bg: "#0a0a0a", color_text: "#f5f5f5",
-      theme_config: { theme_id: "fitness_active", card_style: "default", card_density: "compact", button_style: "square", btn_radius: 4, hero_btn_radius: 4, hero_layout: "left", products_cols: 3, footer_bg: "#000000", footer_text_color: "#9ca3af", hero_wave_shape: "diagonal", card_gap: "tight", category_display: "pills" },
+      theme_config: { theme_id: "fitness_active", navbar_color: "#111111", card_style: "default", card_density: "compact", button_style: "square", btn_radius: 4, hero_btn_radius: 4, hero_layout: "left", products_cols: 3, footer_bg: "#000000", footer_text_color: "#9ca3af", hero_wave_shape: "diagonal", card_gap: "tight", category_display: "pills" },
       preview: { bodyBg:"#0a0a0a", navBg:"#111", navBorder:"3px solid #16a34a", searchBg:"#1e1e1e", searchBorder:"#333", searchRadius:"4px", btnRadius:"3px", heroBg:"linear-gradient(155deg,#0a0a0a 0%,#1a1a1a 50%,#0a1f0a 100%)", heroHeight:70, heroRadius:"0", heroText:"#f5f5f5", heroSubText:"#555", heroBtnBg:"#16a34a", heroBtnRadius:"3px", heroBtnText:"#fff", cardBg:"#1a1a1a", cardRadius:"4px", cardBorder:"1px solid #2a2a2a", cardShadow:"0 2px 10px rgba(0,0,0,.5)", imgBg:"#111", cardText:"rgba(80,80,80,.8)", footerBg:"#000", footerText:"rgba(85,85,85,.35)" },
     },
     {
@@ -441,7 +451,7 @@ function ConfigTab({ pageId }) {
       category: "Catálogos grandes · Mayoristas",
       desc: "Práctico y directo. El foco está en ver muchos productos.",
       banner_color: "#1d4ed8", color_bg: "#f8fafc", color_text: "#0f172a",
-      theme_config: { theme_id: "mayorista", card_style: "default", card_density: "compact", button_style: "square", btn_radius: 6, hero_btn_radius: 6, hero_layout: "left", products_cols: 4, footer_bg: "#1e293b", footer_text_color: "#94a3b8", hero_wave_shape: "straight", card_gap: "tight", category_display: "pills" },
+      theme_config: { theme_id: "mayorista", navbar_color: "#1e293b", card_style: "default", card_density: "compact", button_style: "square", btn_radius: 6, hero_btn_radius: 6, hero_layout: "left", products_cols: 4, footer_bg: "#1e293b", footer_text_color: "#94a3b8", hero_wave_shape: "straight", card_gap: "tight", category_display: "pills" },
       preview: { bodyBg:"#f8fafc", navBg:"#fff", navBorder:"2px solid #1d4ed8", searchBg:"#f1f5f9", searchBorder:"#cbd5e1", searchRadius:"5px", btnRadius:"4px", heroBg:"linear-gradient(90deg,#1d4ed8 0%,#1e3a8a 100%)", heroHeight:45, heroRadius:"0", heroText:"#fff", heroSubText:"rgba(255,255,255,.78)", heroBtnBg:"#fff", heroBtnRadius:"4px", heroBtnText:"#1d4ed8", cardBg:"#fff", cardRadius:"6px", cardBorder:"1px solid #e2e8f0", cardShadow:"0 1px 4px rgba(0,0,0,.05)", imgBg:"#f8fafc", cardText:"#b8cce0", footerBg:"#1e293b", footerText:"rgba(148,163,184,.4)" },
     },
     {
@@ -449,7 +459,7 @@ function ConfigTab({ pageId }) {
       category: "Ticket alto · Gadgets premium · Regalos",
       desc: "Elegante, oscuro y sofisticado. Para productos de alto valor.",
       banner_color: "#d4af37", color_bg: "#0a0a14", color_text: "#e8e8f0",
-      theme_config: { theme_id: "premium_dark", card_style: "minimal", card_density: "wide", button_style: "soft", btn_radius: 6, hero_btn_radius: 6, hero_layout: "center", products_cols: 3, footer_bg: "#04040c", footer_text_color: "#555577", hero_wave_shape: "straight", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "premium_dark", navbar_color: "#04040c", card_style: "minimal", card_density: "wide", button_style: "soft", btn_radius: 6, hero_btn_radius: 6, hero_layout: "center", products_cols: 3, footer_bg: "#04040c", footer_text_color: "#555577", hero_wave_shape: "straight", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#0a0a14", navBg:"rgba(8,8,18,.94)", navBorder:"1px solid rgba(212,175,55,.18)", searchBg:"rgba(255,255,255,.05)", searchBorder:"rgba(212,175,55,.2)", searchRadius:"6px", btnRadius:"5px", heroBg:"radial-gradient(ellipse at center top,rgba(212,175,55,.1) 0%,transparent 60%),linear-gradient(180deg,#0a0a1e 0%,#060614 100%)", heroHeight:80, heroRadius:"0", heroText:"#e8e8f0", heroSubText:"#555577", heroBtnBg:"#d4af37", heroBtnRadius:"5px", heroBtnText:"#0a0a14", cardBg:"rgba(255,255,255,.03)", cardRadius:"8px", cardBorder:"1px solid rgba(212,175,55,.14)", cardShadow:"0 4px 24px rgba(0,0,0,.5)", imgBg:"rgba(0,0,0,.35)", cardText:"rgba(85,85,119,.7)", footerBg:"#04040c", footerText:"rgba(85,85,119,.3)" },
     },
     {
@@ -457,7 +467,7 @@ function ConfigTab({ pageId }) {
       category: "Juguetes · Niños · Productos coloridos",
       desc: "Alegre, amigable y seguro. Para tiendas de juguetes.",
       banner_color: "#7c3aed", color_bg: "#fdf4ff", color_text: "#1f1f1f",
-      theme_config: { theme_id: "kids_toys", card_style: "default", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#ede9fe", footer_text_color: "#6d28d9", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
+      theme_config: { theme_id: "kids_toys", navbar_color: "#7c3aed", card_style: "default", card_density: "normal", button_style: "round", btn_radius: 99, hero_btn_radius: 99, hero_layout: "center", products_cols: 3, footer_bg: "#ede9fe", footer_text_color: "#6d28d9", hero_wave_shape: "wave", card_gap: "normal", category_display: "pills" },
       preview: { bodyBg:"#fdf4ff", navBg:"#fff", navBorder:"2px solid #ddd6fe", searchBg:"#f5f0ff", searchBorder:"#ddd6fe", searchRadius:"99px", btnRadius:"99px", heroBg:"linear-gradient(135deg,#fdf4ff 0%,#ede9fe 50%,#e0d7ff 100%)", heroHeight:65, heroRadius:"0 0 22px 22px", heroText:"#2e1065", heroSubText:"#7c3aed", heroBtnBg:"#7c3aed", heroBtnRadius:"99px", heroBtnText:"#fff", cardBg:"#fff", cardRadius:"20px", cardBorder:"2px solid #ddd6fe", cardShadow:"0 4px 16px rgba(124,58,237,.1)", imgBg:"#f5f0ff", cardText:"#c4b0e8", footerBg:"#ede9fe", footerText:"rgba(109,40,217,.3)" },
     },
     {
@@ -465,7 +475,7 @@ function ConfigTab({ pageId }) {
       category: "Herramientas · Ferretería · Técnico",
       desc: "Fuerte, técnico y confiable. Para herramientas y materiales.",
       banner_color: "#ea580c", color_bg: "#111111", color_text: "#f5f5f5",
-      theme_config: { theme_id: "industrial", card_style: "default", card_density: "compact", button_style: "square", btn_radius: 2, hero_btn_radius: 2, hero_layout: "left", products_cols: 3, footer_bg: "#0a0a0a", footer_text_color: "#666666", hero_wave_shape: "diagonal", card_gap: "tight", category_display: "pills" },
+      theme_config: { theme_id: "industrial", navbar_color: "#0a0a0a", card_style: "default", card_density: "compact", button_style: "square", btn_radius: 2, hero_btn_radius: 2, hero_layout: "left", products_cols: 3, footer_bg: "#0a0a0a", footer_text_color: "#666666", hero_wave_shape: "diagonal", card_gap: "tight", category_display: "pills" },
       preview: { bodyBg:"#111", navBg:"#0a0a0a", navBorder:"2px solid #ea580c", searchBg:"#1e1e1e", searchBorder:"#333", searchRadius:"2px", btnRadius:"2px", heroBg:"linear-gradient(158deg,#0a0a0a 0%,#1a1a1a 50%,#1a0e06 100%)", heroHeight:70, heroRadius:"0", heroText:"#f5f5f5", heroSubText:"#555", heroBtnBg:"#ea580c", heroBtnRadius:"1px", heroBtnText:"#fff", cardBg:"#1a1a1a", cardRadius:"3px", cardBorder:"1px solid #2a2a2a", cardShadow:"0 2px 10px rgba(0,0,0,.6)", imgBg:"#0d0d0d", cardText:"rgba(80,80,80,.8)", footerBg:"#0a0a0a", footerText:"rgba(80,80,80,.3)" },
     },
   ];
@@ -474,11 +484,19 @@ function ConfigTab({ pageId }) {
     setForm(prev => {
       const next = {
         ...prev,
-        banner_color: theme.banner_color,
-        color_bg: theme.color_bg,
-        color_text: theme.color_text,
+        banner_color:    theme.banner_color,
+        color_bg:        theme.color_bg,
+        color_text:      theme.color_text,
+        color_secondary: "",
         theme_config: {
           ...(prev.theme_config || {}),
+          // Reset per-element color overrides so the new palette controls everything
+          promo_color:       "",
+          hero_btn_color:    "",
+          product_btn_color: "",
+          card_btn_color:    "",
+          card_price_color:  "",
+          // Apply new preset on top (may re-set any of the above)
           ...theme.theme_config,
           theme_id: theme.id,
         },
@@ -618,6 +636,8 @@ function ConfigTab({ pageId }) {
 
   const activeCats = Array.isArray(form.featured_categories) ? form.featured_categories : [];
   const tc = form.theme_config || {};
+  // Layouts that use a catbar (horizontal bar below navbar) — category_display doesn't apply there
+  const isBarLayout = ["recife", "brasilia", "lima", "amazonas"].includes(tc.layout);
 
   const SECTIONS = [
     { id: "identidad", label: "Identidad" },
@@ -750,6 +770,184 @@ function ConfigTab({ pageId }) {
 
           {/* ── Tema ────────────────────────────────────── */}
           {section === "tema" && <>
+
+            {/* ── Layout picker ── */}
+            <div className="pe-section-note" style={{ marginBottom: 10 }}>
+              <strong>Estructura de la tienda</strong>
+              <span>Elegí cómo se organiza la página. Podés cambiarla cuando quieras.</span>
+            </div>
+            <div className="pe-layout-picker">
+              {[
+                {
+                  id: null,
+                  name: "Clásico",
+                  tagline: "Hero + grilla",
+                  svg: (
+                    <svg viewBox="0 0 80 64" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="64" fill="#f9fafb"/>
+                      <rect x="0" y="0" width="80" height="10" fill="#1a1a1a"/>
+                      <rect x="8" y="3" width="16" height="4" rx="2" fill="#4db81a"/>
+                      <rect x="28" y="3" width="24" height="4" rx="2" fill="#333"/>
+                      <rect x="68" y="3" width="6" height="4" rx="2" fill="#4db81a"/>
+                      <rect x="0" y="10" width="80" height="18" fill="#4db81a" opacity=".15"/>
+                      <rect x="20" y="15" width="40" height="4" rx="2" fill="#1a1a1a" opacity=".4"/>
+                      <rect x="28" y="21" width="24" height="3" rx="1.5" fill="#1a1a1a" opacity=".2"/>
+                      <rect x="4" y="32" width="22" height="22" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="4" y="32" width="22" height="13" rx="2" fill="#e5e7eb"/>
+                      <rect x="6" y="47" width="12" height="2" rx="1" fill="#555"/>
+                      <rect x="6" y="51" width="8" height="1.5" rx=".75" fill="#4db81a"/>
+                      <rect x="29" y="32" width="22" height="22" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="29" y="32" width="22" height="13" rx="2" fill="#e5e7eb"/>
+                      <rect x="31" y="47" width="12" height="2" rx="1" fill="#555"/>
+                      <rect x="31" y="51" width="8" height="1.5" rx=".75" fill="#4db81a"/>
+                      <rect x="54" y="32" width="22" height="22" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="54" y="32" width="22" height="13" rx="2" fill="#e5e7eb"/>
+                      <rect x="56" y="47" width="12" height="2" rx="1" fill="#555"/>
+                      <rect x="56" y="51" width="8" height="1.5" rx=".75" fill="#4db81a"/>
+                    </svg>
+                  ),
+                },
+                {
+                  id: "recife",
+                  name: "Recife",
+                  tagline: "Barra de info + logo centrado",
+                  svg: (
+                    <svg viewBox="0 0 80 64" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="64" fill="#f9fafb"/>
+                      <rect x="0" y="0" width="80" height="5" fill="#111"/>
+                      <rect x="8" y="1.5" width="20" height="2" rx="1" fill="#888"/>
+                      <rect x="52" y="1.5" width="12" height="2" rx="1" fill="#888"/>
+                      <rect x="0" y="5" width="80" height="10" fill="#fff" stroke="#e5e7eb" strokeWidth=".5"/>
+                      <rect x="5" y="8" width="16" height="3" rx="1.5" fill="#333"/>
+                      <rect x="30" y="7" width="20" height="5" rx="2" fill="#4db81a" opacity=".15"/>
+                      <rect x="33" y="9" width="14" height="2" rx="1" fill="#4db81a"/>
+                      <rect x="68" y="8" width="7" height="3" rx="1" fill="#333"/>
+                      <rect x="0" y="15" width="80" height="5" fill="#f3f4f6"/>
+                      <rect x="6" y="17" width="10" height="1.5" rx=".75" fill="#777"/>
+                      <rect x="20" y="17" width="10" height="1.5" rx=".75" fill="#777"/>
+                      <rect x="34" y="17" width="10" height="1.5" rx=".75" fill="#777"/>
+                      <rect x="0" y="20" width="80" height="14" fill="#4db81a" opacity=".2"/>
+                      <rect x="20" y="24" width="40" height="3" rx="1.5" fill="#1a1a1a" opacity=".4"/>
+                      <rect x="28" y="29" width="24" height="2" rx="1" fill="#1a1a1a" opacity=".2"/>
+                      <rect x="2" y="37" width="17" height="20" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="2" y="37" width="17" height="12" rx="2" fill="#e0e0e0"/>
+                      <rect x="21" y="37" width="17" height="20" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="21" y="37" width="17" height="12" rx="2" fill="#e0e0e0"/>
+                      <rect x="40" y="37" width="17" height="20" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="40" y="37" width="17" height="12" rx="2" fill="#e0e0e0"/>
+                      <rect x="59" y="37" width="17" height="20" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="59" y="37" width="17" height="12" rx="2" fill="#e0e0e0"/>
+                    </svg>
+                  ),
+                },
+                {
+                  id: "brasilia",
+                  name: "Brasilia",
+                  tagline: "Categorías con carrusel",
+                  svg: (
+                    <svg viewBox="0 0 80 64" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="64" fill="#f9fafb"/>
+                      <rect x="0" y="0" width="80" height="10" fill="#fff" stroke="#e5e7eb" strokeWidth=".5"/>
+                      <rect x="4" y="3" width="14" height="4" rx="2" fill="#4db81a"/>
+                      <rect x="56" y="3" width="8" height="4" rx="2" fill="#e5e7eb"/>
+                      <rect x="66" y="3" width="8" height="4" rx="2" fill="#333"/>
+                      <rect x="0" y="10" width="80" height="16" fill="#4db81a" opacity=".25"/>
+                      <rect x="16" y="13" width="48" height="4" rx="2" fill="#fff" opacity=".8"/>
+                      <rect x="24" y="19" width="32" height="3" rx="1.5" fill="#fff" opacity=".5"/>
+                      <rect x="0" y="27" width="80" height="6" fill="#f3f4f6"/>
+                      <rect x="4" y="29" width="12" height="2" rx="1" fill="#4db81a"/>
+                      <rect x="19" y="29" width="12" height="2" rx="1" fill="#999"/>
+                      <rect x="34" y="29" width="12" height="2" rx="1" fill="#999"/>
+                      <rect x="49" y="29" width="12" height="2" rx="1" fill="#999"/>
+                      <rect x="4" y="35" width="22" height="23" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="4" y="35" width="22" height="14" rx="2" fill="#ddd"/>
+                      <rect x="28" y="35" width="22" height="23" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="28" y="35" width="22" height="14" rx="2" fill="#ddd"/>
+                      <rect x="52" y="35" width="22" height="23" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="52" y="35" width="22" height="14" rx="2" fill="#ddd"/>
+                    </svg>
+                  ),
+                },
+                {
+                  id: "lima",
+                  name: "Lima",
+                  tagline: "Minimalista · logo centrado",
+                  svg: (
+                    <svg viewBox="0 0 80 64" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="64" fill="#fafafa"/>
+                      <rect x="0" y="0" width="80" height="11" fill="#fff" stroke="#e5e7eb" strokeWidth=".5"/>
+                      <circle cx="8" cy="5.5" r="3" fill="#e5e7eb"/>
+                      <rect x="25" y="3.5" width="30" height="4" rx="2" fill="#222"/>
+                      <circle cx="72" cy="5.5" r="3" fill="#e5e7eb"/>
+                      <rect x="66" y="3.5" width="7" height="4" rx="2" fill="#e5e7eb"/>
+                      <rect x="0" y="11" width="80" height="22" fill="#111" opacity=".88"/>
+                      <rect x="20" y="16" width="40" height="5" rx="2.5" fill="#fff" opacity=".9"/>
+                      <rect x="26" y="24" width="28" height="3" rx="1.5" fill="#fff" opacity=".4"/>
+                      <rect x="3" y="36" width="22" height="24" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="3" y="36" width="22" height="15" rx="2" fill="#e0e0e0"/>
+                      <rect x="5" y="53" width="10" height="2" rx="1" fill="#555"/>
+                      <rect x="5" y="57" width="7" height="1.5" rx=".75" fill="#4db81a"/>
+                      <rect x="29" y="36" width="22" height="24" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="29" y="36" width="22" height="15" rx="2" fill="#e0e0e0"/>
+                      <rect x="31" y="53" width="10" height="2" rx="1" fill="#555"/>
+                      <rect x="31" y="57" width="7" height="1.5" rx=".75" fill="#4db81a"/>
+                      <rect x="55" y="36" width="22" height="24" rx="2" fill="#fff" stroke="#e5e7eb" strokeWidth="1"/>
+                      <rect x="55" y="36" width="22" height="15" rx="2" fill="#e0e0e0"/>
+                      <rect x="57" y="53" width="10" height="2" rx="1" fill="#555"/>
+                      <rect x="57" y="57" width="7" height="1.5" rx=".75" fill="#4db81a"/>
+                    </svg>
+                  ),
+                },
+                {
+                  id: "amazonas",
+                  name: "Amazonas",
+                  tagline: "Productos por sección",
+                  svg: (
+                    <svg viewBox="0 0 80 64" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="80" height="64" fill="#f9fafb"/>
+                      <rect x="0" y="0" width="80" height="10" fill="#fff" stroke="#e5e7eb" strokeWidth=".5"/>
+                      <rect x="4" y="3" width="14" height="4" rx="2" fill="#4db81a"/>
+                      <rect x="50" y="3" width="16" height="4" rx="1" fill="#e5e7eb"/>
+                      <rect x="68" y="3" width="8" height="4" rx="2" fill="#333"/>
+                      <rect x="0" y="10" width="80" height="12" fill="#4db81a" opacity=".2"/>
+                      <rect x="8" y="13" width="30" height="4" rx="2" fill="#1a1a1a" opacity=".4"/>
+                      <rect x="0" y="22" width="80" height="1" fill="#e5e7eb"/>
+                      <rect x="4" y="25" width="18" height="2" rx="1" fill="#333"/>
+                      <rect x="4" y="30" width="22" height="14" rx="2" fill="#ddd"/>
+                      <rect x="28" y="30" width="22" height="14" rx="2" fill="#ddd"/>
+                      <rect x="52" y="30" width="22" height="14" rx="2" fill="#ddd"/>
+                      <rect x="0" y="46" width="80" height="1" fill="#e5e7eb"/>
+                      <rect x="4" y="49" width="22" height="2" rx="1" fill="#333"/>
+                      <rect x="4" y="54" width="17" height="8" rx="2" fill="#ddd"/>
+                      <rect x="23" y="54" width="17" height="8" rx="2" fill="#ddd"/>
+                      <rect x="42" y="54" width="17" height="8" rx="2" fill="#ddd"/>
+                      <rect x="61" y="54" width="17" height="8" rx="2" fill="#ddd"/>
+                    </svg>
+                  ),
+                },
+              ].map(layout => {
+                const currentLayout = tc.layout ?? null;
+                const isActive = currentLayout === layout.id;
+                return (
+                  <button
+                    key={layout.id ?? "default"}
+                    type="button"
+                    className={`pe-layout-card${isActive ? " pe-layout-card--active" : ""}`}
+                    onClick={() => setTheme("layout", layout.id)}
+                  >
+                    <div className="pe-layout-card__preview">{layout.svg}</div>
+                    <div className="pe-layout-card__info">
+                      <div className="pe-layout-card__name">{layout.name}</div>
+                      <div className="pe-layout-card__tagline">{layout.tagline}</div>
+                      {isActive && <div className="pe-layout-card__badge">✓ Activo</div>}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="pe-divider-title" style={{ marginTop: 20, marginBottom: 16 }}>Plantilla visual</div>
+
             <div className="pe-section-note">
               <strong>Plantilla visual</strong>
               <span>Elegí un estilo completo. Después podés ajustar colores, botones y más.</span>
@@ -890,15 +1088,14 @@ function ConfigTab({ pageId }) {
                 onClear={() => setTheme("navbar_color", "")} />
             </div>
 
-            <div className="pe-style-control">
-              <div className="pe-style-control__head">
-                <strong>Color de la barra de promoción</strong>
-                <span className="pe-style-control__hint">Fondo del banner superior</span>
-              </div>
+            <Field label="Color de la barra de promoción"
+              hint="Fondo del banner superior"
+              fieldId="field-promo-color"
+              highlighted={highlightedField === "promo_topbar"}>
               <ColorRow value={tc.promo_color || ""}
                 onChange={v => setTheme("promo_color", v)}
                 onClear={() => setTheme("promo_color", "")} />
-            </div>
+            </Field>
 
             <div className="pe-divider-title">Comportamiento</div>
 
@@ -907,12 +1104,14 @@ function ConfigTab({ pageId }) {
                 onChange={v => setTheme("navbar_sticky", v)}
                 label={tc.navbar_sticky !== false ? "Fijo (siempre visible)" : "Estático"} />
             </Field>
-            <Field label="Mostrar categorías en el navbar">
-              <Toggle checked={!!tc.navbar_show_categories}
-                onChange={v => setTheme("navbar_show_categories", v)}
-                label={tc.navbar_show_categories ? "Activado" : "Desactivado"} />
-              <p style={{ fontSize: ".77rem", color: "var(--text-tertiary)", marginTop: 4 }}>Muestra las categorías del catálogo como links en el navbar.</p>
-            </Field>
+            {!isBarLayout && (
+              <Field label="Mostrar categorías en el navbar">
+                <Toggle checked={!!tc.navbar_show_categories}
+                  onChange={v => setTheme("navbar_show_categories", v)}
+                  label={tc.navbar_show_categories ? "Activado" : "Desactivado"} />
+                <p style={{ fontSize: ".77rem", color: "var(--text-tertiary)", marginTop: 4 }}>Muestra las categorías del catálogo como links en el navbar.</p>
+              </Field>
+            )}
 
             <div className="pe-divider-title">Barra de promoción</div>
 
@@ -1006,7 +1205,10 @@ function ConfigTab({ pageId }) {
                 placeholder="Ej: Todo lo que necesitás" />
             </Field>
 
-            <Field label="Tagline" hint="Subtítulo debajo del título">
+            <Field label="Tagline"
+              hint={isBarLayout
+                ? "Se muestra en la barra superior de la tienda"
+                : "Subtítulo debajo del título del hero"}>
               <input className="form-input" value={form.tagline}
                 onChange={e => set("tagline", e.target.value)}
                 placeholder="Envíos a todo el país, pagá con MercadoPago" maxLength={160} />
@@ -1034,24 +1236,26 @@ function ConfigTab({ pageId }) {
                 label={tc.show_trust_badges !== false ? "Visibles" : "Ocultos"} />
             </Field>
 
-            <Field label="Forma del separador inferior">
-              <div className="pe-option-grid pe-option-grid--2">
-                {[
-                  { value: "wave",     label: "Ola",       desc: "Transición suave." },
-                  { value: "straight", label: "Recto",     desc: "Borde limpio." },
-                  { value: "diagonal", label: "Diagonal",  desc: "Corte inclinado." },
-                  { value: "double",   label: "Doble ola", desc: "Más dinamismo." },
-                ].map(item => (
-                  <button key={item.value} type="button"
-                    className={optionClass((tc.hero_wave_shape || "wave") === item.value)}
-                    onClick={() => setTheme("hero_wave_shape", item.value)}>
-                    <strong>{item.label}</strong><span>{item.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </Field>
+            {!isBarLayout && (
+              <Field label="Forma del separador inferior">
+                <div className="pe-option-grid pe-option-grid--2">
+                  {[
+                    { value: "wave",     label: "Ola",       desc: "Transición suave." },
+                    { value: "straight", label: "Recto",     desc: "Borde limpio." },
+                    { value: "diagonal", label: "Diagonal",  desc: "Corte inclinado." },
+                    { value: "double",   label: "Doble ola", desc: "Más dinamismo." },
+                  ].map(item => (
+                    <button key={item.value} type="button"
+                      className={optionClass((tc.hero_wave_shape || "wave") === item.value)}
+                      onClick={() => setTheme("hero_wave_shape", item.value)}>
+                      <strong>{item.label}</strong><span>{item.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
 
-            {tc.hero_bg_type !== "image" && (
+            {!isBarLayout && tc.hero_bg_type !== "image" && (
               <Field label="Patrón de fondo">
                 <div className="pe-option-grid pe-option-grid--2">
                   {[
@@ -1176,40 +1380,77 @@ function ConfigTab({ pageId }) {
 
             <div className="pe-divider-title">Categorías</div>
 
-            <Field label="Cómo se muestran" highlighted={highlightedField === "categories"}>
-              <div className="pe-option-grid pe-option-grid--3">
-                {[
-                  { value: "pills",  label: "Pastillas", desc: "Filtros en fila." },
-                  { value: "grid",   label: "Grilla",    desc: "Cards grandes." },
-                  { value: "hidden", label: "Ocultas",   desc: "Sin filtro." },
-                ].map(({ value, label, desc }) => (
-                  <button key={value} type="button"
-                    className={optionClass((tc.category_display || "pills") === value)}
-                    onClick={() => setTheme("category_display", value)}>
-                    <strong>{label}</strong><span>{desc}</span>
-                  </button>
-                ))}
-              </div>
-            </Field>
+            {isBarLayout ? (
+              /* Recife / Brasilia / Lima / Amazonas — tienen barra horizontal fija */
+              <>
+                <Field label="Barra de categorías" highlighted={highlightedField === "categories"}>
+                  <Toggle
+                    checked={tc.navbar_show_categories !== false}
+                    onChange={v => setTheme("navbar_show_categories", v)}
+                    label={tc.navbar_show_categories !== false ? "Visible" : "Oculta"} />
+                  <p style={{ fontSize: ".77rem", color: "var(--text-tertiary)", marginTop: 4 }}>
+                    Barra horizontal debajo del navbar para filtrar por categoría.
+                  </p>
+                </Field>
 
-            {categories.length > 0 && tc.category_display !== "hidden" && (
-              <Field label="Categorías visibles" hint="Sin selección = todas visibles.">
-                <div className="pe-cat-grid">
-                  {categories.map(cat => (
-                    <button key={cat.id} type="button"
-                      className={`pe-cat-pill ${activeCats.includes(cat.id) ? "is-active" : ""}`}
-                      onClick={() => toggleCategory(cat.id)}>
-                      {cat.name}
-                    </button>
-                  ))}
-                </div>
-                {activeCats.length > 0 && (
-                  <button type="button" className="pe-cat-clear"
-                    onClick={() => set("featured_categories", [])}>
-                    Mostrar todas
-                  </button>
+                {categories.length > 0 && tc.navbar_show_categories !== false && (
+                  <Field label="Categorías visibles" hint="Sin selección = todas visibles.">
+                    <div className="pe-cat-grid">
+                      {categories.map(cat => (
+                        <button key={cat.id} type="button"
+                          className={`pe-cat-pill ${activeCats.includes(cat.id) ? "is-active" : ""}`}
+                          onClick={() => toggleCategory(cat.id)}>
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                    {activeCats.length > 0 && (
+                      <button type="button" className="pe-cat-clear"
+                        onClick={() => set("featured_categories", [])}>
+                        Mostrar todas
+                      </button>
+                    )}
+                  </Field>
                 )}
-              </Field>
+              </>
+            ) : (
+              /* Default layout — soporta grilla de categorías o sin filtro */
+              <>
+                <Field label="Cómo se muestran" highlighted={highlightedField === "categories"}>
+                  <div className="pe-option-grid pe-option-grid--2">
+                    {[
+                      { value: "grid",   label: "Grilla",  desc: "Cards de categoría sobre los productos." },
+                      { value: "hidden", label: "Ocultas", desc: "Sin filtro visible." },
+                    ].map(({ value, label, desc }) => (
+                      <button key={value} type="button"
+                        className={optionClass((tc.category_display === "grid" ? "grid" : "hidden") === value)}
+                        onClick={() => setTheme("category_display", value)}>
+                        <strong>{label}</strong><span>{desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+
+                {categories.length > 0 && tc.category_display === "grid" && (
+                  <Field label="Categorías visibles" hint="Sin selección = todas visibles.">
+                    <div className="pe-cat-grid">
+                      {categories.map(cat => (
+                        <button key={cat.id} type="button"
+                          className={`pe-cat-pill ${activeCats.includes(cat.id) ? "is-active" : ""}`}
+                          onClick={() => toggleCategory(cat.id)}>
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                    {activeCats.length > 0 && (
+                      <button type="button" className="pe-cat-clear"
+                        onClick={() => set("featured_categories", [])}>
+                        Mostrar todas
+                      </button>
+                    )}
+                  </Field>
+                )}
+              </>
             )}
 
           </>}
