@@ -33,11 +33,13 @@ import ComboEditor    from "./pages/ComboEditor";
 import Subscription  from "./pages/Subscription";
 import Estadisticas  from "./pages/Estadisticas";
 import Academia      from "./pages/Academia";
+import Publicidad   from "./pages/Publicidad";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
 import Legal          from "./pages/Legal";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword  from "./pages/ResetPassword";
+import ForgotPassword  from "./pages/ForgotPassword";
+import ResetPassword   from "./pages/ResetPassword";
+import Impersonate     from "./pages/Impersonate";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -61,6 +63,8 @@ export default function App() {
           <Route path="/forgot-password"  element={<ForgotPassword />} />
           <Route path="/reset-password"   element={<ResetPassword />} />
           <Route path="/store/:slug"      element={<PublicStore />} />
+          <Route path="/impersonate"      element={<Impersonate />} />
+          <Route path="/legal"            element={<Legal />} />
 
           {/* Panel del vendedor (requiere auth) */}
           <Route element={<ProtectedRoute />}>
@@ -80,9 +84,10 @@ export default function App() {
               <Route path="/integrations"                  element={<Integrations />} />
               <Route path="/about"                         element={<About />} />
               <Route path="/contact"                       element={<Contact />} />
-              <Route path="/legal"                         element={<Legal />} />
+
               <Route path="/subscription"                  element={<Subscription />} />
               <Route path="/academia"                      element={<Academia />} />
+              <Route path="/publicidad"                    element={<Publicidad />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
