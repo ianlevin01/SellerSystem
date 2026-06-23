@@ -96,6 +96,18 @@ function getStatus(order) {
       icon: Clock3,
       description: "Pago y envío pendientes de coordinación con el comprador.",
     },
+    packaged: {
+      label: "Empaquetado",
+      tone: "blue",
+      icon: PackageCheck,
+      description: "El pedido está empaquetado y siendo preparado para el despacho.",
+    },
+    shipped: {
+      label: "Enviado",
+      tone: "green",
+      icon: Truck,
+      description: "El pedido fue despachado por Correo Argentino.",
+    },
   };
 
   return map[color] || map.pending;
