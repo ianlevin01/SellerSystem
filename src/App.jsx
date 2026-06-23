@@ -33,7 +33,6 @@ import ComboEditor    from "./pages/ComboEditor";
 import Subscription  from "./pages/Subscription";
 import Estadisticas  from "./pages/Estadisticas";
 import Academia      from "./pages/Academia";
-import Publicidad   from "./pages/Publicidad";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
 import Legal          from "./pages/Legal";
@@ -87,7 +86,6 @@ export default function App() {
 
               <Route path="/subscription"                  element={<Subscription />} />
               <Route path="/academia"                      element={<Academia />} />
-              <Route path="/publicidad"                    element={<Publicidad />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
