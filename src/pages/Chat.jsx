@@ -361,24 +361,32 @@ function AdminChatPanel() {
 
       <form className="vtz-chat-composer" onSubmit={send}>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          disabled={sending || uploading}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", padding: "0 4px", display: "flex", alignItems: "center", flexShrink: 0 }}
-          title="Adjuntar imagen"
-        >
-          <Image size={19} />
-        </button>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(e); } }}
-          placeholder="Escribí tu mensaje para el equipo Ventaz..."
-          disabled={sending}
-          rows={1}
-          autoFocus
-        />
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={sending || uploading}
+            title="Adjuntar imagen"
+            style={{
+              width: 38, height: 38, flexShrink: 0,
+              background: "none", border: "1.5px solid #dfe8d7",
+              borderRadius: 12, cursor: "pointer", color: "#9ca79f",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <Image size={17} />
+          </button>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(e); } }}
+            placeholder="Escribí tu mensaje para el equipo Ventaz..."
+            disabled={sending}
+            rows={1}
+            autoFocus
+            style={{ flex: 1 }}
+          />
+        </div>
         <button type="submit" disabled={sending || uploading || (!input.trim() && !pendingKey)}>
           {sending ? <Loader2 size={18} className="vtz-chat-spin" /> : <Send size={18} />}
         </button>
