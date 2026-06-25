@@ -28,12 +28,6 @@ function dateFmt(d) {
     day: "2-digit", month: "short", year: "numeric",
   });
 }
-function releaseDate(orderDate) {
-  if (!orderDate) return "—";
-  const d = new Date(orderDate);
-  d.setDate(d.getDate() + 7);
-  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
-}
 function maskCvu(cvu) {
   if (!cvu || cvu.length < 6) return cvu;
   return `${cvu.slice(0, 4)} •••• •••• •••• ${cvu.slice(-4)}`;
@@ -233,7 +227,7 @@ export default function Payouts() {
             <div className="vtz-tip-wrap">
               <HelpCircle size={14} className="vtz-tip-icon" />
               <div className="vtz-tip">
-                Tus ganancias están en período de retención de 7 días desde la compra. Pasado ese plazo quedan disponibles para transferir.
+                Tus ganancias están en período de retención según tu plan. Pasada la fecha indicada quedan disponibles para transferir.
               </div>
             </div>
             <strong className="vtz-payouts-card__total">{money(pendingTotal)}</strong>
@@ -245,7 +239,7 @@ export default function Payouts() {
                 <li key={o.id}>
                   <span className="vtz-payouts-orders__num">#{o.order_numero}</span>
                   <span className="vtz-payouts-orders__date vtz-payouts-orders__date--release">
-                    <Clock3 size={10} /> Se libera el {releaseDate(o.order_date)}
+                    <Clock3 size={10} /> Se libera el {dateFmt(o.available_at)}
                   </span>
                   <span className="vtz-payouts-orders__earn">{money(o.amount)}</span>
                 </li>

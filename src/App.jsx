@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import client from "./api/client";
 
 // Si alguien accede directamente a academia.ventaz.com.ar sin estar logueado,
 // redirigirlo a ventaz.com.ar (el panel principal).
@@ -45,6 +46,27 @@ function HomeRoute() {
   return isLoggedIn ? <Navigate to="/dashboard" replace /> : <Landing />;
 }
 
+// Redirect /products → /pages preservando los query params (back_url de MP incluye ?payment_id=)
+function ProductsRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/pages${location.search}`} replace />;
+}
+
+// Detecta el ?payment_id= que MP agrega al back_url y llama al confirm endpoint
+function PaymentReturnHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentId = params.get("payment_id") || params.get("collection_id");
+    if (!paymentId) return;
+    client.get(`/seller/purchase/confirm?payment_id=${paymentId}`).catch(() => {});
+    const confirmed = params.get("confirmed");
+    navigate(location.pathname + (confirmed ? `?confirmed=${confirmed}` : ""), { replace: true });
+  }, []);
+  return null;
+}
+
 export default function App() {
   const [ready, setReady] = useState(false);
 
@@ -53,6 +75,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <PaymentReturnHandler />
         <Routes>
           {/* Públicas */}
           <Route path="/"             element={<HomeRoute />} />
@@ -69,7 +92,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/dashboard"                     element={<Dashboard />} />
-              <Route path="/products"                      element={<Navigate to="/pages" replace />} />
+              <Route path="/products"                      element={<ProductsRedirect />} />
               <Route path="/products/:productId/edit"                        element={<ProductEditor />} />
               <Route path="/pages/:pageId/products/:productId/edit"        element={<ProductEditor />} />
               <Route path="/pages/:pageId/combos/:comboId/edit"          element={<ComboEditor />} />

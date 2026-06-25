@@ -11,12 +11,14 @@ import {
   Info,
   Layers,
   Loader2,
+  Package,
   PackagePlus,
   Pencil,
   Plus,
   Power,
   Save,
   Search,
+  ShoppingBag,
   ShoppingCart,
   Sparkles,
   Trash2,
@@ -160,6 +162,399 @@ function ProductImage({ product }) {
 const PAGE_SIZE = 20;
 const FREE_SHIPPING_MIN_MARGIN = 15000;
 
+const AR_PROVINCES = [
+  "Buenos Aires","Ciudad Autónoma de Buenos Aires","Catamarca","Chaco","Chubut",
+  "Córdoba","Corrientes","Entre Ríos","Formosa","Jujuy","La Pampa","La Rioja",
+  "Mendoza","Misiones","Neuquén","Río Negro","Salta","San Juan","San Luis",
+  "Santa Cruz","Santa Fe","Santiago del Estero","Tierra del Fuego","Tucumán",
+];
+
+// ─── Modal: solicitar muestra ─────────────────────────────────────────────────
+function SellerRequestModal({ product, onClose, pageId }) {
+  const [step,            setStep]           = useState("postal"); // postal | method
+  const [postalCode,      setPostalCode]     = useState("");
+  const [rates,           setRates]          = useState([]);
+  const [shippingType,    setShippingType]   = useState(null);  // "pickup" | "home" | "branch"
+  const [selectedRate,    setSelectedRate]   = useState(null);
+  const [street,          setStreet]         = useState("");
+  const [streetNum,       setStreetNum]      = useState("");
+  const [city,            setCity]           = useState("");
+  const [province,        setProvince]       = useState("");
+  const [branchProvince,  setBranchProvince] = useState("");
+  const [agencies,        setAgencies]       = useState([]);
+  const [selectedBranch,  setSelectedBranch] = useState(null);
+  const [fetchingAgencies,setFetchingAgencies] = useState(false);
+  const [loadingRates,    setLoadingRates]   = useState(false);
+  const [loadingCO,       setLoadingCO]      = useState(false);
+  const [error,           setError]          = useState("");
+
+  const precio1     = resellerCost(product);
+  const homeRates   = rates.filter(r => r.home_delivery);
+  const branchRates = rates.filter(r => r.branch_pickup);
+
+  async function fetchRates() {
+    if (!postalCode.trim() || postalCode.length < 4) {
+      setError("Ingresá un código postal válido.");
+      return;
+    }
+    setError("");
+    setLoadingRates(true);
+    try {
+      const res = await client.get("/seller/products/shipping-quote", { params: { postal_code: postalCode.trim() } });
+      setRates(res.data.rates || []);
+      setStep("method");
+      setShippingType(null);
+      setSelectedRate(null);
+    } catch {
+      setError("Error al obtener tarifas. Verificá el código postal.");
+    } finally {
+      setLoadingRates(false);
+    }
+  }
+
+  async function fetchAgencies(prov) {
+    setBranchProvince(prov);
+    setSelectedBranch(null);
+    setAgencies([]);
+    if (!prov) return;
+    setFetchingAgencies(true);
+    try {
+      const res = await client.get("/seller/products/shipping-agencies", { params: { province: prov, cp: postalCode.trim() } });
+      setAgencies(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setAgencies([]);
+    } finally {
+      setFetchingAgencies(false);
+    }
+  }
+
+  function selectType(type) {
+    setShippingType(type);
+    setSelectedRate(type === "home" ? (homeRates[0] || null) : type === "branch" ? (branchRates[0] || null) : null);
+    setSelectedBranch(null);
+    setBranchProvince("");
+    setAgencies([]);
+  }
+
+  function isReadyToPay() {
+    if (!shippingType) return false;
+    if (shippingType === "pickup") return true;
+    if (!selectedRate) return false;
+    if (shippingType === "home" && (!street.trim() || !streetNum.trim() || !city.trim())) return false;
+    if (shippingType === "branch" && !selectedBranch) return false;
+    return true;
+  }
+
+  async function checkout() {
+    if (!isReadyToPay()) return;
+    setLoadingCO(true);
+    setError("");
+    try {
+      const shipping = shippingType === "pickup"
+        ? { type: "pickup" }
+        : {
+            type: shippingType,
+            postal_code: postalCode.trim(),
+            rate: selectedRate,
+            street: street.trim() || null,
+            street_number: streetNum.trim() || null,
+            city: shippingType === "branch" ? (selectedBranch?.city || null) : (city.trim() || null),
+            branch_id:   selectedBranch?.id   || null,
+            branch_name: selectedBranch?.name || null,
+          };
+      const res = await client.post("/seller/products/request-product", { product_id: product.id, shipping, page_id: pageId || null });
+      window.location.href = res.data.checkout_url;
+    } catch (err) {
+      setError(err.response?.data?.message || "Error al crear el checkout.");
+      setLoadingCO(false);
+    }
+  }
+
+  const shippingCost = shippingType === "pickup" ? 0 : Number(selectedRate?.price || 0);
+  const total        = precio1 + shippingCost;
+
+  const btnStyle = { padding: "10px 14px", borderRadius: 8, border: "1.5px solid", cursor: "pointer", textAlign: "left", width: "100%", display: "block", background: "#fff", transition: "border-color .15s, background .15s" };
+  const btnActive = { borderColor: "#22c55e", background: "rgba(34,197,94,.07)" };
+  const btnInactive = { borderColor: "#e5e7eb" };
+
+  return createPortal(
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-box" style={{ width: "100%", maxWidth: 460, maxHeight: "90vh", overflowY: "auto" }}>
+        <div className="modal-header">
+          <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>Solicitar muestra</h2>
+          <button type="button" className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+            <strong style={{ color: "#111" }}>{productName(product)}</strong>
+            <br />1 unidad para vos — para mostrarle el producto a tus clientes.
+          </p>
+
+          {/* ── Paso 1: código postal ── */}
+          {step === "postal" && (
+            <>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>¿Cuál es tu código postal?</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  className="seller-product-price-input"
+                  placeholder="Ej: 1414"
+                  value={postalCode}
+                  onChange={e => { setPostalCode(e.target.value.replace(/\D/g, "")); setError(""); }}
+                  onKeyDown={e => e.key === "Enter" && fetchRates()}
+                  maxLength={8}
+                  style={{ flex: 1, padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: 7, fontSize: 14 }}
+                />
+                <button type="button" className="seller-product-btn seller-product-btn--save"
+                  onClick={fetchRates} disabled={loadingRates || postalCode.length < 4}>
+                  {loadingRates ? <Loader2 size={14} className="seller-products-spin" /> : "Ver opciones"}
+                </button>
+              </div>
+              <button type="button" className="seller-product-btn seller-product-btn--save"
+                onClick={() => { setStep("method"); setShippingType("pickup"); setRates([]); }}
+                style={{ background: "#f9fafb", color: "#374151", border: "1px solid #e5e7eb", fontWeight: 500 }}>
+                Prefiero pasar a buscar (gratis)
+              </button>
+            </>
+          )}
+
+          {/* ── Paso 2: método ── */}
+          {step === "method" && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button type="button" className="seller-product-btn seller-product-btn--edit"
+                  onClick={() => { setStep("postal"); setShippingType(null); setSelectedRate(null); }}
+                  style={{ padding: "6px 10px", fontSize: 12 }}>← Atrás</button>
+                <span style={{ fontSize: 12, color: "#6b7280" }}>CP {postalCode}</span>
+              </div>
+
+              <div style={{ fontWeight: 600, fontSize: 13 }}>¿Cómo querés recibirlo?</div>
+
+              {/* Pickup */}
+              <button type="button" onClick={() => selectType("pickup")}
+                style={{ ...btnStyle, ...(shippingType === "pickup" ? btnActive : btnInactive) }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>Pasar a buscar</div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Sin costo de envío</div>
+              </button>
+
+              {/* Sucursal */}
+              {branchRates.length > 0 && (
+                <button type="button" onClick={() => selectType("branch")}
+                  style={{ ...btnStyle, ...(shippingType === "branch" ? btnActive : btnInactive) }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>Correo Argentino — Sucursal</div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                    Desde {money(branchRates[0].price)} · Retirás en una sucursal cercana
+                  </div>
+                </button>
+              )}
+              {shippingType === "branch" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 12, borderLeft: "2px solid #e5e7eb" }}>
+                  {branchRates.length > 1 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {branchRates.map(r => (
+                        <label key={r.code} style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", fontSize: 13 }}>
+                          <input type="radio" name="branch_rate" checked={selectedRate?.code === r.code} onChange={() => setSelectedRate(r)} />
+                          <span style={{ flex: 1 }}>{r.name}</span>
+                          <span style={{ fontWeight: 600 }}>{money(r.price)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>
+                      Provincia para buscar sucursales
+                    </label>
+                    <select
+                      value={branchProvince}
+                      onChange={e => fetchAgencies(e.target.value)}
+                      style={{ width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 7, fontSize: 13 }}
+                    >
+                      <option value="">Seleccioná una provincia</option>
+                      {AR_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  {fetchingAgencies && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "#6b7280" }}>
+                      <Loader2 size={14} className="seller-products-spin" /> Buscando sucursales...
+                    </div>
+                  )}
+                  {!fetchingAgencies && agencies.length > 0 && (
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 }}>
+                        Sucursal *
+                        {postalCode && <span style={{ marginLeft: 6, fontWeight: 400, color: "#6b7280" }}>cercanas a CP {postalCode}</span>}
+                      </label>
+                      <div style={{ maxHeight: 200, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                        {agencies.map(a => (
+                          <label key={a.id} style={{
+                            display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 12px", cursor: "pointer",
+                            borderBottom: "1px solid #f3f4f6",
+                            background: selectedBranch?.id === a.id ? "rgba(34,197,94,.07)" : "transparent",
+                          }}>
+                            <input type="radio" name="branch_agency" style={{ marginTop: 3 }}
+                              checked={selectedBranch?.id === a.id}
+                              onChange={() => setSelectedBranch(a)} />
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>{a.name}</div>
+                              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>
+                                {a.address}{a.city ? `, ${a.city}` : ""}{a.cp ? ` · CP ${a.cp}` : ""}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!fetchingAgencies && branchProvince && agencies.length === 0 && (
+                    <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>No se encontraron sucursales para esa provincia.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Domicilio */}
+              {homeRates.length > 0 && (
+                <button type="button" onClick={() => selectType("home")}
+                  style={{ ...btnStyle, ...(shippingType === "home" ? btnActive : btnInactive) }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>Correo Argentino — Domicilio</div>
+                  <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                    Desde {money(homeRates[0].price)} · Envío a tu dirección
+                  </div>
+                </button>
+              )}
+              {shippingType === "home" && homeRates.length > 1 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 12 }}>
+                  {homeRates.map(r => (
+                    <label key={r.code} style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer", fontSize: 13 }}>
+                      <input type="radio" name="home_rate" checked={selectedRate?.code === r.code} onChange={() => setSelectedRate(r)} />
+                      <span style={{ flex: 1 }}>{r.name}</span>
+                      <span style={{ fontWeight: 600 }}>{money(r.price)}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {shippingType === "home" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingLeft: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 8 }}>
+                    <input placeholder="Calle *" value={street} onChange={e => setStreet(e.target.value)}
+                      style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 7, fontSize: 13 }} />
+                    <input placeholder="Número *" value={streetNum} onChange={e => setStreetNum(e.target.value)}
+                      style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 7, fontSize: 13, width: 90 }} />
+                  </div>
+                  <input placeholder="Ciudad *" value={city} onChange={e => setCity(e.target.value)}
+                    style={{ padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 7, fontSize: 13 }} />
+                </div>
+              )}
+
+              {/* Total */}
+              {shippingType && (
+                <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                    {shippingType === "pickup" ? "Total a pagar" : `Total (producto ${selectedRate ? `+ ${money(selectedRate.price)} envío` : ""})`}
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#111" }}>{money(total)}</div>
+                </div>
+              )}
+            </>
+          )}
+
+          {error && <p style={{ fontSize: 13, color: "#dc2626", margin: 0 }}>{error}</p>}
+
+          {(shippingType) && (
+            <button type="button" className="seller-product-btn seller-product-btn--save"
+              onClick={checkout} disabled={loadingCO || !isReadyToPay()}>
+              {loadingCO ? <Loader2 size={15} className="seller-products-spin" /> : <ShoppingBag size={15} />}
+              {loadingCO ? "Procesando..." : "Ir a pagar"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ─── Modal: reservar stock ────────────────────────────────────────────────────
+function StockReserveModal({ product, onClose, pageId }) {
+  const [quantity,        setQuantity]        = useState(1);
+  const [loadingCheckout, setLoadingCheckout] = useState(false);
+  const [error,           setError]           = useState("");
+
+  const precio1          = resellerCost(product);
+  const availableReserve = Number(product.available_for_reserve || 0);
+  const total            = precio1 * quantity;
+
+  async function checkout() {
+    if (quantity < 1 || quantity > availableReserve) return;
+    setLoadingCheckout(true);
+    setError("");
+    try {
+      const res = await client.post("/seller/products/reserve-stock", { product_id: product.id, quantity, page_id: pageId || null });
+      window.location.href = res.data.checkout_url;
+    } catch (err) {
+      setError(err.response?.data?.message || "Error al crear el checkout.");
+      setLoadingCheckout(false);
+    }
+  }
+
+  return createPortal(
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-box" style={{ width: "100%", maxWidth: 420 }}>
+        <div className="modal-header">
+          <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>Reservar stock</h2>
+          <button type="button" className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+            <strong style={{ color: "#111" }}>{productName(product)}</strong>
+            <br />Las unidades reservadas son exclusivas para vos. Cuando alguien te compra, se descuenta de tu reserva y te llevás la ganancia completa.
+          </p>
+
+          <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px" }}>
+            <div style={{ fontSize: 12, color: "#6b7280" }}>Disponible para reservar</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "#111" }}>{availableReserve} unidad{availableReserve !== 1 ? "es" : ""}</div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 8 }}>Cantidad a reservar</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 0, border: "1.5px solid #d1d5db", borderRadius: 8, width: "fit-content", overflow: "hidden" }}>
+              <button type="button"
+                onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                disabled={quantity <= 1}
+                style={{ width: 40, height: 40, border: "none", background: "#f9fafb", cursor: "pointer", fontSize: 18, fontWeight: 700, color: quantity <= 1 ? "#d1d5db" : "#374151", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                −
+              </button>
+              <div style={{ borderLeft: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb", padding: "0 20px", height: 40, display: "flex", alignItems: "center", fontSize: 16, fontWeight: 700, minWidth: 60, justifyContent: "center" }}>
+                {quantity}
+              </div>
+              <button type="button"
+                onClick={() => setQuantity(q => Math.min(availableReserve, q + 1))}
+                disabled={quantity >= availableReserve}
+                style={{ width: 40, height: 40, border: "none", background: "#f9fafb", cursor: "pointer", fontSize: 18, fontWeight: 700, color: quantity >= availableReserve ? "#d1d5db" : "#374151", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                +
+              </button>
+            </div>
+          </div>
+
+          <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px" }}>
+            <div style={{ fontSize: 12, color: "#6b7280" }}>Total ({quantity} × {money(precio1)})</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#111" }}>{money(total)}</div>
+          </div>
+
+          {error && <p style={{ fontSize: 13, color: "#dc2626", margin: 0 }}>{error}</p>}
+
+          <button type="button" className="seller-product-btn seller-product-btn--save"
+            onClick={checkout}
+            disabled={loadingCheckout || quantity < 1 || quantity > availableReserve || availableReserve === 0}>
+            {loadingCheckout ? <Loader2 size={15} className="seller-products-spin" /> : <Package size={15} />}
+            {loadingCheckout ? "Procesando..." : `Reservar ${quantity} unidad${quantity !== 1 ? "es" : ""}`}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function PageProducts({ pageId }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -194,6 +589,9 @@ export default function PageProducts({ pageId }) {
   const [comboMode,     setComboMode]     = useState(false);
   const [comboSelected, setComboSelected] = useState(new Set());
   const [creatingCombo, setCreatingCombo] = useState(false);
+  const [requestModal, setRequestModal] = useState(null);
+  const [reserveModal, setReserveModal] = useState(null);
+  const [confirmBanner, setConfirmBanner] = useState(null);
   const debounceRef  = useRef(null);
   const abortRef     = useRef(null);
   const sentinelRef  = useRef(null);
@@ -209,6 +607,15 @@ export default function PageProducts({ pageId }) {
     setToast({ message: msg, isError: true });
     toastTimerRef.current = setTimeout(() => setToast(null), 4000);
   }
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const confirmed = params.get("confirmed");
+    if (confirmed === "seller_request" || confirmed === "stock_reserve") {
+      setConfirmBanner(confirmed);
+      navigate(location.pathname, { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
     function updateFixedToolbar() {
@@ -1264,6 +1671,14 @@ export default function PageProducts({ pageId }) {
                       <span style={{ color: isLowStock ? "#f59e0b" : "inherit", fontWeight: isLowStock ? 600 : undefined }}>
                         Stock: {fmt(productStock(product))}{isLowStock ? " ⚠" : ""}
                       </span>
+                      {Number(product.seller_own_stock || 0) > 0 && (
+                        <>
+                          {" · "}
+                          <span style={{ color: "#166534", fontWeight: 600 }}>
+                            Stock propio: {product.seller_own_stock}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
 
@@ -1416,6 +1831,33 @@ export default function PageProducts({ pageId }) {
                       </>
                     )}
                   </div>
+
+                  {/* Botones de compra propia */}
+                  {!comboMode && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <button
+                        type="button"
+                        className="seller-product-btn seller-product-btn--edit"
+                        style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}
+                        onClick={() => setRequestModal(product)}
+                        title="Solicitá 1 unidad para vos, para mostrarle el producto a tus clientes"
+                      >
+                        <ShoppingBag size={13} />
+                        Solicitar muestra
+                      </button>
+                      <button
+                        type="button"
+                        className="seller-product-btn seller-product-btn--edit"
+                        style={{ flex: 1, fontSize: 12, padding: "7px 10px" }}
+                        onClick={() => setReserveModal(product)}
+                        disabled={Number(product.available_for_reserve || 0) === 0}
+                        title={Number(product.available_for_reserve || 0) === 0 ? "Sin stock disponible para reservar" : "Reservá unidades exclusivas para vos"}
+                      >
+                        <Package size={13} />
+                        Reservar stock
+                      </button>
+                    </div>
+                  )}
                 </div>
               </article>
             );
@@ -1430,6 +1872,35 @@ export default function PageProducts({ pageId }) {
         )}
         </>
       )}
+
+      {/* Banner post-pago MercadoPago */}
+      {confirmBanner && (
+        <div style={{
+          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+          background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12,
+          padding: "14px 20px", display: "flex", alignItems: "center", gap: 12,
+          boxShadow: "0 4px 20px rgba(0,0,0,.12)", zIndex: 9999, maxWidth: 440, width: "calc(100% - 48px)",
+        }}>
+          <CheckCircle2 size={20} style={{ color: "#16a34a", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#111" }}>
+              {confirmBanner === "seller_request" ? "¡Solicitud confirmada!" : "¡Reserva confirmada!"}
+            </div>
+            <div style={{ fontSize: 13, color: "#6b7280" }}>
+              {confirmBanner === "seller_request"
+                ? "Tu pago fue procesado. El producto está en camino."
+                : "Tu pago fue procesado. Las unidades ya están reservadas para vos."}
+            </div>
+          </div>
+          <button type="button" onClick={() => setConfirmBanner(null)}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#6b7280" }}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {requestModal && <SellerRequestModal product={requestModal} onClose={() => setRequestModal(null)} pageId={pageId} />}
+      {reserveModal && <StockReserveModal product={reserveModal} onClose={() => setReserveModal(null)} pageId={pageId} />}
 
     </div>
   );
