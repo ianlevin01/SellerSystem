@@ -46,6 +46,20 @@ function HomeRoute() {
   return isLoggedIn ? <Navigate to="/dashboard" replace /> : <Landing />;
 }
 
+// Lleva al vendedor directo a los productos de su primera página (para links de email)
+function MyProductsRedirect() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    client.get("/seller/store/pages")
+      .then(res => {
+        const pages = res.data || [];
+        navigate(pages.length > 0 ? `/pages/${pages[0].id}/products` : "/pages", { replace: true });
+      })
+      .catch(() => navigate("/pages", { replace: true }));
+  }, []);
+  return null;
+}
+
 // Redirect /products → /pages preservando los query params (back_url de MP incluye ?payment_id=)
 function ProductsRedirect() {
   const location = useLocation();
@@ -93,6 +107,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/dashboard"                     element={<Dashboard />} />
               <Route path="/products"                      element={<ProductsRedirect />} />
+              <Route path="/mis-productos"                 element={<MyProductsRedirect />} />
               <Route path="/products/:productId/edit"                        element={<ProductEditor />} />
               <Route path="/pages/:pageId/products/:productId/edit"        element={<ProductEditor />} />
               <Route path="/pages/:pageId/combos/:comboId/edit"          element={<ComboEditor />} />
