@@ -205,8 +205,13 @@ function MessageBubble({ msg, conversationId, onQuoteAccepted }) {
           isSeller ? "vtz-chat-bubble--seller" : "vtz-chat-bubble--customer"
         }`}
       >
-        <p style={{ color: isSeller ? "#fff" : "#0f172a" }}>{msg.body}</p>
-        <small>{formatTime(msg.created_at)}</small>
+        {msg.body && <p style={{ color: isSeller ? "#fff" : "#0f172a", margin: msg.image_url ? "0 0 8px" : 0 }}>{msg.body}</p>}
+        {msg.image_url && (
+          <a href={msg.image_url} target="_blank" rel="noopener noreferrer">
+            <img src={msg.image_url} alt="imagen" style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, display: "block", cursor: "zoom-in" }} />
+          </a>
+        )}
+        <small style={{ marginTop: 4, display: "block" }}>{formatTime(msg.created_at)}</small>
       </div>
     </div>
   );
@@ -403,14 +408,18 @@ export default function Chat() {
   const [conversations, setConversations] = useState([]);
   const [selected,      setSelected]      = useState(null);
   const [messages,      setMessages]      = useState([]);
-  const [reply,         setReply]         = useState("");
-  const [sending,       setSending]       = useState(false);
-  const [loadingConvs,  setLoadingConvs]  = useState(true);
-  const [loadingMsgs,   setLoadingMsgs]   = useState(false);
-  const [search,        setSearch]        = useState("");
+  const [reply,          setReply]          = useState("");
+  const [sending,        setSending]        = useState(false);
+  const [uploadingImg,   setUploadingImg]   = useState(false);
+  const [pendingKey,     setPendingKey]     = useState(null);
+  const [pendingPreview, setPendingPreview] = useState(null);
+  const [loadingConvs,   setLoadingConvs]   = useState(true);
+  const [loadingMsgs,    setLoadingMsgs]    = useState(false);
+  const [search,         setSearch]         = useState("");
 
   const endRef  = useRef(null);
   const pollRef = useRef(null);
+  const fileRef = useRef(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -463,26 +472,54 @@ export default function Chat() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setPendingPreview(URL.createObjectURL(file));
+    setUploadingImg(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await client.post(`/seller/chat/conversations/${selected.id}/upload-image`, fd);
+      setPendingKey(res.data.key);
+    } catch {
+      setPendingPreview(null);
+      alert("Error al subir la imagen");
+    } finally {
+      setUploadingImg(false);
+    }
+  }
+
+  function clearPendingImage() {
+    setPendingKey(null);
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+    setPendingPreview(null);
+  }
+
   async function handleSend(e) {
     e.preventDefault();
 
-    if (!reply.trim() || !selected) return;
+    if ((!reply.trim() && !pendingKey) || !selected) return;
 
-    const body = reply.trim();
+    const body = reply.trim() || null;
+    const imageUrl = pendingKey || null;
     setSending(true);
 
     try {
       const res = await client.post(`/seller/chat/conversations/${selected.id}/messages`, {
         body,
+        image_url: imageUrl,
       });
 
       setMessages((prev) => [...prev, res.data]);
       setReply("");
+      clearPendingImage();
 
       setConversations((prev) =>
         prev.map((c) =>
           c.id === selected.id
-            ? { ...c, last_message: body, updated_at: new Date().toISOString() }
+            ? { ...c, last_message: body || "📷 Imagen", updated_at: new Date().toISOString() }
             : c
         )
       );
@@ -607,6 +644,7 @@ export default function Chat() {
                       onClick={() => {
                         setSelected(conv);
                         setMessages([]);
+                        clearPendingImage();
                       }}
                     >
                       <span className="vtz-chat-conv__avatar" style={{ background: color }}>
@@ -686,18 +724,53 @@ export default function Chat() {
                   <div ref={endRef} />
                 </div>
 
-                <form className="vtz-chat-composer" onSubmit={handleSend}>
-                  <textarea
-                    value={reply}
-                    onChange={(e) => setReply(e.target.value)}
-                    onKeyDown={handleInputKeyDown}
-                    placeholder="Escribí tu respuesta..."
-                    disabled={sending}
-                    rows={1}
-                    autoFocus
-                  />
+                {pendingPreview && (
+                  <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <img src={pendingPreview} alt="preview" style={{ height: 64, width: 64, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
+                      {uploadingImg && (
+                        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Loader2 size={18} color="#fff" className="vtz-chat-spin" />
+                        </div>
+                      )}
+                    </div>
+                    {!uploadingImg && (
+                      <button type="button" onClick={clearPendingImage} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", padding: 2 }}>
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                )}
 
-                  <button type="submit" disabled={sending || !reply.trim()}>
+                <form className="vtz-chat-composer" onSubmit={handleSend}>
+                  <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={sending || uploadingImg}
+                      title="Adjuntar imagen"
+                      style={{
+                        width: 38, height: 38, flexShrink: 0,
+                        background: "none", border: "1.5px solid #dfe8d7",
+                        borderRadius: 12, cursor: "pointer", color: "#9ca79f",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      <Image size={17} />
+                    </button>
+                    <textarea
+                      value={reply}
+                      onChange={(e) => setReply(e.target.value)}
+                      onKeyDown={handleInputKeyDown}
+                      placeholder="Escribí tu respuesta..."
+                      disabled={sending}
+                      rows={1}
+                      autoFocus
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                  <button type="submit" disabled={sending || uploadingImg || (!reply.trim() && !pendingKey)}>
                     {sending ? <Loader2 size={18} className="vtz-chat-spin" /> : <Send size={18} />}
                   </button>
                 </form>
