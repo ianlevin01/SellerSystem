@@ -9,6 +9,7 @@ import {
   BadgeCheck,
   Check,
   CheckCircle2,
+  Image,
   Loader2,
   MessageCircle,
   MessageSquare,
@@ -17,6 +18,7 @@ import {
   ShoppingCart,
   Sparkles,
   UserRound,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -213,11 +215,15 @@ function MessageBubble({ msg, conversationId, onQuoteAccepted }) {
 // ── Admin chat panel ───────────────────────────────────────────
 
 function AdminChatPanel() {
-  const [messages,  setMessages]  = useState([]);
-  const [input,     setInput]     = useState("");
-  const [loading,   setLoading]   = useState(true);
-  const [sending,   setSending]   = useState(false);
-  const endRef = useRef(null);
+  const [messages,      setMessages]      = useState([]);
+  const [input,         setInput]         = useState("");
+  const [loading,       setLoading]       = useState(true);
+  const [sending,       setSending]       = useState(false);
+  const [uploading,     setUploading]     = useState(false);
+  const [pendingKey,    setPendingKey]    = useState(null);
+  const [pendingPreview,setPendingPreview] = useState(null);
+  const endRef  = useRef(null);
+  const fileRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -238,14 +244,42 @@ function AdminChatPanel() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  async function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setPendingPreview(URL.createObjectURL(file));
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await client.post("/seller/chat/admin/upload-image", fd);
+      setPendingKey(res.data.key);
+    } catch {
+      setPendingPreview(null);
+      alert("Error al subir la imagen");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function clearPendingImage() {
+    setPendingKey(null);
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+    setPendingPreview(null);
+  }
+
   async function send(e) {
     e.preventDefault();
-    if (!input.trim() || sending) return;
-    const body = input.trim();
+    if ((!input.trim() && !pendingKey) || sending || uploading) return;
     setSending(true);
     try {
-      await client.post("/seller/chat/admin/messages", { body });
+      await client.post("/seller/chat/admin/messages", {
+        body:      input.trim() || null,
+        image_url: pendingKey   || null,
+      });
       setInput("");
+      clearPendingImage();
       await load();
     } finally {
       setSending(false);
@@ -292,8 +326,13 @@ function AdminChatPanel() {
                       Equipo Ventaz
                     </small>
                   )}
-                  <p style={{ color: isSeller ? "#fff" : "#0f172a" }}>{m.body}</p>
-                  <small>{formatTime(m.created_at)}</small>
+                  {m.body && <p style={{ color: isSeller ? "#fff" : "#0f172a", margin: m.image_url ? "0 0 8px" : 0 }}>{m.body}</p>}
+                  {m.image_url && (
+                    <a href={m.image_url} target="_blank" rel="noopener noreferrer">
+                      <img src={m.image_url} alt="imagen" style={{ maxWidth: "100%", maxHeight: 260, borderRadius: 8, display: "block", cursor: "zoom-in" }} />
+                    </a>
+                  )}
+                  <small style={{ marginTop: m.image_url || m.body ? 4 : 0, display: "block" }}>{formatTime(m.created_at)}</small>
                 </div>
               </div>
             );
@@ -302,7 +341,35 @@ function AdminChatPanel() {
         <div ref={endRef} />
       </div>
 
+      {pendingPreview && (
+        <div style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <div style={{ position: "relative", display: "inline-block" }}>
+            <img src={pendingPreview} alt="preview" style={{ height: 64, width: 64, objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
+            {uploading && (
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.45)", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Loader2 size={18} color="#fff" className="vtz-chat-spin" />
+              </div>
+            )}
+          </div>
+          {!uploading && (
+            <button type="button" onClick={clearPendingImage} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", padding: 2 }}>
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
+
       <form className="vtz-chat-composer" onSubmit={send}>
+        <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={sending || uploading}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-3)", padding: "0 4px", display: "flex", alignItems: "center", flexShrink: 0 }}
+          title="Adjuntar imagen"
+        >
+          <Image size={19} />
+        </button>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -312,7 +379,7 @@ function AdminChatPanel() {
           rows={1}
           autoFocus
         />
-        <button type="submit" disabled={sending || !input.trim()}>
+        <button type="submit" disabled={sending || uploading || (!input.trim() && !pendingKey)}>
           {sending ? <Loader2 size={18} className="vtz-chat-spin" /> : <Send size={18} />}
         </button>
       </form>
