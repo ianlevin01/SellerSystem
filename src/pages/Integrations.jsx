@@ -321,27 +321,47 @@ function IntegrationCard({ integration, pageId, products, combos, onToggle, togg
 }
 
 function MetaPixelConfig({ pageId, initialConfig }) {
-  const [pixelId, setPixelId] = useState(initialConfig?.pixel_id || "");
-  const [saving,  setSaving]  = useState(false);
-  const [msg,     setMsg]     = useState("");
+  const [pixelId,   setPixelId]   = useState(initialConfig?.pixel_id || "");
+  const [saving,    setSaving]    = useState(false);
+  const [msg,       setMsg]       = useState("");
   const [extracted, setExtracted] = useState(false);
+
+  // Meta-connected pixel selector
+  const [metaPixels,    setMetaPixels]    = useState(null); // null = not loaded
+  const [loadingPixels, setLoadingPixels] = useState(false);
+  const [metaConnected, setMetaConnected] = useState(false);
+
+  useEffect(() => {
+    client.get("/seller/meta/status")
+      .then(r => setMetaConnected(!!(r.data?.connected && r.data?.ad_account_id)))
+      .catch(() => {});
+  }, []);
+
+  async function loadPixels() {
+    setLoadingPixels(true);
+    try {
+      const r = await client.get("/seller/meta/pixels");
+      setMetaPixels(r.data || []);
+    } catch {
+      setMetaPixels([]);
+    } finally {
+      setLoadingPixels(false); }
+  }
+
+  function selectPixel(id) {
+    setPixelId(id);
+    setMetaPixels(null);
+  }
 
   const isValid = /^\d{15,16}$/.test(pixelId.trim());
 
   function handleChange(e) {
     const raw = e.target.value;
-    // Si pegaron algo que no son solo dígitos, intentar extraer el Pixel ID
     if (/\D/.test(raw)) {
       const match = raw.match(/\b(\d{15,16})\b/);
-      if (match) {
-        setPixelId(match[1]);
-        setExtracted(true);
-        setTimeout(() => setExtracted(false), 3000);
-        return;
-      }
+      if (match) { setPixelId(match[1]); setExtracted(true); setTimeout(() => setExtracted(false), 3000); return; }
     }
     setExtracted(false);
-    // Solo permitir dígitos
     setPixelId(raw.replace(/\D/g, "").slice(0, 16));
   }
 
@@ -356,9 +376,7 @@ function MetaPixelConfig({ pageId, initialConfig }) {
       setTimeout(() => setMsg(""), 3000);
     } catch {
       setMsg("Error al guardar");
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   }
 
   const showError = pixelId.length > 0 && !isValid;
@@ -366,36 +384,81 @@ function MetaPixelConfig({ pageId, initialConfig }) {
   return (
     <div style={{ marginTop: 20, paddingTop: 20, borderTop: "1px solid var(--border)" }}>
       <h4 style={{ margin: "0 0 4px", fontSize: ".9375rem" }}>Pixel ID</h4>
-      <p style={{ margin: "0 0 10px", fontSize: ".82rem", color: "var(--text-secondary)" }}>
-        Encontrás tu Pixel ID en Meta Business → Fuentes de datos → Píxeles. Solo el número, sin código.
-      </p>
-      <div style={{ display: "flex", gap: 8 }}>
-        <input className="form-input" value={pixelId}
-          onChange={handleChange}
-          placeholder="Ej: 1560743509088594"
-          maxLength={16}
-          inputMode="numeric"
-          style={{ flex: 1, borderColor: showError ? "var(--danger,#ef4444)" : undefined }} />
-        <button type="button" className="btn btn--primary btn--sm"
-          onClick={save} disabled={saving || !isValid}>
-          {saving ? <Loader2 size={13} className="spin" /> : "Guardar"}
-        </button>
-      </div>
-      {extracted && (
-        <p style={{ margin: "6px 0 0", fontSize: ".82rem", color: "var(--success,#059669)" }}>
-          ✓ ID extraído automáticamente del código pegado
-        </p>
+
+      {metaConnected && (
+        <div style={{ marginBottom: 12 }}>
+          {metaPixels === null ? (
+            <button type="button" onClick={loadPixels} disabled={loadingPixels}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 14px",
+                borderRadius: 8, border: "1.5px solid #1877f2", background: "#e7f0fd",
+                color: "#1877f2", fontSize: ".82rem", fontWeight: 600, cursor: "pointer" }}>
+              {loadingPixels ? <Loader2 size={13} className="spin" /> : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              )}
+              Seleccionar pixel de Meta
+            </button>
+          ) : metaPixels.length === 0 ? (
+            <p style={{ margin: 0, fontSize: ".82rem", color: "var(--text-secondary)" }}>
+              No se encontraron píxeles en tu cuenta. Ingresá el ID manualmente.
+              <button onClick={() => setMetaPixels(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", fontSize: ".82rem", color: "var(--brand,#6366f1)" }}>Volver</button>
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <p style={{ margin: "0 0 6px", fontSize: ".82rem", color: "var(--text-secondary)" }}>
+                Elegí el pixel que querés conectar a esta tienda:
+              </p>
+              {metaPixels.map(px => (
+                <button key={px.id} type="button" onClick={() => selectPixel(px.id)}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 14px", borderRadius: 9, border: "1.5px solid var(--border)",
+                    background: "var(--surface)", cursor: "pointer", textAlign: "left",
+                    transition: "border-color .15s" }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = "#1877f2"}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
+                  <span style={{ fontWeight: 600, fontSize: ".88rem" }}>{px.name}</span>
+                  <span style={{ fontSize: ".75rem", color: "var(--text-secondary)", fontFamily: "monospace" }}>{px.id}</span>
+                </button>
+              ))}
+              <button onClick={() => setMetaPixels(null)} style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", fontSize: ".8rem", color: "var(--text-secondary)" }}>
+                Ingresar ID manualmente
+              </button>
+            </div>
+          )}
+        </div>
       )}
-      {showError && !extracted && (
-        <p style={{ margin: "6px 0 0", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>
-          El Pixel ID debe ser solo el número (15 o 16 dígitos), no el código completo.
-        </p>
+
+      {metaPixels === null && (
+        <>
+          {!metaConnected && (
+            <p style={{ margin: "0 0 10px", fontSize: ".82rem", color: "var(--text-secondary)" }}>
+              Encontrás tu Pixel ID en Meta Business → Fuentes de datos → Píxeles. Solo el número, sin código.
+            </p>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <input className="form-input" value={pixelId} onChange={handleChange}
+              placeholder="Ej: 1560743509088594" maxLength={16} inputMode="numeric"
+              style={{ flex: 1, borderColor: showError ? "var(--danger,#ef4444)" : undefined }} />
+            <button type="button" className="btn btn--primary btn--sm"
+              onClick={save} disabled={saving || !isValid}>
+              {saving ? <Loader2 size={13} className="spin" /> : "Guardar"}
+            </button>
+          </div>
+          {extracted && <p style={{ margin: "6px 0 0", fontSize: ".82rem", color: "var(--success,#059669)" }}>✓ ID extraído automáticamente del código pegado</p>}
+          {showError && !extracted && <p style={{ margin: "6px 0 0", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>El Pixel ID debe ser solo el número (15 o 16 dígitos), no el código completo.</p>}
+          {msg && !extracted && <p style={{ margin: "6px 0 0", fontSize: ".82rem", color: msg.startsWith("✓") ? "var(--success,#059669)" : "var(--danger,#ef4444)" }}>{msg}</p>}
+        </>
       )}
-      {msg && !extracted && (
-        <p style={{ margin: "6px 0 0", fontSize: ".82rem",
-          color: msg.startsWith("✓") ? "var(--success,#059669)" : "var(--danger,#ef4444)" }}>
-          {msg}
-        </p>
+
+      {metaPixels !== null && pixelId && isValid && (
+        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: ".84rem", color: "var(--text-secondary)" }}>
+            Pixel seleccionado: <strong style={{ fontFamily: "monospace" }}>{pixelId}</strong>
+          </span>
+          <button type="button" className="btn btn--primary btn--sm" onClick={save} disabled={saving}>
+            {saving ? <Loader2 size={13} className="spin" /> : "Guardar"}
+          </button>
+          {msg && <span style={{ fontSize: ".82rem", color: msg.startsWith("✓") ? "var(--success,#059669)" : "var(--danger,#ef4444)" }}>{msg}</span>}
+        </div>
       )}
     </div>
   );

@@ -34,6 +34,7 @@ import ComboEditor    from "./pages/ComboEditor";
 import Subscription  from "./pages/Subscription";
 import Estadisticas  from "./pages/Estadisticas";
 import Academia      from "./pages/Academia";
+import Publicidad     from "./pages/Publicidad";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
 import Legal          from "./pages/Legal";
@@ -64,6 +65,13 @@ function MyProductsRedirect() {
 function ProductsRedirect() {
   const location = useLocation();
   return <Navigate to={`/pages${location.search}`} replace />;
+}
+
+// Publicidad todavía no pasó la revisión de Meta — visible solo para la cuenta de prueba.
+const BETA_SELLER_EMAIL = "yolodercye@gmail.com";
+function PublicidadRoute() {
+  const { seller } = useAuth();
+  return seller?.email === BETA_SELLER_EMAIL ? <Publicidad /> : <Navigate to="/dashboard" replace />;
 }
 
 // Detecta el ?payment_id= que MP agrega al back_url y llama al confirm endpoint
@@ -124,6 +132,7 @@ export default function App() {
 
               <Route path="/subscription"                  element={<Subscription />} />
               <Route path="/academia"                      element={<Academia />} />
+              <Route path="/publicidad"                    element={<PublicidadRoute />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />

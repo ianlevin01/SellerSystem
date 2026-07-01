@@ -10,11 +10,14 @@ import client from "../api/client";
 import {
   LayoutDashboard, ShoppingBag,
   Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
-  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2
+  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2, Megaphone
 } from "lucide-react";
 
 const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "https://academia.ventaz.com.ar";
 const ACADEMY_TOOLTIP_KEY = "academy_new_courses_v1";
+
+// Publicidad todavía no pasó la revisión de Meta — visible solo para la cuenta de prueba.
+const BETA_SELLER_EMAIL = "yolodercye@gmail.com";
 
 const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
@@ -22,6 +25,7 @@ const nav = [
   { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
   { to: "/estadisticas", label: "Estadísticas",   icon: BarChart2   },
   { to: "/cobros",       label: "Cobros",         icon: Wallet },
+  { to: "/publicidad",   label: "Publicidad",      icon: Megaphone },
   { to: "/integrations", label: "Integraciones",  icon: Puzzle },
   { to: "/chat",         label: "Chat",           icon: MessageSquare },
   { to: "/calculator",   label: "Calculadora",    icon: Calculator },
@@ -45,6 +49,7 @@ export default function Layout() {
   const { seller, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const visibleNav = nav.filter(item => item.to !== "/publicidad" || seller?.email === BETA_SELLER_EMAIL);
   const [pages, setPages]               = useState([]);
   const [storeOpen, setStoreOpen]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
@@ -242,7 +247,7 @@ export default function Layout() {
         )}
 
         <nav className="sidebar__nav">
-          {nav.map(({ to, label, icon: Icon }) => (
+          {visibleNav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
