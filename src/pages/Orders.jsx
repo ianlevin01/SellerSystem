@@ -56,6 +56,11 @@ function timeFmt(d) {
   });
 }
 
+// Pedidos sin pago confirmado — no se les muestra ganancia porque todavía no es plata real.
+function isUnpaid(order) {
+  return ["pending", "consultation"].includes(order.color || "pending");
+}
+
 function getStatus(order) {
   const color = order.color || "pending";
 
@@ -128,10 +133,9 @@ export default function Orders() {
   }, []);
 
   const stats = useMemo(() => {
-    const totalGanancia = orders.reduce(
-      (sum, order) => sum + Number(order.ganancia_vendedor || 0),
-      0
-    );
+    const totalGanancia = orders
+      .filter((order) => !isUnpaid(order))
+      .reduce((sum, order) => sum + Number(order.ganancia_vendedor || 0), 0);
 
     const totalVenta = orders.reduce(
       (sum, order) => sum + Number(order.total || 0),
@@ -296,7 +300,17 @@ export default function Orders() {
                       onClick={() => toggleExpand(order.id)}
                     >
                       <div className="vtz-order__main">
-                        <span className="vtz-order__number">Pedido #{order.numero}</span>
+                        <span className="vtz-order__number">
+                          Pedido #{order.numero}
+                          {order.channel === "mercadolibre" && (
+                            <span style={{
+                              marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "2px 8px",
+                              borderRadius: 99, background: "#FFE600", color: "#2D3277", verticalAlign: "middle",
+                            }}>
+                              Mercado Libre
+                            </span>
+                          )}
+                        </span>
                         <strong>{order.customer_name || "Cliente sin nombre"}</strong>
                         <small>
                           {dateFmt(order.created_at)}
@@ -312,7 +326,11 @@ export default function Orders() {
                       <div className="vtz-order__money">
                         <span>Total</span>
                         <strong>{money(order.total)}</strong>
-                        <small style={{ color: "var(--success, #16a34a)" }}>+{money(order.ganancia_vendedor)} ganancia</small>
+                        {isUnpaid(order) ? (
+                          <small style={{ color: "var(--text-tertiary, #999)" }}>Pago pendiente</small>
+                        ) : (
+                          <small style={{ color: "var(--success, #16a34a)" }}>+{money(order.ganancia_vendedor)} ganancia</small>
+                        )}
                       </div>
 
                       <ChevronDown className="vtz-order__chevron" size={22} />
@@ -379,10 +397,17 @@ export default function Orders() {
                               </div>
                             )}
 
-                            <div className="is-highlight">
-                              <span>Tu ganancia neta</span>
-                              <strong>{money(order.ganancia_vendedor)}</strong>
-                            </div>
+                            {isUnpaid(order) ? (
+                              <div className="is-highlight">
+                                <span>Tu ganancia neta</span>
+                                <strong style={{ color: "var(--text-tertiary, #999)" }}>Pago pendiente</strong>
+                              </div>
+                            ) : (
+                              <div className="is-highlight">
+                                <span>Tu ganancia neta</span>
+                                <strong>{money(order.ganancia_vendedor)}</strong>
+                              </div>
+                            )}
 
                             <p style={{ fontSize: ".78rem", color: "var(--text-tertiary)", marginTop: 4 }}>
                               {status.description}

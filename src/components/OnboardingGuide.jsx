@@ -12,9 +12,81 @@ import {
   X,
 } from "lucide-react";
 import client from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import "./OnboardingGuide.css";
 
 const TOUR_DONE_KEY = "ventaz_seller_onboarding_done_v3";
+
+// Tour completo para el track de Mercado Libre — a diferencia del de ecommerce, las 3
+// secciones de /mercado-libre (Tus publicaciones/Publicar producto/Cobro) son pestañas de
+// estado interno, no rutas distintas, así que no podemos forzar el cambio de pestaña como
+// sí hacemos con /pages/:id/products vs /pages/:id/discounts — el spotlight se queda en
+// elementos siempre visibles (banner de conexión, barra de pestañas) en vez de asumir
+// una pestaña puntual activa.
+function buildMlProgramSteps(connected) {
+  return [
+    {
+      path: "/dashboard",
+      selector: null,
+      title: "Bienvenido a Ventaz",
+      body: "En menos de un minuto vas a entender cómo publicar tu catálogo en Mercado Libre y ver tus ventas desde el panel.",
+    },
+    {
+      path: "/dashboard",
+      selector: ".stat-grid",
+      title: "Resumen del negocio",
+      body: "Acá ves rápidamente cuánto vendiste, qué pedidos tenés pendientes y cómo viene la actividad.",
+    },
+    {
+      path: "/mercado-libre",
+      selector: null,
+      title: "Tu sección de Mercado Libre",
+      body: "Desde acá conectás tu propia cuenta de Mercado Libre y publicás el catálogo de Ventaz directo ahí.",
+    },
+    {
+      path: "/mercado-libre",
+      selector: ".ml-connection-banner",
+      title: "Conectá tu cuenta",
+      body: connected
+        ? "Ya conectaste tu cuenta de Mercado Libre — perfecto, podés desconectarla o cambiarla desde acá cuando quieras."
+        : "Tocá 'Conectar Mercado Libre' y autorizá a Ventaz — es un solo paso, con tu cuenta real de Mercado Libre. El resto de esta guía tiene más sentido una vez conectado.",
+    },
+    {
+      path: "/mercado-libre",
+      selector: connected ? ".ml-tabs" : ".ml-connection-banner",
+      title: "Las 3 secciones",
+      body: connected
+        ? "'Tus publicaciones' muestra lo que ya publicaste. En 'Cobro' guardás una tarjeta (se usa para cobrarte una vez al día el costo de tus ventas). En 'Publicar producto' elegís qué vender."
+        : "Una vez que conectes tu cuenta, van a aparecer 3 pestañas acá: 'Tus publicaciones', 'Cobro' (para guardar una tarjeta) y 'Publicar producto'. Conectá tu cuenta y volvé a abrir esta guía (botón 'Guía' abajo a la derecha) para verlas.",
+    },
+    {
+      path: "/orders",
+      selector: ".vtz-orders-list-wrap, .vtz-orders-hero, .orders-list, .card",
+      title: "Pedidos",
+      body: "Cuando alguien te compre por Mercado Libre, el pedido aparece acá con un distintivo de Mercado Libre.",
+    },
+    {
+      path: "/chat",
+      selector: ".vtz-chat-layout, .vtz-chat-main, .vtz-chat-sidebar, .card",
+      title: "Mensajes",
+      body: "Si un cliente te escribe por la tienda web, respondés desde acá sin salir del panel.",
+    },
+    {
+      path: "/calculator",
+      selector: ".vtz-calc-form, .vtz-calc-top, .vtz-calc-result-card, .card",
+      title: "Calculadora",
+      body: "Usala para revisar costos y márgenes antes de definir el precio de un producto en Mercado Libre.",
+    },
+    {
+      path: null,
+      selector: null,
+      title: "Listo",
+      body: connected
+        ? "Eso es lo esencial. Si necesitás repasar el recorrido, el botón Guía queda siempre abajo a la derecha."
+        : "Conectá tu cuenta cuando quieras y volvé a esta guía para ver el resto — el botón Guía queda siempre abajo a la derecha.",
+    },
+  ];
+}
 
 function buildFullProgramSteps(firstStoreId) {
   const hasStore = Boolean(firstStoreId);
@@ -98,7 +170,7 @@ function buildFullProgramSteps(firstStoreId) {
   ];
 }
 
-function currentPageExtraSteps(pathname) {
+function currentPageExtraSteps(pathname, mlConnected) {
   // /pages — create first page
   if (pathname === "/pages") {
     return [
@@ -143,6 +215,34 @@ function currentPageExtraSteps(pathname) {
         selector: null,
         title: "CVU para cobros",
         body: "Para recibir tus ganancias, configurá tu CVU o alias bancario en la sección Cobros.",
+      },
+    ];
+  }
+
+  // /mercado-libre — conectar cuenta y publicar el primer producto
+  if (pathname === "/mercado-libre") {
+    return [
+      {
+        path: pathname,
+        selector: null,
+        title: "Mercado Libre",
+        body: "Acá conectás tu cuenta y publicás el catálogo de Ventaz directo en tu propia cuenta de Mercado Libre.",
+      },
+      {
+        path: pathname,
+        selector: ".ml-connection-banner",
+        title: "Conectá tu cuenta",
+        body: mlConnected
+          ? "Ya conectaste tu cuenta de Mercado Libre — perfecto."
+          : "Tocá 'Conectar Mercado Libre' y autorizá a Ventaz — es un solo paso.",
+      },
+      {
+        path: pathname,
+        selector: mlConnected ? ".ml-tabs" : ".ml-connection-banner",
+        title: "Las 3 secciones",
+        body: mlConnected
+          ? "Empezá por 'Cobro' para guardar una tarjeta, y después publicá tu primer producto desde 'Publicar producto'."
+          : "Una vez conectada tu cuenta, van a aparecer acá 'Tus publicaciones', 'Cobro' y 'Publicar producto'.",
       },
     ];
   }
@@ -482,12 +582,15 @@ function pickFirstStoreId(payload) {
 export default function OnboardingGuide() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { seller } = useAuth();
+  const isMlTrack = seller?.onboarding_track === "mercadolibre";
 
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
   const [copyKey, setCopyKey] = useState(0);
   const [firstStoreId, setFirstStoreId] = useState(null);
+  const [mlConnected, setMlConnected] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -508,9 +611,22 @@ export default function OnboardingGuide() {
     };
   }, []);
 
+  // Solo relevante para el track de Mercado Libre — determina si los pasos que hablan de
+  // pestañas ya visibles (Tus publicaciones/Cobro/Publicar producto) tienen sentido o si
+  // todavía hay que guiar a conectar la cuenta primero.
+  useEffect(() => {
+    if (!isMlTrack) return;
+    let alive = true;
+    client.get("/seller/ml/status")
+      .then(res => { if (alive) setMlConnected(!!res.data?.connected); })
+      .catch(() => { if (alive) setMlConnected(false); });
+    return () => { alive = false; };
+  }, [isMlTrack]);
+
   const steps = useMemo(() => {
-    return currentPageExtraSteps(location.pathname) || buildFullProgramSteps(firstStoreId);
-  }, [location.pathname, firstStoreId]);
+    return currentPageExtraSteps(location.pathname, mlConnected)
+      || (isMlTrack ? buildMlProgramSteps(mlConnected) : buildFullProgramSteps(firstStoreId));
+  }, [location.pathname, firstStoreId, isMlTrack, mlConnected]);
 
   const step = steps[stepIndex] || steps[0];
 
@@ -548,7 +664,8 @@ export default function OnboardingGuide() {
   );
 
   function startTour() {
-    const nextSteps = currentPageExtraSteps(location.pathname) || buildFullProgramSteps(firstStoreId);
+    const nextSteps = currentPageExtraSteps(location.pathname, mlConnected)
+      || (isMlTrack ? buildMlProgramSteps(mlConnected) : buildFullProgramSteps(firstStoreId));
     const first = nextSteps[0];
 
     setOpen(true);

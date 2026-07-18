@@ -105,6 +105,32 @@ const PAGE_HELP = {
     ],
   },
 
+  "/mercado-libre": {
+    title: "Mercado Libre",
+    sections: [
+      {
+        heading: "¿Qué ves acá?",
+        body: "Publicá el catálogo de Ventaz directo en tu propia cuenta de Mercado Libre — no reemplaza tu tienda propia, es otro canal de venta más.",
+      },
+      {
+        heading: "Conectar tu cuenta",
+        body: "Hacé clic en «Conectar Mercado Libre» y autorizá a Ventaz con tu cuenta real de Mercado Libre. Es un solo paso, se hace una vez.",
+      },
+      {
+        heading: "Cobro",
+        body: "Guardá una tarjeta antes de publicar. El costo de cada venta se cobra una vez al día en un solo cargo: primero de tu saldo prepago si tenés cargado, y si no alcanza, de la tarjeta guardada.",
+      },
+      {
+        heading: "Publicar producto",
+        body: "Elegís un producto del catálogo, la categoría de Mercado Libre, el precio y las imágenes. Ahí mismo vas a ver cuánto recibís después de la comisión de Mercado Libre.",
+      },
+      {
+        heading: "Tus publicaciones",
+        body: "Cada publicación muestra su estado, visitas, calidad y la comisión — y un acceso directo para verla o editarla en Mercado Libre.",
+      },
+    ],
+  },
+
   "/integrations": {
     title: "Integraciones",
     sections: [
@@ -234,11 +260,21 @@ function resolveHelpKey(pathname) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
+const HIDDEN_KEY = "ventaz_howtouse_hidden";
+
 export default function HowToUse() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState(null);
+  const [hidden, setHidden] = useState(() => localStorage.getItem(HIDDEN_KEY) === "1");
   const panelRef = useRef(null);
+
+  function dismissForever(e) {
+    e.stopPropagation();
+    localStorage.setItem(HIDDEN_KEY, "1");
+    setHidden(true);
+    setOpen(false);
+  }
 
   const helpKey = resolveHelpKey(location.pathname);
   const help = PAGE_HELP[helpKey] || PAGE_HELP.default;
@@ -265,19 +301,32 @@ export default function HowToUse() {
     setExpandedIdx(prev => (prev === idx ? null : idx));
   }
 
+  if (hidden) return null;
+
   return (
     <>
       {/* ── Botón flotante ── */}
-      <button
-        type="button"
-        className="htu-fab"
-        onClick={() => setOpen(o => !o)}
-        aria-label="¿Cómo usar esta sección?"
-        title="¿Cómo usar?"
-      >
-        <HelpCircle size={18} />
-        <span>¿Cómo usar?</span>
-      </button>
+      <div className="htu-fab-wrap">
+        <button
+          type="button"
+          className="htu-fab"
+          onClick={() => setOpen(o => !o)}
+          aria-label="¿Cómo usar esta sección?"
+          title="¿Cómo usar?"
+        >
+          <HelpCircle size={18} />
+          <span>¿Cómo usar?</span>
+        </button>
+        <button
+          type="button"
+          className="htu-fab__close"
+          onClick={dismissForever}
+          aria-label="Ocultar este botón de ayuda"
+          title="Ocultar"
+        >
+          <X size={11} />
+        </button>
+      </div>
 
       {/* ── Panel de ayuda ── */}
       {open && (
@@ -336,11 +385,13 @@ export default function HowToUse() {
       {/* ── Estilos ── */}
       <style>{`
         /* ── Botón flotante ── */
-        .htu-fab {
+        .htu-fab-wrap {
           position: fixed;
           bottom: 88px;           /* encima del botón Taz que suele estar a ~24px */
           right: 24px;
           z-index: 900;
+        }
+        .htu-fab {
           display: flex;
           align-items: center;
           gap: 7px;
@@ -361,6 +412,27 @@ export default function HowToUse() {
           transform: translateY(-1px);
           border-color: var(--brand, #5b52f0);
           color: var(--brand, #5b52f0);
+        }
+        .htu-fab__close {
+          position: absolute;
+          top: -6px;
+          left: -6px;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: var(--surface-2, #f3f4f6);
+          border: 1px solid var(--border, #e2e8f0);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: var(--text-secondary, #666);
+          padding: 0;
+        }
+        .htu-fab__close:hover {
+          background: var(--danger-bg, #fee2e2);
+          color: var(--danger, #ef4444);
+          border-color: var(--danger, #ef4444);
         }
 
         /* ── Panel ── */

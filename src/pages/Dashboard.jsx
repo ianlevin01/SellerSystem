@@ -25,13 +25,31 @@ export default function Dashboard() {
   const [productsCount, setProductsCount] = useState(0);
   const [loading, setLoading]         = useState(true);
   const [checklistShown, setChecklistShown] = useState(true);
+  const [mlNeedsFirstListing, setMlNeedsFirstListing] = useState(false);
+  const [mlBlockedDebt, setMlBlockedDebt] = useState(0);
 
-  // Primer acceso: si seller.slug es null (sin tiendas en AuthContext),
-  // verificar con la API para confirmar antes de redirigir.
-  // Esto evita un loop si el usuario acaba de crear su primera tienda
-  // pero AuthContext todavía no se actualizó.
+  // Primer acceso: todavía no eligió si quiere vender por tienda propia o por Mercado Libre.
   useEffect(() => {
-    if (!seller || seller.slug) return;
+    if (!seller) return;
+    if (!seller.onboarding_track) { navigate("/start", { replace: true }); return; }
+
+    // Track Mercado Libre: el paso obligatorio inicial es publicar el primer producto. Antes
+    // esto sacaba al vendedor del Dashboard a la fuerza — ahora se queda en el Dashboard (que
+    // es lo que espera ver al entrar) con un aviso, en vez de secuestrar la navegación.
+    if (seller.onboarding_track === "mercadolibre") {
+      client.get("/seller/ml/listings").then(res => {
+        setMlNeedsFirstListing((res.data || []).length === 0);
+      }).catch(() => {});
+      client.get("/seller/ml/wallet").then(res => {
+        setMlBlockedDebt(Number(res.data?.blockedDebt || 0));
+      }).catch(() => {});
+      return;
+    }
+
+    // Track ecommerce (comportamiento de siempre): si seller.slug es null (sin tiendas en
+    // AuthContext), verificar con la API para confirmar antes de redirigir. Esto evita un
+    // loop si el usuario acaba de crear su primera tienda pero AuthContext todavía no se actualizó.
+    if (seller.slug) return;
     client.get("/seller/store/pages").then(res => {
       if (res.data.length === 0) {
         navigate("/pages?new=true", { replace: true });
@@ -49,7 +67,10 @@ export default function Dashboard() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const totalGanancia = orders.reduce((sum, o) => sum + Number(o.ganancia_vendedor || 0), 0);
+  // Pedidos sin pago confirmado — no se les muestra ganancia porque todavía no es plata real.
+  const isUnpaid = order => ["pending", "consultation"].includes(order.color || "pending");
+
+  const totalGanancia = orders.filter(o => !isUnpaid(o)).reduce((sum, o) => sum + Number(o.ganancia_vendedor || 0), 0);
   const pendingOrders = orders.filter(o => o.color === "pending").length;
 
   const stats = [
@@ -63,6 +84,42 @@ export default function Dashboard() {
 
   return (
     <div>
+      {mlBlockedDebt > 0 && (
+        <Link
+          to="/mercado-libre"
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            background: "#FEF2F2", border: "1px solid #FCA5A5",
+            borderRadius: "var(--radius-md)", padding: "12px 16px",
+            marginBottom: 20, color: "#7f1d1d", textDecoration: "none",
+            fontSize: ".9rem",
+          }}
+        >
+          <AlertTriangle size={16} color="#dc2626" />
+          <span>
+            <strong>Tenés ${fmt(mlBlockedDebt)} de deuda vencida en Mercado Libre</strong> — tus publicaciones están pausadas y tus pedidos no se pueden despachar hasta que la pagues.
+          </span>
+          <span style={{ marginLeft: "auto", fontWeight: 500 }}>Pagar ahora →</span>
+        </Link>
+      )}
+
+      {mlNeedsFirstListing && (
+        <Link
+          to="/mercado-libre"
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            background: "#FFFBEA", border: "1px solid #FFE600",
+            borderRadius: "var(--radius-md)", padding: "12px 16px",
+            marginBottom: 20, color: "#2D3277", textDecoration: "none",
+            fontSize: ".9rem",
+          }}
+        >
+          <ShoppingBag size={16} color="#2D3277" />
+          <span><strong>Publicá tu primer producto en Mercado Libre</strong> — conectá tu cuenta y elegí qué vender.</span>
+          <span style={{ marginLeft: "auto", fontWeight: 500 }}>Ir a Mercado Libre →</span>
+        </Link>
+      )}
+
       {profileIncomplete && (
         <Link
           to="/profile"
@@ -168,7 +225,11 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <div className="order-preview-row__total">${fmt(order.total)}</div>
-                  <div className="order-preview-row__ganancia">+${fmt(order.ganancia_vendedor)}</div>
+                  {isUnpaid(order) ? (
+                    <div className="order-preview-row__ganancia" style={{ color: "var(--text-secondary, #999)" }}>Pago pendiente</div>
+                  ) : (
+                    <div className="order-preview-row__ganancia">+${fmt(order.ganancia_vendedor)}</div>
+                  )}
                 </div>
               </div>
             ))

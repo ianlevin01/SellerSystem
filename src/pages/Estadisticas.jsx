@@ -1,7 +1,8 @@
 // src/pages/Estadisticas.jsx
 import { useEffect, useState, useMemo } from "react";
 import client from "../api/client";
-import { BarChart2, ShoppingBag, TrendingUp, Eye, ChevronDown, ShoppingCart, Mail, Package, ChevronRight } from "lucide-react";
+import { BarChart2, ShoppingBag, TrendingUp, Eye, ChevronDown, ShoppingCart, Mail, Package, ChevronRight, CheckCircle2, PauseCircle, AlertTriangle } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
 import "../styles/Estadisticas.css";
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -180,7 +181,82 @@ function itemsSummary(items) {
   return items.length > 2 ? `${first} +${items.length - 2} más` : first;
 }
 
+// ── Panel de resumen de Mercado Libre — reemplaza el de carritos abandonados para el track
+// ML, que no tiene tienda propia. Reusa /seller/ml/summary y /seller/ml/listings, mismos
+// endpoints que ya usa la pestaña "Resumen" de /mercado-libre.
+function MlSummaryPanel({ summary, listings }) {
+  const topListings = [...listings]
+    .sort((a, b) => (b.units_sold || 0) - (a.units_sold || 0))
+    .slice(0, 8);
+
+  return (
+    <div className="card" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 20 }}>
+      <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Publicaciones en Mercado Libre</h2>
+        <p style={{ margin: 0, fontSize: 12, color: "var(--text-tertiary)" }}>Estado actual y top publicaciones por ventas</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "16px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(5,150,105,.08)" }}>
+          <CheckCircle2 size={14} color="#059669" />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{summary?.active_count ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Activas</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(107,114,128,.1)" }}>
+          <PauseCircle size={14} color="#6b7280" />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{summary?.paused_count ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Pausadas</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(239,68,68,.08)" }}>
+          <AlertTriangle size={14} color="#ef4444" />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{summary?.error_count ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Con error</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(217,119,6,.08)" }}>
+          <Package size={14} color="#d97706" />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{summary?.stock_paused_count ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Sin stock</span>
+        </div>
+      </div>
+
+      <div style={{ padding: "0 24px 20px" }}>
+        <h3 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: ".04em", margin: "8px 0 10px" }}>
+          Top publicaciones
+        </h3>
+        {topListings.length === 0 ? (
+          <div className="empty-state" style={{ padding: "32px 12px" }}>
+            <div className="empty-state__icon"><ShoppingBag size={26} /></div>
+            <h3>Sin publicaciones todavía</h3>
+            <p>Publicá tu primer producto en Mercado Libre para ver sus ventas acá.</p>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {topListings.map(l => (
+              <div key={l.ml_item_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                {l.image_url
+                  ? <img src={l.image_url} alt="" style={{ width: 34, height: 34, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+                  : <div style={{ width: 34, height: 34, borderRadius: 6, background: "var(--surface-2,#f3f4f6)", flexShrink: 0 }} />
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {l.product_name}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: "var(--text-tertiary)" }}>SKU {l.sku || "—"}</p>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#4db81a", flexShrink: 0 }}>{l.units_sold || 0} vendidas</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Estadisticas() {
+  const { seller } = useAuth();
+  const isMlTrack = seller?.onboarding_track === "mercadolibre";
+
   const [pages,          setPages]          = useState([]);
   const [pageId,         setPageId]         = useState("");
   const [rangeIdx,       setRangeIdx]       = useState(2);
@@ -192,6 +268,8 @@ export default function Estadisticas() {
   const [acLoading,      setAcLoading]      = useState(false);
   const [expandedCart,   setExpandedCart]   = useState(null);
   const [acFilter,       setAcFilter]       = useState("all");
+  const [mlSummary,      setMlSummary]      = useState(null);
+  const [mlListings,     setMlListings]     = useState([]);
 
   const { from, to } = useMemo(() => {
     const now  = new Date();
@@ -200,22 +278,40 @@ export default function Estadisticas() {
     return { from: toLocalISO(f), to: toLocalISO(now) };
   }, [rangeIdx]);
 
+  // Un vendedor de Mercado Libre no tiene tiendas — no tiene sentido pedirle que elija una.
   useEffect(() => {
+    if (isMlTrack) return;
     client.get("/seller/store/pages").then(r => {
       const list = r.data || [];
       setPages(list);
       if (list.length === 1) setPageId(list[0].id);
     }).catch(() => {});
-  }, []);
+  }, [isMlTrack]);
 
+  // Para ML se usa la vista "todos los canales" (sin pageId) — ya trae los pedidos de ML
+  // agregados por día, visitas/carritos quedan en 0 porque no hay tienda web.
   useEffect(() => {
+    if (isMlTrack) {
+      setLoading(true); setError("");
+      client.get("/seller/store/analytics", { params: { from, to } })
+        .then(r => setData(r.data))
+        .catch(() => setError("No se pudieron cargar las estadísticas."))
+        .finally(() => setLoading(false));
+      return;
+    }
     if (!pageId) { setData(null); return; }
     setLoading(true); setError("");
     client.get(`/seller/store/pages/${pageId}/analytics`, { params: { from, to } })
       .then(r => setData(r.data))
       .catch(() => setError("No se pudieron cargar las estadísticas."))
       .finally(() => setLoading(false));
-  }, [pageId, from, to]);
+  }, [isMlTrack, pageId, from, to]);
+
+  useEffect(() => {
+    if (!isMlTrack) return;
+    client.get("/seller/ml/summary").then(r => setMlSummary(r.data)).catch(() => {});
+    client.get("/seller/ml/listings").then(r => setMlListings(r.data || [])).catch(() => {});
+  }, [isMlTrack]);
 
   const allDates = useMemo(() => buildDateRange(from, to), [from, to]);
 
@@ -238,13 +334,13 @@ export default function Estadisticas() {
   }, [data, allDates]);
 
   useEffect(() => {
-    if (!pageId) { setAbandonedCarts([]); return; }
+    if (isMlTrack || !pageId) { setAbandonedCarts([]); return; }
     setAcLoading(true);
     client.get(`/seller/store/pages/${pageId}/abandoned-carts`)
       .then(r => setAbandonedCarts(r.data || []))
       .catch(() => setAbandonedCarts([]))
       .finally(() => setAcLoading(false));
-  }, [pageId]);
+  }, [isMlTrack, pageId]);
 
   const totals       = data?.totals || {};
   const selectedPage = pages.find(p => p.id === pageId);
@@ -260,12 +356,14 @@ export default function Estadisticas() {
           </div>
           <div>
             <h1 className="est-hero__title">Estadísticas</h1>
-            <p className="est-hero__sub">Visitantes, pedidos y facturación de tu tienda</p>
+            <p className="est-hero__sub">
+              {isMlTrack ? "Ventas y publicaciones de Mercado Libre" : "Visitantes, pedidos y facturación de tu tienda"}
+            </p>
           </div>
         </div>
 
-        {/* Store selector — solo si hay más de una tienda */}
-        {pages.length > 1 && (
+        {/* Store selector — solo si hay más de una tienda (no aplica a Mercado Libre) */}
+        {!isMlTrack && pages.length > 1 && (
           <div className="est-hero__select-wrap">
             <select
               className="est-select"
@@ -282,7 +380,7 @@ export default function Estadisticas() {
         )}
 
         {/* Una sola tienda: muestra el nombre */}
-        {pages.length === 1 && pageId && (
+        {!isMlTrack && pages.length === 1 && pageId && (
           <div className="est-hero__store-chip">
             <span className="est-hero__store-dot" />
             {selectedPage?.store_name || selectedPage?.page_name}
@@ -302,7 +400,7 @@ export default function Estadisticas() {
       </div>
 
       {/* ── Contenido ──────────────────────────────────────────── */}
-      {!pageId && pages.length > 1 && (
+      {!isMlTrack && !pageId && pages.length > 1 && (
         <div className="empty-state" style={{ padding: "72px 20px" }}>
           <div className="empty-state__icon"><BarChart2 size={32} /></div>
           <h3>Seleccioná una tienda</h3>
@@ -310,48 +408,57 @@ export default function Estadisticas() {
         </div>
       )}
 
-      {pageId && error && (
+      {(isMlTrack || pageId) && error && (
         <div className="alert alert--error" style={{ marginTop: 20 }}>{error}</div>
       )}
 
-      {pageId && !error && (
+      {(isMlTrack || pageId) && !error && (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 20, alignItems: "start" }}>
 
           {/* ── COLUMNA IZQUIERDA — gráficos y tabla ──────────────── */}
           <div>
-          {/* Stat cards */}
+          {/* Stat cards — Mercado Libre no tiene tienda, así que "visitas"/"carritos" no
+              existen (siempre serían 0); solo tiene sentido mostrar pedidos y facturación. */}
           <div className="est-stats-grid">
-            <StatCard icon={Eye}          label="Visitas"          value={loading ? "—" : fmt(totals.visits)}          sub={`Últimos ${RANGES[rangeIdx].days} días`} color="#6366f1" />
-            <StatCard icon={ShoppingCart} label="Carritos creados" value={loading ? "—" : fmt(totals.carts)}           sub="Sesiones con al menos 1 producto"         color="#0ea5e9" />
+            {!isMlTrack && (
+              <>
+                <StatCard icon={Eye}          label="Visitas"          value={loading ? "—" : fmt(totals.visits)}          sub={`Últimos ${RANGES[rangeIdx].days} días`} color="#6366f1" />
+                <StatCard icon={ShoppingCart} label="Carritos creados" value={loading ? "—" : fmt(totals.carts)}           sub="Sesiones con al menos 1 producto"         color="#0ea5e9" />
+              </>
+            )}
             <StatCard icon={ShoppingBag}  label="Pedidos"          value={loading ? "—" : fmt(totals.orders)}          sub="Pagados + pendientes"                     color="#4db81a" />
             <StatCard icon={TrendingUp}   label="Facturación"      value={loading ? "—" : fmtMoney(totals.revenue)}    sub="Total del período"                        color="#f59e0b" />
           </div>
 
-          {/* Chart type toggle */}
-          <div className="est-chart-controls">
-            <span className="est-chart-controls__label">Vista:</span>
-            {[["bars", "Barras"], ["lines", "Líneas"]].map(([mode, lbl]) => (
-              <button key={mode} type="button"
-                className={`btn btn--sm ${chartMode === mode ? "btn--primary" : "btn--ghost"}`}
-                onClick={() => setChartMode(mode)}>
-                {lbl}
-              </button>
-            ))}
-          </div>
+          {!isMlTrack && (
+            <>
+              {/* Chart type toggle */}
+              <div className="est-chart-controls">
+                <span className="est-chart-controls__label">Vista:</span>
+                {[["bars", "Barras"], ["lines", "Líneas"]].map(([mode, lbl]) => (
+                  <button key={mode} type="button"
+                    className={`btn btn--sm ${chartMode === mode ? "btn--primary" : "btn--ghost"}`}
+                    onClick={() => setChartMode(mode)}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
 
-          {/* Visits chart — full width */}
-          <div className="card est-chart-card">
-            <div className="est-chart-card__head">
-              <span className="est-chart-dot" style={{ background: "#6366f1" }} />
-              <h2 className="est-chart-card__title">Visitas por día</h2>
-            </div>
-            {loading
-              ? <div className="skeleton" style={{ height: 140, borderRadius: 8 }} />
-              : chartMode === "bars"
-                ? <BarChartSVG data={visitsByDate} color="#6366f1" height={140} tooltip={d => `${fmt(d.value)} visita${d.value !== 1 ? "s" : ""}`} />
-                : <LineChartSVG data1={visitsByDate} data2={ordersByDate} color1="#6366f1" color2="#4db81a" label1="Visitas" label2="Pedidos" height={160} />
-            }
-          </div>
+              {/* Visits chart — full width */}
+              <div className="card est-chart-card">
+                <div className="est-chart-card__head">
+                  <span className="est-chart-dot" style={{ background: "#6366f1" }} />
+                  <h2 className="est-chart-card__title">Visitas por día</h2>
+                </div>
+                {loading
+                  ? <div className="skeleton" style={{ height: 140, borderRadius: 8 }} />
+                  : chartMode === "bars"
+                    ? <BarChartSVG data={visitsByDate} color="#6366f1" height={140} tooltip={d => `${fmt(d.value)} visita${d.value !== 1 ? "s" : ""}`} />
+                    : <LineChartSVG data1={visitsByDate} data2={ordersByDate} color1="#6366f1" color2="#4db81a" label1="Visitas" label2="Pedidos" height={160} />
+                }
+              </div>
+            </>
+          )}
 
           {/* Orders + Revenue — 2 columnas en desktop, 1 en mobile */}
           <div className="est-dual-grid">
@@ -391,7 +498,7 @@ export default function Estadisticas() {
                 <div className="empty-state" style={{ padding: "48px 20px" }}>
                   <div className="empty-state__icon"><BarChart2 size={32} /></div>
                   <h3>Aún no hay datos</h3>
-                  <p>Las visitas y pedidos aparecerán cuando alguien entre a tu tienda.</p>
+                  <p>{isMlTrack ? "Los pedidos de Mercado Libre van a aparecer acá." : "Las visitas y pedidos aparecerán cuando alguien entre a tu tienda."}</p>
                 </div>
               );
 
@@ -402,7 +509,7 @@ export default function Estadisticas() {
                     <table className="est-table">
                       <thead>
                         <tr>
-                          {["Fecha", "Visitas", "Pedidos", "Facturación"].map(h => (
+                          {(isMlTrack ? ["Fecha", "Pedidos", "Facturación"] : ["Fecha", "Visitas", "Pedidos", "Facturación"]).map(h => (
                             <th key={h}>{h}</th>
                           ))}
                         </tr>
@@ -415,7 +522,7 @@ export default function Estadisticas() {
                           return (
                             <tr key={date}>
                               <td className="est-table__date">{fmtDate(date)}</td>
-                              <td style={{ color: "#6366f1", fontWeight: 600 }}>{fmt(v)}</td>
+                              {!isMlTrack && <td style={{ color: "#6366f1", fontWeight: 600 }}>{fmt(v)}</td>}
                               <td style={{ color: "#4db81a", fontWeight: 600 }}>{fmt(o)}</td>
                               <td style={{ color: "#f59e0b", fontWeight: 700 }}>{fmtMoney(r)}</td>
                             </tr>
@@ -430,7 +537,10 @@ export default function Estadisticas() {
           )}
           </div>{/* fin columna izquierda */}
 
-          {/* ── COLUMNA DERECHA — carritos abandonados ────────────── */}
+          {/* ── COLUMNA DERECHA — carritos abandonados (ecommerce) o resumen de ML ── */}
+          {isMlTrack ? (
+            <MlSummaryPanel summary={mlSummary} listings={mlListings} />
+          ) : (
           <div className="card" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 20 }}>
             {/* Header */}
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "space-between" }}>
@@ -568,7 +678,8 @@ export default function Estadisticas() {
                 </table>
               </div>
             )}
-          </div>{/* fin columna derecha */}
+          </div>
+          )}{/* fin columna derecha */}
 
         </div>
       )}

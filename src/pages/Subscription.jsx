@@ -8,14 +8,17 @@ import {
 } from "lucide-react";
 import "../styles/Subscription.css";
 
-// Bullets que van dentro de la card (cortos)
+// Bullets que van dentro de la card (cortos) — se muestran a todos los vendedores sin
+// importar si venden por tienda propia o por Mercado Libre (o ambos), para que cada uno vea
+// el valor completo del plan.
 const PLAN_HIGHLIGHTS = {
-  inicial: ["1 tienda activa",       "Productos ilimitados", "MercadoPago incluido", "Ganancias en 14 días"],
-  pro:     ["Hasta 4 tiendas",       "Carga masiva de productos", "IA para tu tienda",   "Ganancias en 7 días"],
-  max:     ["Tiendas ilimitadas",    "Carga masiva de productos", "IA para tu tienda",   "Ganancias el mismo día"],
+  inicial: ["1 tienda activa",       "Productos ilimitados", "MercadoPago incluido", "Ganancias en 14 días", "Hasta 10 publicaciones en ML"],
+  pro:     ["Hasta 4 tiendas",       "Carga masiva de productos", "IA para tu tienda",   "Ganancias en 7 días", "Hasta 50 publicaciones en ML"],
+  max:     ["Tiendas ilimitadas",    "Carga masiva de productos", "IA para tu tienda",   "Ganancias el mismo día", "Publicaciones ilimitadas en ML"],
 };
 
-// Grid de comparación (abajo de los cards)
+// Grid de comparación (abajo de los cards) — se muestra completa a todos los vendedores,
+// tienda propia y Mercado Libre son dos canales del mismo plan, no dos productos separados.
 const FEATURE_GROUPS = [
   {
     group: "Tiendas y productos",
@@ -26,10 +29,16 @@ const FEATURE_GROUPS = [
     ]
   },
   {
+    group: "Mercado Libre",
+    features: [
+      { label: "Publicaciones activas en ML",  values: { inicial: "10",          pro: "50",   max: "Ilimitadas" } },
+    ]
+  },
+  {
     group: "Pagos y ganancias",
     features: [
       { label: "Integración MercadoPago",      values: { inicial: true,          pro: true,   max: true } },
-      { label: "Descuento en costo",           values: { inicial: "—",           pro: "5%",   max: "10%" } },
+      { label: "Descuento en costo (tienda y Mercado Libre)", values: { inicial: "—", pro: "5%", max: "10%" } },
       { label: "Disponibilidad de ganancias",  values: { inicial: "14 días",     pro: "7 días", max: "Mismo día" } },
       { label: "Envío prioritario a clientes", values: { inicial: false,         pro: true,   max: true } },
     ]
@@ -45,8 +54,8 @@ const FEATURE_GROUPS = [
 
 // Para los modales de downgrade (qué se pierde)
 const PLAN_EXTRAS = {
-  pro:  ["Hasta 4 tiendas", "Carga masiva de productos", "IA para tu tienda", "Academia Ventaz", "Ganancias en 7 días", "Envío prioritario"],
-  max:  ["Tiendas ilimitadas", "Descuento 10% en costo", "Ganancias el mismo día"],
+  pro:  ["Hasta 4 tiendas", "Carga masiva de productos", "IA para tu tienda", "Academia Ventaz", "Ganancias en 7 días", "Envío prioritario", "Hasta 50 publicaciones en ML"],
+  max:  ["Tiendas ilimitadas", "Descuento 10% en costo", "Ganancias el mismo día", "Publicaciones ilimitadas en ML"],
 };
 
 function getPlanOrder(planId) {
@@ -369,7 +378,7 @@ function TrialView({ current, plans, onSelect, actionLoading, confirmPlan, msg, 
                 <p className="spc__desc">{PLAN_DESC[plan.id] || plan.description}</p>
                 <div className="spc__sep" />
                 <ul className="spc__features">
-                  {(PLAN_FEATURES[plan.id] || []).map(f => (
+                  {(PLAN_HIGHLIGHTS[plan.id] || []).map(f => (
                     <li key={f}><span className="spc__check"><Check size={10} strokeWidth={3} /></span>{f}</li>
                   ))}
                 </ul>

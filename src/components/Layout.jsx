@@ -7,6 +7,7 @@ import GuidedTour, { GuidedTourStyles } from "./GuidedTour";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
+import MercadoLibreIcon from "./icons/MercadoLibreIcon";
 import {
   LayoutDashboard, ShoppingBag,
   Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
@@ -26,6 +27,7 @@ const nav = [
   { to: "/estadisticas", label: "Estadísticas",   icon: BarChart2   },
   { to: "/cobros",       label: "Cobros",         icon: Wallet },
   { to: "/publicidad",   label: "Publicidad",      icon: Megaphone },
+  { to: "/mercado-libre", label: "Mercado Libre",  icon: MercadoLibreIcon, iconSize: 18 },
   { to: "/integrations", label: "Integraciones",  icon: Puzzle },
   { to: "/chat",         label: "Chat",           icon: MessageSquare },
   { to: "/calculator",   label: "Calculadora",    icon: Calculator },
@@ -49,8 +51,29 @@ export default function Layout() {
   const { seller, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const visibleNav = nav.filter(item => item.to !== "/publicidad" || seller?.email === BETA_SELLER_EMAIL);
   const [pages, setPages]               = useState([]);
+  // Cobros, Publicidad y Chat dependen de la tienda propia (ganancias que paga Ventaz,
+  // campañas de una página, mensajería con compradores de la tienda) — no tienen ningún dato
+  // para un vendedor de Mercado Libre, que cobra directo en su MP y usa la mensajería nativa
+  // de ML. Se ocultan solo para ese track; para ecommerce sigue todo igual.
+  const isMlTrack = seller?.onboarding_track === "mercadolibre";
+  const filteredNav = nav.filter(item => {
+    if (item.to === "/publicidad") return seller?.email === BETA_SELLER_EMAIL && !isMlTrack;
+    if (item.to === "/mercado-libre") return isMlTrack;
+    if (item.to === "/pages") return pages.length > 0;
+    if (isMlTrack && (item.to === "/cobros" || item.to === "/chat")) return false;
+    return true;
+  });
+  // Para el track de Mercado Libre, "Mercado Libre" pasa a ser lo primero después del
+  // Dashboard — es lo que ese vendedor vino a usar, no tiene sentido que quede escondido
+  // más abajo entre ítems de ecommerce que probablemente ni use.
+  const visibleNav = isMlTrack
+    ? [
+        filteredNav.find(i => i.to === "/dashboard"),
+        filteredNav.find(i => i.to === "/mercado-libre"),
+        ...filteredNav.filter(i => i.to !== "/dashboard" && i.to !== "/mercado-libre"),
+      ].filter(Boolean)
+    : filteredNav;
   const [storeOpen, setStoreOpen]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [adminUnread, setAdminUnread]   = useState(0);
@@ -247,7 +270,7 @@ export default function Layout() {
         )}
 
         <nav className="sidebar__nav">
-          {visibleNav.map(({ to, label, icon: Icon }) => (
+          {visibleNav.map(({ to, label, icon: Icon, iconSize }) => (
             <NavLink
               key={to}
               to={to}
@@ -257,7 +280,7 @@ export default function Layout() {
                 "sidebar__link" + (isActive ? " active" : "")
               }
             >
-              <Icon size={15} />
+              <Icon size={iconSize || 15} />
               <span className="sidebar__label">{label}</span>
             </NavLink>
           ))}

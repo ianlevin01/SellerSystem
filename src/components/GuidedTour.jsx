@@ -152,6 +152,33 @@ const TOURS = {
     },
   ],
 
+  "/mercado-libre": [
+    {
+      selector: null,
+      title: "¡Bienvenido a Mercado Libre!",
+      body: "Desde acá conectás tu propia cuenta de Mercado Libre y publicás el catálogo de Ventaz directo ahí, sin salir de Ventaz.",
+      position: "center",
+    },
+    {
+      selector: ".ml-connection-banner",
+      title: "Conectá tu cuenta",
+      body: "Tocá «Conectar Mercado Libre» y autorizá a Ventaz con tu cuenta real de Mercado Libre — es un solo paso.",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-tabs",
+      title: "Las 3 secciones",
+      body: "«Tus publicaciones» muestra lo que ya publicaste. «Publicar producto» te deja elegir del catálogo qué vender. «Cobro» es donde guardás una tarjeta para pagar el costo de tus ventas.",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-listings-tab",
+      title: "Tus publicaciones",
+      body: "Cada publicación muestra visitas, calidad y cuánto recibís después de la comisión de Mercado Libre.",
+      position: "top",
+    },
+  ],
+
   "/profile": [
     {
       selector: null,

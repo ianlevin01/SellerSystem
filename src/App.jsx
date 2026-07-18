@@ -35,12 +35,14 @@ import Subscription  from "./pages/Subscription";
 import Estadisticas  from "./pages/Estadisticas";
 import Academia      from "./pages/Academia";
 import Publicidad     from "./pages/Publicidad";
+import MercadoLibre    from "./pages/MercadoLibre";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
 import Legal          from "./pages/Legal";
 import ForgotPassword  from "./pages/ForgotPassword";
 import ResetPassword   from "./pages/ResetPassword";
 import Impersonate     from "./pages/Impersonate";
+import StartChoice     from "./pages/StartChoice";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -112,6 +114,7 @@ export default function App() {
 
           {/* Panel del vendedor (requiere auth) */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/start" element={<StartChoice />} />
             <Route element={<Layout />}>
               <Route path="/dashboard"                     element={<Dashboard />} />
               <Route path="/products"                      element={<ProductsRedirect />} />
@@ -133,6 +136,7 @@ export default function App() {
               <Route path="/subscription"                  element={<Subscription />} />
               <Route path="/academia"                      element={<Academia />} />
               <Route path="/publicidad"                    element={<PublicidadRoute />} />
+              <Route path="/mercado-libre"                 element={<MercadoLibre />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />

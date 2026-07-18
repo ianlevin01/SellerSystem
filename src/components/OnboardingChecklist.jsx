@@ -3,9 +3,48 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, ChevronDown, ChevronUp, Rocket, X } from "lucide-react";
 import client from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 import "../styles/OnboardingChecklist.css";
 
-const OBJECTIVES = [
+const ML_OBJECTIVES = [
+  {
+    key:         "connect_ml",
+    title:       "Conectá tu cuenta de Mercado Libre",
+    description: "Autorizá a Ventaz a publicar en tu propia cuenta de Mercado Libre.",
+    emoji:       "🔗",
+    route:       () => `/mercado-libre`,
+  },
+  {
+    key:         "save_card",
+    title:       "Guardá una tarjeta para el cobro",
+    description: "Se usa para cobrarte una vez al día el costo de tus ventas de Mercado Libre.",
+    emoji:       "💳",
+    route:       () => `/mercado-libre`,
+  },
+  {
+    key:         "first_listing",
+    title:       "Publicá tu primer producto",
+    description: "Elegí un producto del catálogo y publicalo en tu cuenta de Mercado Libre.",
+    emoji:       "📦",
+    route:       () => `/mercado-libre?guide=true`,
+  },
+  {
+    key:         "complete_profile",
+    title:       "Completá tu perfil",
+    description: "Subí foto de perfil y agregá tu teléfono.",
+    emoji:       "👤",
+    route:       () => `/profile?guide=true`,
+  },
+  {
+    key:         "first_sale_ml",
+    title:       "Generá tu primera venta",
+    description: "Compartí tus publicaciones y recibí tu primer pedido por Mercado Libre.",
+    emoji:       "🚀",
+    route:       () => `/orders`,
+  },
+];
+
+const ECOMMERCE_OBJECTIVES = [
   {
     key:         "create_page",
     title:       "Creá tu primera página",
@@ -73,6 +112,8 @@ const OBJECTIVES = [
 
 export default function OnboardingChecklist({ onHide }) {
   const navigate = useNavigate();
+  const { seller } = useAuth();
+  const OBJECTIVES = seller?.onboarding_track === "mercadolibre" ? ML_OBJECTIVES : ECOMMERCE_OBJECTIVES;
   const [progress,   setProgress]   = useState(null);
   const [loading,    setLoading]     = useState(true);
   const [collapsed,  setCollapsed]   = useState(false);

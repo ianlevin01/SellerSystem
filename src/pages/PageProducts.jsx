@@ -555,7 +555,7 @@ function StockReserveModal({ product, onClose, pageId }) {
   );
 }
 
-export default function PageProducts({ pageId }) {
+export default function PageProducts({ pageId, mode = "page", onPublishToMl, onComboReadyForMl }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [products,      setProducts]      = useState([]);
@@ -678,6 +678,7 @@ export default function PageProducts({ pageId }) {
       const raw = res.data;
       setCategories(Array.isArray(raw) ? raw : raw?.categories || []);
     }).catch(() => {});
+    if (mode !== "page") return; // los combos son un concepto de tienda web, no aplican en modo ML
     client.get(`/seller/store/pages/${pageId}/combos`).then(res => {
       const data = res.data || [];
       setCombos(data);
@@ -685,7 +686,7 @@ export default function PageProducts({ pageId }) {
       data.forEach(c => { pm[c.id] = c.promo_enabled && c.promo_price ? String(c.promo_price) : ""; });
       setComboPromos(pm);
     }).catch(() => {});
-  }, [pageId]);
+  }, [pageId, mode]);
 
   // Re-fetch cuando cambian los filtros (búsqueda con debounce)
   useEffect(() => {
@@ -716,11 +717,15 @@ export default function PageProducts({ pageId }) {
     const params = { limit: PAGE_SIZE, offset };
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
-    if (onlyMine)        params.only_mine = "true";
-    else if (!comboMode) params.not_mine  = "true";
+    if (mode === "page") {
+      // "en mi tienda"/"todos" es un concepto de página web — en modo ML se ve el catálogo completo
+      if (onlyMine)        params.only_mine = "true";
+      else if (!comboMode) params.not_mine  = "true";
+    }
 
     try {
-      const res  = await client.get(`/seller/store/pages/${pageId}/products`, { params, signal: controller.signal });
+      const url = mode === "ml" ? "/seller/products" : `/seller/store/pages/${pageId}/products`;
+      const res  = await client.get(url, { params, signal: controller.signal });
       const list = normalizeProducts(res.data);
       if (offset === 0) {
         setProducts(list);
@@ -799,7 +804,8 @@ export default function PageProducts({ pageId }) {
     const suggested = suggestedPrice(product);
     const sale      = roundPrice(prices[product.id]);
     const saved     = backendPagePrice(product);
-    const inStore   = isProductInStore(product) || Boolean(locallyAdded[productKey(product.id)]);
+    // "En tienda" es un concepto de página web — en modo ML nunca aplica (evita links/acciones rotas con pageId undefined)
+    const inStore   = mode === "page" && (isProductInStore(product) || Boolean(locallyAdded[productKey(product.id)]));
     const profit    = sale - cost;
     // Si tiene envío gratis activo el precio mínimo se eleva
     const minPrice  = product.free_shipping ? cost + FREE_SHIPPING_MIN_MARGIN : cost;
@@ -822,6 +828,7 @@ export default function PageProducts({ pageId }) {
   function useSuggested(product) { setPrice(product.id, suggestedPrice(product)); }
 
   async function addProduct(product) {
+    if (mode === "ml") { onPublishToMl?.(product); return; }
     const info = getInfo(product);
     if (!info.valid) {
       setMessage(`Para agregar "${productName(product)}", el precio tiene que ser igual o mayor a ${money(info.minPrice)}.`);
@@ -1107,6 +1114,16 @@ export default function PageProducts({ pageId }) {
     if (comboSelected.size === 0) return;
     setCreatingCombo(true);
     try {
+      if (mode === "ml") {
+        const res = await client.post(`/seller/ml/combos`, {
+          products: Array.from(comboSelected).map(id => ({ productId: id, quantity: 1 })),
+        });
+        setComboMode(false);
+        setComboSelected(new Set());
+        setCreatingCombo(false);
+        onComboReadyForMl?.(res.data.id);
+        return;
+      }
       const res = await client.post(`/seller/store/pages/${pageId}/combos`, {
         name: "Nuevo combo",
         products: Array.from(comboSelected).map(id => ({ product_id: id, quantity: 1 })),
@@ -1133,10 +1150,12 @@ export default function PageProducts({ pageId }) {
             placeholder="Buscar por nombre o código..."
           />
         </div>
-        <div className="seller-products-tabs">
-          <button type="button" className={!onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(false)}>Todos</button>
-          <button type="button" className={onlyMine  ? "is-active" : ""} onClick={() => setOnlyMine(true)}>En mi tienda</button>
-        </div>
+        {mode === "page" && (
+          <div className="seller-products-tabs">
+            <button type="button" className={!onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(false)}>Todos</button>
+            <button type="button" className={onlyMine  ? "is-active" : ""} onClick={() => setOnlyMine(true)}>En mi tienda</button>
+          </div>
+        )}
       </section>
     );
   }
@@ -1338,26 +1357,35 @@ export default function PageProducts({ pageId }) {
               Si cargás un <strong>precio promo menor</strong>, la tienda muestra automáticamente el porcentaje de descuento.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
-            <button type="button" className="btn btn--combo-cta" onClick={enterComboMode}>
-              <Layers size={16} /> Crear combo
-            </button>
-            {sellerPlan === "inicial" ? (
-              <button
-                type="button"
-                className="btn btn--ghost btn--sm"
-                title="Disponible en Plan Pro y Max"
-                onClick={() => alert("La carga masiva de productos está disponible en el Plan Pro y Plan Max. Actualizá tu plan en la sección de suscripciones.")}
-              >
-                <PackagePlus size={16} /> Agregar todos los productos visibles
+          {mode === "page" && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+              <button type="button" className="btn btn--combo-cta" onClick={enterComboMode}>
+                <Layers size={16} /> Crear combo
               </button>
-            ) : (
-              <button type="button" className="btn btn--primary btn--sm" onClick={addVisibleProducts} disabled={bulkSaving}>
-                {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
-                {bulkSaving ? "Agregando..." : "Agregar a mi tienda todos los productos visibles"}
+              {sellerPlan === "inicial" ? (
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--sm"
+                  title="Disponible en Plan Pro y Max"
+                  onClick={() => alert("La carga masiva de productos está disponible en el Plan Pro y Plan Max. Actualizá tu plan en la sección de suscripciones.")}
+                >
+                  <PackagePlus size={16} /> Agregar todos los productos visibles
+                </button>
+              ) : (
+                <button type="button" className="btn btn--primary btn--sm" onClick={addVisibleProducts} disabled={bulkSaving}>
+                  {bulkSaving ? <Loader2 size={16} className="seller-products-spin" /> : <PackagePlus size={16} />}
+                  {bulkSaving ? "Agregando..." : "Agregar a mi tienda todos los productos visibles"}
+                </button>
+              )}
+            </div>
+          )}
+          {mode === "ml" && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+              <button type="button" className="btn btn--combo-cta" onClick={enterComboMode}>
+                <Layers size={16} /> Crear combo
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -1790,6 +1818,16 @@ export default function PageProducts({ pageId }) {
                       >
                         {comboSelected.has(product.id) ? <CheckCircle2 size={16} /> : <Plus size={16} />}
                         {comboSelected.has(product.id) ? "En el combo ✓" : "Agregar al combo"}
+                      </button>
+                    ) : mode === "ml" ? (
+                      <button
+                        type="button"
+                        className="seller-product-btn seller-product-btn--add"
+                        onClick={() => addProduct(product)}
+                        disabled={saving}
+                      >
+                        {saving ? <Loader2 size={16} className="seller-products-spin" /> : <Plus size={16} />}
+                        Publicar en Mercado Libre
                       </button>
                     ) : !info.inStore ? (
                       <button

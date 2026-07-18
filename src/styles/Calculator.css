@@ -415,6 +415,50 @@
   color: #fff;
 }
 
+/* Desglose tipo lista (una fila por línea) — usado en la calculadora de Mercado Libre en vez
+   de la grilla de tarjetas de .vtz-calc-detail, que con 6-7 líneas quedaba muy fragmentada. */
+.vtz-calc-breakdown {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+}
+
+.vtz-calc-breakdown__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,.11);
+}
+
+.vtz-calc-breakdown__row span {
+  color: rgba(255,255,255,.62);
+  font-size: .86rem;
+  font-weight: 750;
+}
+
+.vtz-calc-breakdown__row strong {
+  color: #fff;
+  font-weight: 850;
+  font-size: .95rem;
+}
+
+.vtz-calc-breakdown__row--total {
+  border-bottom: none;
+  margin-top: 4px;
+  padding-top: 16px;
+}
+
+.vtz-calc-breakdown__row--total span {
+  color: rgba(255,255,255,.85);
+  font-size: .92rem;
+}
+
+.vtz-calc-breakdown__row--total strong {
+  font-size: 1.15rem;
+  color: #fff;
+}
+
 .vtz-calc-guide {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -9,7 +9,12 @@ import {
   TrendingUp,
   Trophy,
   Zap,
+  Search,
+  Loader2,
 } from "lucide-react";
+import client from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import { Link } from "react-router-dom";
 
 const PLATFORM_PCTS = [30, 27.5, 22, 20];
 
@@ -43,7 +48,272 @@ function numberValue(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
-export default function Calculator() {
+// ── Calculadora para Mercado Libre ──────────────────────────────────────────
+// El sistema de tramos de arriba es específico del modelo de tienda propia — ML tiene su
+// propia comisión por categoría, así que en vez de tramos usamos los mismos endpoints que ya
+// usa el modal de publicar en /mercado-libre: buscador de categoría + GET listing-fees.
+function MlCalculator() {
+  const [connected, setConnected]   = useState(null); // null = todavía no se sabe
+  const [query,       setQuery]       = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [categoryId,  setCategoryId]  = useState("");
+  const [price,       setPrice]       = useState("");
+  const [weight,      setWeight]      = useState("");
+  const [freeShipping, setFreeShipping] = useState(true);
+  const [withInstallments, setWithInstallments] = useState(false);
+  const [fees,         setFees]        = useState(null);
+  const [feesLoading,  setFeesLoading] = useState(false);
+
+  // Selector de producto real del catálogo — autocompleta peso y costo en vez de cargarlos a mano.
+  const [productQuery,       setProductQuery]       = useState("");
+  const [productSuggestions, setProductSuggestions] = useState([]);
+  const [selectedProduct,    setSelectedProduct]     = useState(null);
+
+  useEffect(() => {
+    client.get("/seller/ml/status")
+      .then(r => setConnected(!!r.data?.connected))
+      .catch(() => setConnected(false));
+  }, []);
+
+  function searchCategories(q = query) {
+    if (!q.trim()) return;
+    client.get("/seller/ml/categories/suggest", { params: { q } })
+      .then(r => setSuggestions(r.data || []))
+      .catch(() => setSuggestions([]));
+  }
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (productQuery.trim().length < 2) { setProductSuggestions([]); return; }
+      client.get("/seller/ml/products/search", { params: { q: productQuery } })
+        .then(r => setProductSuggestions(r.data || []))
+        .catch(() => setProductSuggestions([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [productQuery]);
+
+  function pickProduct(p) {
+    setSelectedProduct(p);
+    setProductQuery(p.name);
+    setProductSuggestions([]);
+    setWeight(p.weightGrams > 0 ? String(p.weightGrams) : "");
+    // Autocompletar categoría también — busca por el nombre del producto y, si encuentra algo,
+    // deja la primera sugerencia ya seleccionada para que solo falte precio/envío/cuotas.
+    setQuery(p.name);
+    client.get("/seller/ml/categories/suggest", { params: { q: p.name } })
+      .then(r => {
+        const found = r.data || [];
+        setSuggestions(found);
+        if (found[0]) setCategoryId(found[0].categoryId);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    const p = Number(price);
+    const t = setTimeout(() => {
+      if (!categoryId || !p || p <= 0) { setFees(null); return; }
+      setFeesLoading(true);
+      // Volumen aproximado a partir del peso para poder pedir el costo de envío cuando no hay
+      // un producto real seleccionado — mismo criterio de cubo que usa mlListingService en el
+      // backend. Si hay un producto elegido, se usa su volumen real en vez de aproximarlo.
+      const weightGrams = Number(weight) || 0;
+      const volumeCm3 = selectedProduct?.volumeCm3 > 0
+        ? selectedProduct.volumeCm3
+        : (weightGrams > 0 ? weightGrams * 4 : 0); // aprox. densidad típica de paquetería
+      client.get("/seller/ml/listing-fees", {
+        params: {
+          price: p, categoryId,
+          ...(weightGrams > 0 ? { weightGrams, volumeCm3, freeShipping: String(freeShipping) } : {}),
+        },
+      })
+        .then(r => setFees(r.data))
+        .catch(() => setFees(null))
+        .finally(() => setFeesLoading(false));
+    }, 400);
+    return () => clearTimeout(t);
+  }, [categoryId, price, weight, freeShipping, selectedProduct]);
+
+  const shippingCost = freeShipping ? Number(fees?.shippingCost || 0) : 0;
+  const installmentsCost = withInstallments ? Number(fees?.installments?.extraCost || 0) : 0;
+  const netAfterShipping = fees ? Number(fees.netAmount) - shippingCost - installmentsCost : null;
+  const productCost = selectedProduct ? Number(selectedProduct.priceFloor) : null;
+  const profit = netAfterShipping !== null && productCost !== null ? netAfterShipping - productCost : null;
+
+  if (connected === null) {
+    return (
+      <main className="vtz-calc-simple">
+        <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+          <Loader2 size={20} className="spin" />
+        </div>
+      </main>
+    );
+  }
+
+  if (!connected) {
+    return (
+      <main className="vtz-calc-simple">
+        <section className="vtz-calc-top">
+          <div>
+            <span className="vtz-calc-kicker"><Sparkles size={16} /> Calculadora</span>
+            <h1>Conectá tu cuenta de Mercado Libre</h1>
+            <p>Necesitás tener Mercado Libre conectado para ver la comisión y lo que recibís por categoría.</p>
+          </div>
+        </section>
+        <Link to="/mercado-libre" className="btn btn--primary" style={{ display: "inline-flex", width: "fit-content" }}>
+          Ir a Mercado Libre
+        </Link>
+      </main>
+    );
+  }
+
+  return (
+    <main className="vtz-calc-simple">
+      <section className="vtz-calc-top">
+        <div>
+          <span className="vtz-calc-kicker"><Sparkles size={16} /> Calculadora</span>
+          <h1>Calculá tu comisión en Mercado Libre.</h1>
+          <p>Buscá la categoría del producto y cargá el precio para ver cuánto te cobra Mercado Libre y cuánto recibís.</p>
+        </div>
+      </section>
+
+      <section className="vtz-calc-layout">
+        <article className="vtz-calc-box vtz-calc-form">
+          <div className="vtz-calc-box__title"><div><h2>Producto</h2></div></div>
+
+          <label className="vtz-calc-field" style={{ position: "relative" }}>
+            <span>Buscar producto del catálogo — opcional</span>
+            <input className="form-input" value={productQuery}
+              onChange={e => { setProductQuery(e.target.value); setSelectedProduct(null); }}
+              placeholder="Ej: mesa de luz" />
+            {productSuggestions.length > 0 && (
+              <div style={{
+                position: "absolute", top: "100%", left: 0, right: 0, zIndex: 5,
+                background: "var(--bg-elevated, #fff)", border: "1px solid var(--border, #e5e7eb)",
+                borderRadius: 8, marginTop: 4, maxHeight: 220, overflowY: "auto",
+              }}>
+                {productSuggestions.map(p => (
+                  <div key={p.id} onClick={() => pickProduct(p)}
+                    style={{ padding: "8px 12px", cursor: "pointer", fontSize: ".9rem" }}>
+                    {p.name}
+                  </div>
+                ))}
+              </div>
+            )}
+            <small style={{ color: "var(--text-tertiary, #9ca3af)", fontSize: ".78rem" }}>
+              Elegí un producto real y completamos peso, costo y categoría solos.
+            </small>
+          </label>
+
+          <div className="vtz-calc-box__title" style={{ marginTop: 8 }}><div><h2>Categoría y precio</h2></div></div>
+
+          <label className="vtz-calc-field">
+            <span>Categoría de Mercado Libre</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input className="form-input" value={query} onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && searchCategories()}
+                placeholder="Palabras clave, ej: mesa de luz" />
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => searchCategories()}><Search size={13} /></button>
+            </div>
+          </label>
+
+          <select className="form-input" value={categoryId} onChange={e => setCategoryId(e.target.value)} style={{ marginBottom: 16 }}>
+            <option value="">{suggestions.length ? "Seleccioná..." : "Buscá una categoría primero"}</option>
+            {suggestions.map(s => <option key={s.categoryId} value={s.categoryId}>{s.categoryName}</option>)}
+          </select>
+
+          <label className="vtz-calc-field">
+            <span>Precio de venta</span>
+            <div className="vtz-calc-input">
+              <b>$</b>
+              <input type="number" min="0" placeholder="Ej: 23000" value={price} onChange={e => setPrice(e.target.value)} />
+            </div>
+          </label>
+
+          <label className="vtz-calc-field">
+            <span>Peso del producto (gramos) {selectedProduct?.weightGrams > 0 ? "" : "— opcional"}</span>
+            <input className="form-input" type="number" min="0" placeholder="Ej: 500"
+              value={weight} onChange={e => setWeight(e.target.value)}
+              readOnly={!!selectedProduct?.weightGrams} />
+            <small style={{ color: "var(--text-tertiary, #9ca3af)", fontSize: ".78rem" }}>
+              {selectedProduct && !selectedProduct.weightGrams
+                ? "Este producto no tiene peso cargado en el catálogo — completalo a mano para estimar el envío."
+                : "Con el peso cargado, también estimamos el costo de envío."}
+            </small>
+          </label>
+
+          {weight && (
+            <label className="vtz-calc-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={freeShipping} onChange={e => setFreeShipping(e.target.checked)} />
+              <span>Ofrecer envío gratis al comprador</span>
+            </label>
+          )}
+
+          {fees?.installments && (
+            <label className="vtz-calc-field" style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={withInstallments} onChange={e => setWithInstallments(e.target.checked)} />
+              <span>Ofrecer cuotas sin interés (publicación Premium)</span>
+            </label>
+          )}
+        </article>
+
+        <article className="vtz-calc-result-card">
+          <div className="vtz-calc-result-card__icon"><Zap size={30} /></div>
+          <span>{selectedProduct ? "Tu ganancia" : "Recibís"}</span>
+          <h2>{feesLoading ? "—" : fees ? money(selectedProduct ? profit : netAfterShipping) : "—"}</h2>
+          <p>
+            {!categoryId
+              ? "Elegí una categoría para calcular la comisión."
+              : !price
+                ? "Cargá un precio para ver el resultado."
+                : feesLoading
+                  ? "Calculando..."
+                  : "Comisión de Mercado Libre para esta categoría y precio."}
+          </p>
+
+          {fees && !feesLoading && (
+            <div className="vtz-calc-breakdown">
+              <div className="vtz-calc-breakdown__row">
+                <span>Precio de venta</span>
+                <strong>{money(Number(price))}</strong>
+              </div>
+              {selectedProduct && (
+                <div className="vtz-calc-breakdown__row">
+                  <span>Costo del producto</span>
+                  <strong>-{money(productCost)}</strong>
+                </div>
+              )}
+              <div className="vtz-calc-breakdown__row">
+                <span>Cargo por vender</span>
+                <strong>-{money(fees.saleFeeAmount)}</strong>
+              </div>
+              <div className="vtz-calc-breakdown__row">
+                <span>Costo por ofrecer cuotas</span>
+                <strong>{installmentsCost > 0 ? `-${money(installmentsCost)}` : "$0"}</strong>
+              </div>
+              {weight && (
+                <div className="vtz-calc-breakdown__row">
+                  <span>Costo por envío</span>
+                  <strong>{shippingCost > 0 ? `-${money(shippingCost)}` : "$0"}</strong>
+                </div>
+              )}
+              <div className="vtz-calc-breakdown__row">
+                <span>Impuestos estimados</span>
+                <strong>$0</strong>
+              </div>
+              <div className="vtz-calc-breakdown__row vtz-calc-breakdown__row--total">
+                <span>{selectedProduct ? "Tu ganancia" : "Recibís"}</span>
+                <strong>{money(selectedProduct ? profit : netAfterShipping)}</strong>
+              </div>
+            </div>
+          )}
+        </article>
+      </section>
+    </main>
+  );
+}
+
+function EcommerceCalculator() {
   const [costo,    setCosto]    = useState("");
   const [precio,   setPrecio]   = useState("");
   const [cantidad, setCantidad] = useState(1);
@@ -402,4 +672,9 @@ export default function Calculator() {
 
     </main>
   );
+}
+
+export default function Calculator() {
+  const { seller } = useAuth();
+  return seller?.onboarding_track === "mercadolibre" ? <MlCalculator /> : <EcommerceCalculator />;
 }
