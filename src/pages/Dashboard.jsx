@@ -29,9 +29,13 @@ export default function Dashboard() {
   const [mlBlockedDebt, setMlBlockedDebt] = useState(0);
 
   // Primer acceso: todavía no eligió si quiere vender por tienda propia o por Mercado Libre.
+  // OJO: no redirigir acá a "/start" cuando falta onboarding_track — este efecto corre al
+  // montar usando el `seller` cacheado en localStorage de sesiones viejas (de antes de que
+  // este campo existiera), mientras AuthContext hace su propio fetch fresco en paralelo que
+  // llega un instante después con el dato correcto. Como este efecto no se re-ejecuta, todos
+  // los vendedores ya existentes quedaban atrapados en "/start" por ese falso negativo.
   useEffect(() => {
     if (!seller) return;
-    if (!seller.onboarding_track) { navigate("/start", { replace: true }); return; }
 
     // Track Mercado Libre: el paso obligatorio inicial es publicar el primer producto. Antes
     // esto sacaba al vendedor del Dashboard a la fuerza — ahora se queda en el Dashboard (que
