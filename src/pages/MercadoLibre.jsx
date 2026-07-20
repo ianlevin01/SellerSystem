@@ -733,9 +733,20 @@ function PublishModal({ product, onClose, onPublished }) {
   useEffect(() => {
     if (!categoryId) { setAttrDefs([]); return; }
     client.get(`/seller/ml/categories/${categoryId}/attributes`)
-      .then(r => setAttrDefs(r.data || []))
+      .then(r => {
+        const defs = r.data || [];
+        setAttrDefs(defs);
+        // La marca/modelo real casi nunca la sabe quien publica (no es el fabricante) — se
+        // precarga un default razonable, editable por si en algún caso sí lo sabe.
+        setAttrValues(prev => {
+          const next = { ...prev };
+          if (defs.some(a => a.id === "BRAND") && !next.BRAND) next.BRAND = "Genérica";
+          if (defs.some(a => a.id === "MODEL") && !next.MODEL) next.MODEL = product.code || product.sku || product.name || "";
+          return next;
+        });
+      })
       .catch(() => setAttrDefs([]));
-  }, [categoryId]);
+  }, [categoryId]); // eslint-disable-line
 
   const requiredAttrs = attrDefs.filter(a => a.required);
   const optionalAttrs = attrDefs.filter(a => !a.required);
@@ -1023,7 +1034,14 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
   useEffect(() => {
     if (!categoryId) { setAttrDefs([]); return; }
     client.get(`/seller/ml/categories/${categoryId}/attributes`)
-      .then(r => setAttrDefs(r.data || []))
+      .then(r => {
+        const defs = r.data || [];
+        setAttrDefs(defs);
+        // Un combo no tiene un único código de producto — solo precargamos la marca.
+        if (defs.some(a => a.id === "BRAND")) {
+          setAttrValues(prev => prev.BRAND ? prev : { ...prev, BRAND: "Genérica" });
+        }
+      })
       .catch(() => setAttrDefs([]));
   }, [categoryId]);
 
