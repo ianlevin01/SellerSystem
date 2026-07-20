@@ -723,7 +723,10 @@ function PublishModal({ product, onClose, onPublished }) {
   const [description, setDescription] = useState(product.custom_desc || product.description || "");
   const [price, setPrice] = useState("");
   const [priceFloor, setPriceFloor] = useState(null);
+  const [weightGrams, setWeightGrams] = useState(0);
+  const [volumeCm3, setVolumeCm3] = useState(0);
   const [shippingFree, setShippingFree] = useState(false);
+  const [withInstallments, setWithInstallments] = useState(false);
   const [existingImages, setExistingImages] = useState([]); // [{id, key, url}]
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [newPictures, setNewPictures] = useState([]); // [{previewUrl, ref, uploading}]
@@ -745,7 +748,11 @@ function PublishModal({ product, onClose, onPublished }) {
   useEffect(() => {
     searchCategories();
     client.get(`/seller/ml/products/${product.id}/price-floor`)
-      .then(r => setPriceFloor(r.data.floor))
+      .then(r => {
+        setPriceFloor(r.data.floor);
+        setWeightGrams(Number(r.data.weightGrams || 0));
+        setVolumeCm3(Number(r.data.volumeCm3 || 0));
+      })
       .catch(() => setPriceFloor(null));
     client.get(`/seller/images/${product.id}`, { params: { all: true } })
       .then(r => {
@@ -787,22 +794,32 @@ function PublishModal({ product, onClose, onPublished }) {
   const [fees, setFees] = useState(null);
   const [feesLoading, setFeesLoading] = useState(false);
 
-  // Recalcula "Recibís" cada vez que cambia precio/categoría — igual que la propia UI de ML.
+  // Recalcula "Recibís" cada vez que cambia precio/categoría/envío — igual que la propia UI de ML.
   useEffect(() => {
     const p = Number(price);
     if (!categoryId || !p || p <= 0) { setFees(null); return; }
     let cancelled = false;
     setFeesLoading(true);
     const timer = setTimeout(() => {
-      client.get("/seller/ml/listing-fees", { params: { price: p, categoryId } })
+      client.get("/seller/ml/listing-fees", {
+        params: {
+          price: p, categoryId,
+          ...(weightGrams > 0 ? { weightGrams, volumeCm3, freeShipping: String(shippingFree) } : {}),
+        },
+      })
         .then(r => { if (!cancelled) setFees(r.data); })
         .catch(() => { if (!cancelled) setFees(null); })
         .finally(() => { if (!cancelled) setFeesLoading(false); });
     }, 400);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [price, categoryId]);
+  }, [price, categoryId, weightGrams, volumeCm3, shippingFree]);
 
   const missingAttrs = requiredAttrs.filter(a => !attrValues[a.id]?.trim());
+
+  const shippingCost     = shippingFree ? Number(fees?.shippingCost || 0) : 0;
+  const installmentsCost = withInstallments ? Number(fees?.installments?.extraCost || 0) : 0;
+  const netFinal    = fees ? Number(fees.netAmount) - shippingCost - installmentsCost : null;
+  const sellingAtLoss = netFinal != null && priceFloor != null && netFinal < priceFloor;
 
   function toggleImage(key) {
     setSelectedKeys(prev => {
@@ -863,7 +880,10 @@ function PublishModal({ product, onClose, onPublished }) {
   async function suggestDescriptionAi() {
     setSuggestingDesc(true);
     try {
-      const res = await client.post("/seller/ml/suggest/description", { productName: product.name, description });
+      const res = await client.post("/seller/ml/suggest/description", {
+        productName: product.name, description,
+        imageUrls: existingImages.map(i => i.url),
+      });
       setDescription(res.data.description);
     } catch { setError("No se pudo generar la descripción"); }
     finally { setSuggestingDesc(false); }
@@ -877,6 +897,7 @@ function PublishModal({ product, onClose, onPublished }) {
       const res = await client.post("/seller/ml/suggest/attributes", {
         productName: product.name, description, categoryName,
         attrDefs: pending.map(a => ({ id: a.id, name: a.name, values: a.values })),
+        imageUrls: existingImages.map(i => i.url),
       });
       setAttrValues(prev => ({ ...prev, ...res.data.values }));
     } catch { setError("No se pudieron sugerir las características"); }
@@ -886,9 +907,12 @@ function PublishModal({ product, onClose, onPublished }) {
   async function generateImageAi() {
     setGeneratingImage(true); setError("");
     try {
-      const res = await client.post("/seller/ml/pictures/generate", { productName: product.name, description });
+      const res = await client.post("/seller/ml/pictures/generate",
+        { productName: product.name, description },
+        { timeout: 90000 });
       setNewPictures(prev => [...prev, { previewUrl: res.data.previewUrl, ref: res.data.ref, uploading: false }]);
     } catch (err) {
+      console.error("[ml] generateImageAi:", err);
       setError(err.response?.data?.message || "No se pudo generar la imagen");
     } finally {
       setGeneratingImage(false);
@@ -926,6 +950,7 @@ function PublishModal({ product, onClose, onPublished }) {
         title, description,
         imageKeys: Array.from(selectedKeys),
         pictureRefs,
+        listingTypeId: withInstallments ? "gold_pro" : "gold_special",
       });
       onPublished(res.data);
     } catch (err) {
@@ -1105,32 +1130,66 @@ function PublishModal({ product, onClose, onPublished }) {
             </small>
           )}
 
-          {priceValid && categoryId && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: "10px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, marginBottom: 16 }}>
-              {feesLoading ? (
-                <span style={{ fontSize: ".82rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
-                  <Loader2 size={12} className="spin" /> Calculando comisión...
-                </span>
-              ) : fees ? (
-                <>
-                  <span style={{ fontSize: ".8rem", color: "var(--text-secondary)" }}>
-                    Cargo por vender: ${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}
-                  </span>
-                  <span style={{ fontSize: ".92rem", fontWeight: 700, color: "var(--success,#059669)" }}>
-                    Recibís: ${Math.round(fees.netAmount).toLocaleString("es-AR")}
-                  </span>
-                </>
-              ) : (
-                <span style={{ fontSize: ".78rem", color: "var(--text-secondary)" }}>No se pudo calcular la comisión</span>
-              )}
-            </div>
+          {weightGrams > 0 && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 10 }}>
+              <input type="checkbox" checked={shippingFree} onChange={e => setShippingFree(e.target.checked)} />
+              Ofrecer envío gratis (a veces Mercado Libre lo exige a partir de cierto precio)
+            </label>
           )}
 
-          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 16 }}>
-            <input type="checkbox" checked={shippingFree} onChange={e => setShippingFree(e.target.checked)} />
-            Ofrecer envío gratis (Mercado Libre descuenta su costo automáticamente de la venta)
-          </label>
+          {fees?.installments && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 16 }}>
+              <input type="checkbox" checked={withInstallments} onChange={e => setWithInstallments(e.target.checked)} />
+              Ofrecer cuotas sin interés (publicación Premium)
+            </label>
+          )}
+
+          {priceValid && categoryId && (
+            feesLoading ? (
+              <p style={{ fontSize: ".82rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
+                <Loader2 size={12} className="spin" /> Calculando comisión...
+              </p>
+            ) : fees ? (
+              <div className="vtz-calc-breakdown" style={{ marginBottom: 16 }}>
+                <div className="vtz-calc-breakdown__row">
+                  <span>Precio de venta</span>
+                  <strong>${Math.round(Number(price)).toLocaleString("es-AR")}</strong>
+                </div>
+                <div className="vtz-calc-breakdown__row">
+                  <span>Cargo por vender</span>
+                  <strong>-${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}</strong>
+                </div>
+                <div className="vtz-calc-breakdown__row">
+                  <span>Costo por ofrecer cuotas</span>
+                  <strong>{installmentsCost > 0 ? `-$${Math.round(installmentsCost).toLocaleString("es-AR")}` : "$0"}</strong>
+                </div>
+                {shippingFree && (
+                  <div className="vtz-calc-breakdown__row">
+                    <span>Costo por envío</span>
+                    <strong>{shippingCost > 0 ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "$0"}</strong>
+                  </div>
+                )}
+                <div className="vtz-calc-breakdown__row">
+                  <span>Impuestos estimados</span>
+                  <strong>$0</strong>
+                </div>
+                <div className="vtz-calc-breakdown__row vtz-calc-breakdown__row--total">
+                  <span>Recibís</span>
+                  <strong>${Math.round(netFinal).toLocaleString("es-AR")}</strong>
+                </div>
+              </div>
+            ) : (
+              <p style={{ fontSize: ".78rem", color: "var(--text-secondary)", marginBottom: 16 }}>No se pudo calcular la comisión</p>
+            )
+          )}
+
+          {sellingAtLoss && (
+            <p style={{ margin: "0 0 16px", padding: "10px 12px", background: "rgba(239,68,68,.1)",
+              border: "1px solid var(--danger,#ef4444)", borderRadius: 8, fontSize: ".8rem",
+              color: "var(--danger,#ef4444)", fontWeight: 600 }}>
+              ⚠ Estás vendiendo a pérdida: lo que recibís (${Math.round(netFinal).toLocaleString("es-AR")}) es menor al costo del producto (${Math.round(priceFloor).toLocaleString("es-AR")}).
+            </p>
+          )}
         </div>
       )}
 
