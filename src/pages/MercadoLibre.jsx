@@ -732,6 +732,7 @@ function PublishModal({ product, onClose, onPublished }) {
   const [suggestingTitle, setSuggestingTitle] = useState(false);
   const [suggestingDesc, setSuggestingDesc] = useState(false);
   const [suggestingAttrs, setSuggestingAttrs] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   const categoryName = suggestions.find(s => s.categoryId === categoryId)?.categoryName;
 
@@ -882,6 +883,18 @@ function PublishModal({ product, onClose, onPublished }) {
     finally { setSuggestingAttrs(false); }
   }
 
+  async function generateImageAi() {
+    setGeneratingImage(true); setError("");
+    try {
+      const res = await client.post("/seller/ml/pictures/generate", { productName: product.name, description });
+      setNewPictures(prev => [...prev, { previewUrl: res.data.previewUrl, ref: res.data.ref, uploading: false }]);
+    } catch (err) {
+      setError(err.response?.data?.message || "No se pudo generar la imagen");
+    } finally {
+      setGeneratingImage(false);
+    }
+  }
+
   async function publish() {
     if (!categoryId) { setError("Elegí una categoría de Mercado Libre"); return; }
     if (!priceValid) {
@@ -930,16 +943,32 @@ function PublishModal({ product, onClose, onPublished }) {
       {step === 0 && (
         <>
           <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Categoría de Mercado Libre</label>
-          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
             <input className="form-input" value={query} onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && searchCategories()}
               placeholder="Palabras clave para buscar la categoría" />
             <button type="button" className="btn btn--ghost btn--sm" onClick={searchCategories}><Search size={13} /></button>
           </div>
-          <select className="form-input" style={{ marginBottom: 16 }} value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-            <option value="">{suggestions.length ? "Seleccioná..." : "Buscá una categoría primero"}</option>
-            {suggestions.map(s => <option key={s.categoryId} value={s.categoryId}>{s.categoryName}</option>)}
-          </select>
+          {suggestions.length === 0 ? (
+            <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>Buscá una categoría para ver las opciones.</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
+              {suggestions.map(s => {
+                const selected = s.categoryId === categoryId;
+                return (
+                  <button key={s.categoryId} type="button" onClick={() => setCategoryId(s.categoryId)}
+                    style={{
+                      textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer",
+                      border: selected ? "2px solid var(--brand,#6366f1)" : "1px solid var(--border)",
+                      background: selected ? "rgba(99,102,241,.06)" : "#fff",
+                    }}>
+                    <div style={{ fontWeight: 600, fontSize: ".86rem" }}>{s.categoryName}</div>
+                    {s.path && <div style={{ fontSize: ".72rem", color: "var(--text-secondary)", marginTop: 2 }}>{s.path}</div>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
 
@@ -1007,10 +1036,15 @@ function PublishModal({ product, onClose, onPublished }) {
               ))}
             </div>
           )}
-          <label className="btn btn--ghost btn--sm" style={{ display: "inline-flex", cursor: "pointer" }}>
-            <Plus size={13} /> Subir imagen nueva
-            <input type="file" accept="image/*" multiple onChange={handleFileUpload} style={{ display: "none" }} />
-          </label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <label className="btn btn--ghost btn--sm" style={{ display: "inline-flex", cursor: "pointer" }}>
+              <Plus size={13} /> Subir imagen nueva
+              <input type="file" accept="image/*" multiple onChange={handleFileUpload} style={{ display: "none" }} />
+            </label>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={generateImageAi} disabled={generatingImage}>
+              {generatingImage ? <Loader2 size={13} className="spin" /> : "✨ Generar con IA"}
+            </button>
+          </div>
         </div>
       )}
 
