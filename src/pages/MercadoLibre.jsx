@@ -530,6 +530,7 @@ function WalletSection({ wallet, onChanged }) {
   const [showCardModal, setShowCardModal] = useState(false);
   const [showAddBalance, setShowAddBalance] = useState(false);
   const [payingDebt, setPayingDebt] = useState(false);
+  const [payingBlockedDebt, setPayingBlockedDebt] = useState(false);
   const [payError, setPayError] = useState("");
 
   async function payDebtNow() {
@@ -541,6 +542,18 @@ function WalletSection({ wallet, onChanged }) {
       setPayError(err.response?.data?.message || "No se pudo pagar la deuda.");
     } finally {
       setPayingDebt(false);
+    }
+  }
+
+  async function payBlockedDebtNow() {
+    setPayingBlockedDebt(true); setPayError("");
+    try {
+      await client.post("/seller/ml/wallet/pay-blocked-debt");
+      onChanged();
+    } catch (err) {
+      setPayError(err.response?.data?.message || "No se pudo pagar la deuda obligatoria.");
+    } finally {
+      setPayingBlockedDebt(false);
     }
   }
 
@@ -636,6 +649,12 @@ function WalletSection({ wallet, onChanged }) {
       {payError && <p style={{ margin: "12px 0 0", fontSize: ".8rem", color: "var(--danger,#ef4444)" }}>{payError}</p>}
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
+        {wallet.hasCard && hasGrace && Number(wallet.blockedDebt) > 0 && (
+          <button type="button" className="btn btn--primary" style={{ padding: "10px 22px", background: "var(--danger,#ef4444)", borderColor: "var(--danger,#ef4444)" }}
+            onClick={payBlockedDebtNow} disabled={payingBlockedDebt}>
+            {payingBlockedDebt ? <Loader2 size={15} className="spin" /> : <><AlertTriangle size={15} /> Pagar deuda obligatoria</>}
+          </button>
+        )}
         {wallet.hasCard && Number(wallet.pendingDebt) > 0 && (
           <button type="button" className="btn btn--primary" style={{ padding: "10px 22px" }} onClick={payDebtNow} disabled={payingDebt}>
             {payingDebt ? <Loader2 size={15} className="spin" /> : <><Wallet size={15} /> Pagar deuda ahora</>}
@@ -1222,8 +1241,15 @@ function formatNumberUnitValue(attr, raw) {
   return `${trimmed} ${NUMBER_UNIT_DEFAULTS[attr.id] || "cm"}`;
 }
 
+// Mercado Libre a veces da una lista fija (marca, por ejemplo) que no siempre tiene la opción
+// real del producto — como igual mandamos value_name como texto (no value_id), ML acepta un
+// valor que no esté en la lista, así que dejamos una opción "Otra" que pasa a un input libre.
 function AttributeField({ attr, value, onChange }) {
   const isNumberUnit = attr.valueType === "number_unit";
+  const hasOptions   = attr.values?.length > 0;
+  const matchesOption = hasOptions && attr.values.some(v => v.name === value);
+  const [customMode, setCustomMode] = useState(hasOptions && !!value && !matchesOption);
+
   return (
     <div>
       <label style={{ fontSize: ".78rem", display: "block", marginBottom: 3 }}>
@@ -1232,18 +1258,30 @@ function AttributeField({ attr, value, onChange }) {
           <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}> ({NUMBER_UNIT_DEFAULTS[attr.id] || "cm"})</span>
         )}
       </label>
-      {attr.values?.length > 0 ? (
-        <select className="form-input" value={value || ""} onChange={e => onChange(e.target.value)}>
+      {hasOptions && !customMode ? (
+        <select className="form-input" value={value || ""} onChange={e => {
+          if (e.target.value === "__custom__") { setCustomMode(true); onChange(""); return; }
+          onChange(e.target.value);
+        }}>
           <option value="">Seleccioná...</option>
           {attr.values.map(v => <option key={v.id || v.name} value={v.name}>{v.name}</option>)}
+          <option value="__custom__">No está en la lista (escribir)...</option>
         </select>
       ) : (
-        <input
-          className="form-input"
-          type={isNumberUnit ? "number" : "text"}
-          value={value || ""}
-          onChange={e => onChange(e.target.value)}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <input
+            className="form-input"
+            type={isNumberUnit ? "number" : "text"}
+            value={value || ""}
+            onChange={e => onChange(e.target.value)}
+          />
+          {hasOptions && (
+            <button type="button" onClick={() => { setCustomMode(false); onChange(""); }}
+              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: ".74rem", color: "var(--brand,#4db81a)", textAlign: "left" }}>
+              Elegir de la lista
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1291,6 +1329,13 @@ const LISTING_FILTERS = [
 function ListingsSection({ listings, statsByItem, onToggleStatus }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+
+  // Si el vendedor publicó todo con la misma cuenta de ML, no tiene sentido mostrar de cuál —
+  // solo aporta cuando hay publicaciones de más de una cuenta distinta (alternó conexiones).
+  const showAccount = useMemo(() => {
+    const accounts = new Set(listings.map(l => l.ml_account_id).filter(Boolean));
+    return accounts.size > 1;
+  }, [listings]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1353,6 +1398,14 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
                   <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{l.product_name}</div>
                   <div style={{ fontSize: ".74rem", color: "var(--text-secondary)" }}>
                     SKU {l.sku || "—"} · ${Number(l.price || 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
+                    {showAccount && (
+                      <span style={{
+                        marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "1px 7px",
+                        borderRadius: 99, background: "var(--surface-2,#f3f4f6)", color: "var(--text-secondary)",
+                      }}>
+                        {l.ml_account_nickname || l.ml_account_id}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: ".72rem", color: "var(--text-secondary)", marginTop: 2 }}>
                     {stats && `${stats.visits} visitas`}
