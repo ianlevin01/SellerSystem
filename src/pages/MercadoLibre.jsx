@@ -908,7 +908,7 @@ function PublishModal({ product, onClose, onPublished }) {
     setGeneratingImage(true); setError("");
     try {
       const res = await client.post("/seller/ml/pictures/generate",
-        { productName: product.name, description },
+        { productName: product.name, description, imageUrls: existingImages.map(i => i.url) },
         { timeout: 90000 });
       setNewPictures(prev => [...prev, { previewUrl: res.data.previewUrl, ref: res.data.ref, uploading: false }]);
     } catch (err) {
@@ -1150,32 +1150,22 @@ function PublishModal({ product, onClose, onPublished }) {
                 <Loader2 size={12} className="spin" /> Calculando comisión...
               </p>
             ) : fees ? (
-              <div className="vtz-calc-breakdown" style={{ marginBottom: 16 }}>
-                <div className="vtz-calc-breakdown__row">
-                  <span>Precio de venta</span>
-                  <strong>${Math.round(Number(price)).toLocaleString("es-AR")}</strong>
-                </div>
-                <div className="vtz-calc-breakdown__row">
-                  <span>Cargo por vender</span>
-                  <strong>-${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}</strong>
-                </div>
-                <div className="vtz-calc-breakdown__row">
-                  <span>Costo por ofrecer cuotas</span>
-                  <strong>{installmentsCost > 0 ? `-$${Math.round(installmentsCost).toLocaleString("es-AR")}` : "$0"}</strong>
-                </div>
-                {shippingFree && (
-                  <div className="vtz-calc-breakdown__row">
-                    <span>Costo por envío</span>
-                    <strong>{shippingCost > 0 ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "$0"}</strong>
+              <div style={{ marginBottom: 16, padding: "4px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9 }}>
+                {[
+                  ["Precio de venta", `$${Math.round(Number(price)).toLocaleString("es-AR")}`],
+                  ["Cargo por vender", `-$${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}`],
+                  ["Costo por ofrecer cuotas", installmentsCost > 0 ? `-$${Math.round(installmentsCost).toLocaleString("es-AR")}` : "$0"],
+                  ...(shippingFree ? [["Costo por envío", shippingCost > 0 ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "$0"]] : []),
+                  ["Impuestos estimados", "$0"],
+                ].map(([label, value]) => (
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>{label}</span>
+                    <strong style={{ fontSize: ".86rem" }}>{value}</strong>
                   </div>
-                )}
-                <div className="vtz-calc-breakdown__row">
-                  <span>Impuestos estimados</span>
-                  <strong>$0</strong>
-                </div>
-                <div className="vtz-calc-breakdown__row vtz-calc-breakdown__row--total">
-                  <span>Recibís</span>
-                  <strong>${Math.round(netFinal).toLocaleString("es-AR")}</strong>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 8px" }}>
+                  <span style={{ fontSize: ".88rem", fontWeight: 600 }}>Recibís</span>
+                  <strong style={{ fontSize: "1.05rem", color: "var(--success,#059669)" }}>${Math.round(netFinal).toLocaleString("es-AR")}</strong>
                 </div>
               </div>
             ) : (

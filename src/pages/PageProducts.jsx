@@ -570,6 +570,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
   const [query,         setQuery]         = useState("");
   const [category,      setCategory]      = useState("all");
   const [onlyMine,      setOnlyMine]      = useState(false);
+  const [minStock,      setMinStock]      = useState("");
   const [loading,       setLoading]       = useState(true);
   const [loadingMore,   setLoadingMore]   = useState(false);
   const [hasMore,       setHasMore]       = useState(false);
@@ -692,9 +693,9 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
   useEffect(() => {
     clearTimeout(debounceRef.current);
     setHasMore(false); // desconecta el observer inmediatamente para evitar loadMore con filtros viejos
-    debounceRef.current = setTimeout(() => fetchProducts(0), query ? 350 : 0);
+    debounceRef.current = setTimeout(() => fetchProducts(0), (query || minStock) ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
-  }, [pageId, query, category, onlyMine, comboMode]);
+  }, [pageId, query, category, onlyMine, minStock, comboMode]);
 
   // Infinite scroll — carga más cuando el sentinel llega al viewport
   useEffect(() => {
@@ -717,6 +718,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
     const params = { limit: PAGE_SIZE, offset };
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
+    if (mode === "ml" && minStock.trim() && Number(minStock) >= 0) params.min_stock = minStock.trim();
     if (mode === "page") {
       // "en mi tienda"/"todos" es un concepto de página web — en modo ML se ve el catálogo completo
       if (onlyMine)        params.only_mine = "true";
@@ -1154,6 +1156,22 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
           <div className="seller-products-tabs">
             <button type="button" className={!onlyMine ? "is-active" : ""} onClick={() => setOnlyMine(false)}>Todos</button>
             <button type="button" className={onlyMine  ? "is-active" : ""} onClick={() => setOnlyMine(true)}>En mi tienda</button>
+          </div>
+        )}
+        {mode === "ml" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <label htmlFor="ml-min-stock" style={{ fontSize: ".8rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+              Stock mayor a
+            </label>
+            <input
+              id="ml-min-stock"
+              type="number"
+              min="0"
+              value={minStock}
+              onChange={e => setMinStock(e.target.value)}
+              placeholder="0"
+              style={{ width: 72, padding: "6px 8px", border: "1px solid var(--border,#d1d5db)", borderRadius: 7, fontSize: ".82rem" }}
+            />
           </div>
         )}
       </section>
