@@ -692,13 +692,33 @@ function WalletSection({ wallet, onChanged }) {
 
 // ── Modal de publicación ─────────────────────────────────────────
 
+const WIZARD_STEPS = ["Categoría", "Características principales", "Fotos", "Título", "Características secundarias", "Descripción", "Precio"];
+
+function WizardProgress({ step, total }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: ".74rem", color: "var(--text-secondary)", fontWeight: 700, marginBottom: 6 }}>
+        Paso {step + 1} de {total}
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        {Array.from({ length: total }).map((_, i) => (
+          <div key={i} style={{
+            flex: 1, height: 4, borderRadius: 99,
+            background: i <= step ? "var(--brand,#6366f1)" : "var(--border)",
+          }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PublishModal({ product, onClose, onPublished }) {
+  const [step, setStep] = useState(0);
   const [query, setQuery] = useState(product.custom_name || product.name);
   const [suggestions, setSuggestions] = useState([]);
   const [categoryId, setCategoryId] = useState("");
   const [attrDefs, setAttrDefs] = useState([]);
   const [attrValues, setAttrValues] = useState({});
-  const [showOptionalAttrs, setShowOptionalAttrs] = useState(false);
   const [title, setTitle] = useState(product.custom_name || product.name || "");
   const [description, setDescription] = useState(product.custom_desc || product.description || "");
   const [price, setPrice] = useState("");
@@ -709,6 +729,11 @@ function PublishModal({ product, onClose, onPublished }) {
   const [newPictures, setNewPictures] = useState([]); // [{previewUrl, ref, uploading}]
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [suggestingTitle, setSuggestingTitle] = useState(false);
+  const [suggestingDesc, setSuggestingDesc] = useState(false);
+  const [suggestingAttrs, setSuggestingAttrs] = useState(false);
+
+  const categoryName = suggestions.find(s => s.categoryId === categoryId)?.categoryName;
 
   function searchCategories() {
     client.get("/seller/ml/categories/suggest", { params: { q: query } })
@@ -810,6 +835,53 @@ function PublishModal({ product, onClose, onPublished }) {
     setNewPictures(prev => prev.filter(p => p.previewUrl !== previewUrl));
   }
 
+  function goBack() { setError(""); setStep(s => Math.max(0, s - 1)); }
+
+  function goNext() {
+    setError("");
+    if (step === 0 && !categoryId) { setError("Elegí una categoría de Mercado Libre"); return; }
+    if (step === 1 && missingAttrs.length > 0) { setError(`Faltan completar: ${missingAttrs.map(a => a.name).join(", ")}`); return; }
+    if (step === 2) {
+      if (newPictures.some(p => p.uploading)) { setError("Esperá a que terminen de subirse las imágenes"); return; }
+      const pictureCount = selectedKeys.size + newPictures.filter(p => p.ref).length;
+      if (pictureCount === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
+    }
+    if (step === 3 && !title.trim()) { setError("Ingresá un título"); return; }
+    setStep(s => Math.min(WIZARD_STEPS.length - 1, s + 1));
+  }
+
+  async function suggestTitleAi() {
+    setSuggestingTitle(true);
+    try {
+      const res = await client.post("/seller/ml/suggest/title", { productName: product.name, categoryName });
+      setTitle(res.data.title);
+    } catch { setError("No se pudo generar el título"); }
+    finally { setSuggestingTitle(false); }
+  }
+
+  async function suggestDescriptionAi() {
+    setSuggestingDesc(true);
+    try {
+      const res = await client.post("/seller/ml/suggest/description", { productName: product.name, description });
+      setDescription(res.data.description);
+    } catch { setError("No se pudo generar la descripción"); }
+    finally { setSuggestingDesc(false); }
+  }
+
+  async function suggestAttrsAi(attrsToFill) {
+    const pending = attrsToFill.filter(a => !attrValues[a.id]?.trim());
+    if (pending.length === 0) return;
+    setSuggestingAttrs(true);
+    try {
+      const res = await client.post("/seller/ml/suggest/attributes", {
+        productName: product.name, description, categoryName,
+        attrDefs: pending.map(a => ({ id: a.id, name: a.name, values: a.values })),
+      });
+      setAttrValues(prev => ({ ...prev, ...res.data.values }));
+    } catch { setError("No se pudieron sugerir las características"); }
+    finally { setSuggestingAttrs(false); }
+  }
+
   async function publish() {
     if (!categoryId) { setError("Elegí una categoría de Mercado Libre"); return; }
     if (!priceValid) {
@@ -851,94 +923,122 @@ function PublishModal({ product, onClose, onPublished }) {
   }
 
   return (
-    <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={560}>
-      <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Título de la publicación</label>
-      <input className="form-input" style={{ marginBottom: 14 }} value={title} onChange={e => setTitle(e.target.value)} />
+    <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={640}>
+      <WizardProgress step={step} total={WIZARD_STEPS.length} />
+      <h4 style={{ margin: "0 0 14px", fontSize: ".95rem" }}>{WIZARD_STEPS[step]}</h4>
 
-      <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Descripción</label>
-      <textarea className="form-input" rows={4} style={{ marginBottom: 16, resize: "vertical" }}
-        value={description} onChange={e => setDescription(e.target.value)} />
-
-      <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 6 }}>Imágenes</label>
-      {existingImages.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-          {existingImages.map(img => {
-            const selected = selectedKeys.has(img.key);
-            return (
-              <button key={img.id || img.key} type="button" onClick={() => toggleImage(img.key)}
-                style={{
-                  position: "relative", width: 64, height: 64, padding: 0, borderRadius: 8, overflow: "hidden",
-                  border: selected ? "2px solid var(--brand,#6366f1)" : "2px solid var(--border)",
-                  opacity: selected ? 1 : .4, cursor: "pointer", background: "none",
-                }}>
-                <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </button>
-            );
-          })}
-        </div>
-      )}
-      <p style={{ margin: "0 0 10px", fontSize: ".76rem", color: "var(--text-secondary)" }}>
-        Las imágenes de tu catálogo aparecen tildadas por defecto — desmarcá las que no quieras incluir en Mercado Libre.
-      </p>
-
-      {newPictures.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-          {newPictures.map(p => (
-            <div key={p.previewUrl} style={{ position: "relative", width: 64, height: 64, borderRadius: 8, overflow: "hidden", border: "2px solid var(--border)" }}>
-              <img src={p.previewUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              {p.uploading && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Loader2 size={16} className="spin" />
-                </div>
-              )}
-              {p.failed && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(239,68,68,.15)" }} title="No se pudo subir" />
-              )}
-              <button type="button" onClick={() => removeNewPicture(p.previewUrl)}
-                style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <X size={10} color="#fff" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <label className="btn btn--ghost btn--sm" style={{ display: "inline-flex", cursor: "pointer", marginBottom: 16 }}>
-        <Plus size={13} /> Subir imagen nueva
-        <input type="file" accept="image/*" multiple onChange={handleFileUpload} style={{ display: "none" }} />
-      </label>
-
-      <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Categoría de Mercado Libre</label>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-        <input className="form-input" value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="Palabras clave para buscar la categoría" />
-        <button type="button" className="btn btn--ghost btn--sm" onClick={searchCategories}><Search size={13} /></button>
-      </div>
-      <select className="form-input" style={{ marginBottom: 16 }} value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-        <option value="">Seleccioná...</option>
-        {suggestions.map(s => <option key={s.categoryId} value={s.categoryId}>{s.categoryName}</option>)}
-      </select>
-
-      {requiredAttrs.length > 0 && (
-        <div style={{ marginBottom: 12, padding: "12px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9 }}>
-          <p style={{ margin: "0 0 10px", fontSize: ".78rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>
-            Datos requeridos por esta categoría
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {requiredAttrs.map(a => (
-              <AttributeField key={a.id} attr={a} value={attrValues[a.id]} onChange={v => setAttrValues(p => ({ ...p, [a.id]: v }))} />
-            ))}
+      {step === 0 && (
+        <>
+          <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Categoría de Mercado Libre</label>
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <input className="form-input" value={query} onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && searchCategories()}
+              placeholder="Palabras clave para buscar la categoría" />
+            <button type="button" className="btn btn--ghost btn--sm" onClick={searchCategories}><Search size={13} /></button>
           </div>
+          <select className="form-input" style={{ marginBottom: 16 }} value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+            <option value="">{suggestions.length ? "Seleccioná..." : "Buscá una categoría primero"}</option>
+            {suggestions.map(s => <option key={s.categoryId} value={s.categoryId}>{s.categoryName}</option>)}
+          </select>
+        </>
+      )}
+
+      {step === 1 && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: ".78rem", color: "var(--text-secondary)" }}>Datos requeridos por "{categoryName}"</p>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => suggestAttrsAi(requiredAttrs)} disabled={suggestingAttrs}>
+              {suggestingAttrs ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
+            </button>
+          </div>
+          {requiredAttrs.length === 0 ? (
+            <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>Esta categoría no pide datos obligatorios.</p>
+          ) : (
+            <div style={{ padding: "12px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, display: "flex", flexDirection: "column", gap: 8 }}>
+              {requiredAttrs.map(a => (
+                <AttributeField key={a.id} attr={a} value={attrValues[a.id]} onChange={v => setAttrValues(p => ({ ...p, [a.id]: v }))} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {optionalAttrs.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <button type="button" onClick={() => setShowOptionalAttrs(v => !v)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--brand,#6366f1)", fontSize: ".8rem", fontWeight: 600, padding: 0 }}>
-            {showOptionalAttrs ? "Ocultar" : "Mostrar"} características opcionales ({optionalAttrs.length})
-          </button>
-          {showOptionalAttrs && (
-            <div style={{ marginTop: 10, padding: "12px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, display: "flex", flexDirection: "column", gap: 8 }}>
+      {step === 2 && (
+        <div>
+          {existingImages.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              {existingImages.map(img => {
+                const selected = selectedKeys.has(img.key);
+                return (
+                  <button key={img.id || img.key} type="button" onClick={() => toggleImage(img.key)}
+                    style={{
+                      position: "relative", width: 72, height: 72, padding: 0, borderRadius: 8, overflow: "hidden",
+                      border: selected ? "2px solid var(--brand,#6366f1)" : "2px solid var(--border)",
+                      opacity: selected ? 1 : .4, cursor: "pointer", background: "none",
+                    }}>
+                    <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <p style={{ margin: "0 0 10px", fontSize: ".76rem", color: "var(--text-secondary)" }}>
+            Las imágenes de tu catálogo aparecen tildadas por defecto — desmarcá las que no quieras incluir en Mercado Libre.
+          </p>
+
+          {newPictures.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              {newPictures.map(p => (
+                <div key={p.previewUrl} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: "2px solid var(--border)" }}>
+                  <img src={p.previewUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  {p.uploading && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Loader2 size={16} className="spin" />
+                    </div>
+                  )}
+                  {p.failed && (
+                    <div style={{ position: "absolute", inset: 0, background: "rgba(239,68,68,.15)" }} title="No se pudo subir" />
+                  )}
+                  <button type="button" onClick={() => removeNewPicture(p.previewUrl)}
+                    style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                    <X size={10} color="#fff" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <label className="btn btn--ghost btn--sm" style={{ display: "inline-flex", cursor: "pointer" }}>
+            <Plus size={13} /> Subir imagen nueva
+            <input type="file" accept="image/*" multiple onChange={handleFileUpload} style={{ display: "none" }} />
+          </label>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <label style={{ fontSize: ".8rem", fontWeight: 600 }}>Título de la publicación</label>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={suggestTitleAi} disabled={suggestingTitle}>
+              {suggestingTitle ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
+            </button>
+          </div>
+          <input className="form-input" maxLength={60} value={title} onChange={e => setTitle(e.target.value)} />
+          <small style={{ display: "block", marginTop: 4, textAlign: "right", color: "var(--text-secondary)" }}>{title.length}/60</small>
+        </div>
+      )}
+
+      {step === 4 && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <p style={{ margin: 0, fontSize: ".78rem", color: "var(--text-secondary)" }}>Opcional — mejora la exposición de la publicación</p>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => suggestAttrsAi(optionalAttrs)} disabled={suggestingAttrs || optionalAttrs.length === 0}>
+              {suggestingAttrs ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
+            </button>
+          </div>
+          {optionalAttrs.length === 0 ? (
+            <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>Esta categoría no tiene características opcionales.</p>
+          ) : (
+            <div style={{ padding: "12px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, display: "flex", flexDirection: "column", gap: 8 }}>
               {optionalAttrs.map(a => (
                 <AttributeField key={a.id} attr={a} value={attrValues[a.id]} onChange={v => setAttrValues(p => ({ ...p, [a.id]: v }))} />
               ))}
@@ -947,47 +1047,73 @@ function PublishModal({ product, onClose, onPublished }) {
         </div>
       )}
 
-      <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Precio en Mercado Libre</label>
-      <input className="form-input" type="number" value={price} onChange={e => setPrice(e.target.value)}
-        style={{ marginBottom: 4, borderColor: price && !priceValid ? "var(--danger,#ef4444)" : undefined }} />
-      {priceFloor != null && (
-        <small style={{ display: "block", marginBottom: 12, color: "var(--text-secondary)" }}>
-          Costo total: ${Math.round(priceFloor).toLocaleString("es-AR")}
-        </small>
-      )}
-
-      {priceValid && categoryId && (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-          padding: "10px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, marginBottom: 16 }}>
-          {feesLoading ? (
-            <span style={{ fontSize: ".82rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
-              <Loader2 size={12} className="spin" /> Calculando comisión...
-            </span>
-          ) : fees ? (
-            <>
-              <span style={{ fontSize: ".8rem", color: "var(--text-secondary)" }}>
-                Cargo por vender: ${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}
-              </span>
-              <span style={{ fontSize: ".92rem", fontWeight: 700, color: "var(--success,#059669)" }}>
-                Recibís: ${Math.round(fees.netAmount).toLocaleString("es-AR")}
-              </span>
-            </>
-          ) : (
-            <span style={{ fontSize: ".78rem", color: "var(--text-secondary)" }}>No se pudo calcular la comisión</span>
-          )}
+      {step === 5 && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <label style={{ fontSize: ".8rem", fontWeight: 600 }}>Descripción</label>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={suggestDescriptionAi} disabled={suggestingDesc}>
+              {suggestingDesc ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
+            </button>
+          </div>
+          <textarea className="form-input" rows={8} style={{ resize: "vertical" }}
+            value={description} onChange={e => setDescription(e.target.value)} />
         </div>
       )}
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 16 }}>
-        <input type="checkbox" checked={shippingFree} onChange={e => setShippingFree(e.target.checked)} />
-        Ofrecer envío gratis (Mercado Libre descuenta su costo automáticamente de la venta)
-      </label>
+      {step === 6 && (
+        <div>
+          <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Precio en Mercado Libre</label>
+          <input className="form-input" type="number" value={price} onChange={e => setPrice(e.target.value)}
+            style={{ marginBottom: 4, borderColor: price && !priceValid ? "var(--danger,#ef4444)" : undefined }} />
+          {priceFloor != null && (
+            <small style={{ display: "block", marginBottom: 12, color: "var(--text-secondary)" }}>
+              Costo total: ${Math.round(priceFloor).toLocaleString("es-AR")}
+            </small>
+          )}
 
-      {error && <p style={{ margin: "0 0 12px", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
+          {priceValid && categoryId && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+              padding: "10px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, marginBottom: 16 }}>
+              {feesLoading ? (
+                <span style={{ fontSize: ".82rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Loader2 size={12} className="spin" /> Calculando comisión...
+                </span>
+              ) : fees ? (
+                <>
+                  <span style={{ fontSize: ".8rem", color: "var(--text-secondary)" }}>
+                    Cargo por vender: ${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}
+                  </span>
+                  <span style={{ fontSize: ".92rem", fontWeight: 700, color: "var(--success,#059669)" }}>
+                    Recibís: ${Math.round(fees.netAmount).toLocaleString("es-AR")}
+                  </span>
+                </>
+              ) : (
+                <span style={{ fontSize: ".78rem", color: "var(--text-secondary)" }}>No se pudo calcular la comisión</span>
+              )}
+            </div>
+          )}
 
-      <button type="button" className="btn btn--primary" style={{ width: "100%" }} onClick={publish} disabled={saving}>
-        {saving ? <Loader2 size={14} className="spin" /> : "Publicar"}
-      </button>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 16 }}>
+            <input type="checkbox" checked={shippingFree} onChange={e => setShippingFree(e.target.checked)} />
+            Ofrecer envío gratis (Mercado Libre descuenta su costo automáticamente de la venta)
+          </label>
+        </div>
+      )}
+
+      {error && <p style={{ margin: "16px 0 0", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
+
+      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+        {step > 0 && (
+          <button type="button" className="btn btn--ghost" onClick={goBack} disabled={saving}>Atrás</button>
+        )}
+        {step < WIZARD_STEPS.length - 1 ? (
+          <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={goNext}>Siguiente</button>
+        ) : (
+          <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={publish} disabled={saving}>
+            {saving ? <Loader2 size={14} className="spin" /> : "Publicar"}
+          </button>
+        )}
+      </div>
     </Modal>
   );
 }
