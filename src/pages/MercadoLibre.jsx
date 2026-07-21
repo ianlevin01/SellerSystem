@@ -1456,16 +1456,23 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
   );
 }
 
-// ML rechaza los atributos "number_unit" (LENGTH, WIDTH, HEIGHT, WEIGHT, etc.) si el valor no
-// trae una unidad ("50" no sirve, tiene que ser "50 cm") — como el vendedor solo tipea el
-// número, se la agregamos automáticamente al armar el payload de publish().
+// ML rechaza los atributos "number_unit" (LENGTH, WIDTH, HEIGHT, WEIGHT, MIN_RECOMMENDED_AGE,
+// etc.) si el valor no trae una unidad ("50" no sirve, tiene que ser "50 cm") — como el
+// vendedor solo tipea el número, se la agregamos automáticamente al armar el payload de
+// publish(). Cada atributo tiene SU PROPIA unidad válida (cm, g, años...), que viaja desde ML
+// en attr.defaultUnit (mlService.getCategoryAttributes) — este mapa es solo un respaldo por si
+// ML no la informara para algún atributo puntual.
 const NUMBER_UNIT_DEFAULTS = { LENGTH: "cm", WIDTH: "cm", HEIGHT: "cm", DEPTH: "cm", WEIGHT: "g" };
+
+function unitFor(attr) {
+  return attr.defaultUnit || NUMBER_UNIT_DEFAULTS[attr.id] || "cm";
+}
 
 function formatNumberUnitValue(attr, raw) {
   const trimmed = String(raw || "").trim();
   if (!trimmed) return trimmed;
   if (/[a-zA-Zµ"]/.test(trimmed)) return trimmed; // ya trae una unidad tipeada
-  return `${trimmed} ${NUMBER_UNIT_DEFAULTS[attr.id] || "cm"}`;
+  return `${trimmed} ${unitFor(attr)}`;
 }
 
 // Mercado Libre a veces da una lista fija (marca, por ejemplo) que no siempre tiene la opción
@@ -1482,7 +1489,7 @@ function AttributeField({ attr, value, onChange }) {
       <label style={{ fontSize: ".78rem", display: "block", marginBottom: 3 }}>
         {attr.name}
         {isNumberUnit && (
-          <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}> ({NUMBER_UNIT_DEFAULTS[attr.id] || "cm"})</span>
+          <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}> ({unitFor(attr)})</span>
         )}
       </label>
       {hasOptions && !customMode ? (
