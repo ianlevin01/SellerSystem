@@ -736,6 +736,11 @@ function PublishModal({ product, onClose, onPublished }) {
   const [suggestingDesc, setSuggestingDesc] = useState(false);
   const [suggestingAttrs, setSuggestingAttrs] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
+  // Atributo puntual que ML rechazó al publicar y que no supimos completar solos (GTIN si falla
+  // el auto-completado, o cualquier otro que aparezca en el futuro) — a diferencia de attrDefs,
+  // este no necesariamente estaba en la lista de características de la categoría.
+  const [mlMissingAttr, setMlMissingAttr] = useState(null);
+  const [mlMissingValue, setMlMissingValue] = useState("");
 
   const categoryName = suggestions.find(s => s.categoryId === categoryId)?.categoryName;
 
@@ -935,6 +940,11 @@ function PublishModal({ product, onClose, onPublished }) {
     const pictureCount = selectedKeys.size + newPictures.filter(p => p.ref).length;
     if (pictureCount === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
 
+    if (mlMissingAttr && !mlMissingValue.trim()) {
+      setError(`Completá "${mlMissingAttr.name}" para poder publicar`);
+      return;
+    }
+
     setSaving(true); setError("");
     try {
       const attributes = attrDefs
@@ -943,6 +953,12 @@ function PublishModal({ product, onClose, onPublished }) {
           id: a.id,
           value_name: a.valueType === "number_unit" ? formatNumberUnitValue(a, attrValues[a.id]) : attrValues[a.id],
         }));
+      if (mlMissingAttr && mlMissingValue.trim()) {
+        attributes.push({
+          id: mlMissingAttr.id,
+          value_name: mlMissingAttr.valueType === "number_unit" ? formatNumberUnitValue(mlMissingAttr, mlMissingValue) : mlMissingValue,
+        });
+      }
       const pictureRefs = newPictures.filter(p => p.ref).map(p => p.ref);
 
       const res = await client.post(`/seller/ml/products/${product.id}/publish`, {
@@ -954,7 +970,14 @@ function PublishModal({ product, onClose, onPublished }) {
       });
       onPublished(res.data);
     } catch (err) {
-      setError(err.response?.data?.message || "No se pudo publicar el producto");
+      const missing = err.response?.data?.missingAttribute;
+      if (missing) {
+        setMlMissingAttr(missing);
+        setMlMissingValue("");
+        setError("");
+      } else {
+        setError(err.response?.data?.message || "No se pudo publicar el producto");
+      }
     } finally {
       setSaving(false);
     }
@@ -1183,6 +1206,16 @@ function PublishModal({ product, onClose, onPublished }) {
         </div>
       )}
 
+      {mlMissingAttr && step === WIZARD_STEPS.length - 1 && (
+        <div style={{ margin: "16px 0 0", padding: "12px 14px", background: "rgba(217,119,6,.08)",
+          border: "1px solid #f59e0b", borderRadius: 9 }}>
+          <p style={{ margin: "0 0 8px", fontSize: ".8rem", color: "#92400e", fontWeight: 600 }}>
+            Mercado Libre necesita este dato para publicar en esta categoría:
+          </p>
+          <AttributeField attr={mlMissingAttr} value={mlMissingValue} onChange={setMlMissingValue} />
+        </div>
+      )}
+
       {error && <p style={{ margin: "16px 0 0", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
 
       <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
@@ -1193,7 +1226,7 @@ function PublishModal({ product, onClose, onPublished }) {
           <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={goNext}>Siguiente</button>
         ) : (
           <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={publish} disabled={saving}>
-            {saving ? <Loader2 size={14} className="spin" /> : "Publicar"}
+            {saving ? <Loader2 size={14} className="spin" /> : mlMissingAttr ? "Reintentar publicación" : "Publicar"}
           </button>
         )}
       </div>
@@ -1220,6 +1253,8 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
   const [shippingFree, setShippingFree] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [mlMissingAttr, setMlMissingAttr] = useState(null);
+  const [mlMissingValue, setMlMissingValue] = useState("");
 
   const comboLabel = useMemo(() => (detail?.products || [])
     .map(p => `${p.quantity > 1 ? `${p.quantity}× ` : ""}${p.name}`).join(" + "), [detail]);
@@ -1309,6 +1344,10 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
       setError(`Faltan completar: ${missingAttrs.map(a => a.name).join(", ")}`);
       return;
     }
+    if (mlMissingAttr && !mlMissingValue.trim()) {
+      setError(`Completá "${mlMissingAttr.name}" para poder publicar`);
+      return;
+    }
 
     setSaving(true); setError("");
     try {
@@ -1318,6 +1357,12 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
           id: a.id,
           value_name: a.valueType === "number_unit" ? formatNumberUnitValue(a, attrValues[a.id]) : attrValues[a.id],
         }));
+      if (mlMissingAttr && mlMissingValue.trim()) {
+        attributes.push({
+          id: mlMissingAttr.id,
+          value_name: mlMissingAttr.valueType === "number_unit" ? formatNumberUnitValue(mlMissingAttr, mlMissingValue) : mlMissingValue,
+        });
+      }
 
       const res = await client.post(`/seller/ml/combos/${comboId}/publish`, {
         mlCategoryId: categoryId, price: Number(price), shippingFree, attributes,
@@ -1325,7 +1370,14 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
       });
       onPublished(res.data);
     } catch (err) {
-      setError(err.response?.data?.message || "No se pudo publicar el combo");
+      const missing = err.response?.data?.missingAttribute;
+      if (missing) {
+        setMlMissingAttr(missing);
+        setMlMissingValue("");
+        setError("");
+      } else {
+        setError(err.response?.data?.message || "No se pudo publicar el combo");
+      }
     } finally {
       setSaving(false);
     }
@@ -1447,10 +1499,20 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
         Ofrecer envío gratis (Mercado Libre descuenta su costo automáticamente de la venta)
       </label>
 
+      {mlMissingAttr && (
+        <div style={{ margin: "0 0 12px", padding: "12px 14px", background: "rgba(217,119,6,.08)",
+          border: "1px solid #f59e0b", borderRadius: 9 }}>
+          <p style={{ margin: "0 0 8px", fontSize: ".8rem", color: "#92400e", fontWeight: 600 }}>
+            Mercado Libre necesita este dato para publicar en esta categoría:
+          </p>
+          <AttributeField attr={mlMissingAttr} value={mlMissingValue} onChange={setMlMissingValue} />
+        </div>
+      )}
+
       {error && <p style={{ margin: "0 0 12px", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
 
       <button type="button" className="btn btn--primary" style={{ width: "100%" }} onClick={publish} disabled={saving}>
-        {saving ? <Loader2 size={14} className="spin" /> : "Publicar combo"}
+        {saving ? <Loader2 size={14} className="spin" /> : mlMissingAttr ? "Reintentar publicación" : "Publicar combo"}
       </button>
     </Modal>
   );
