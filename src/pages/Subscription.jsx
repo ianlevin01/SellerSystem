@@ -493,6 +493,7 @@ export default function Subscription() {
   const [confirmPlan,   setConfirmPlan]   = useState(null);
   const [showCancel,    setShowCancel]    = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [retryLoading,  setRetryLoading]  = useState(false);
   const [msg,           setMsg]           = useState(null);
   const [searchParams,  setSearchParams]  = useSearchParams();
 
@@ -545,6 +546,17 @@ export default function Subscription() {
     }
   }
 
+  async function handleRetry() {
+    setRetryLoading(true);
+    try {
+      const res = await client.post("/seller/subscriptions/retry");
+      window.location.href = res.data.init_point;
+    } catch (err) {
+      setMsg({ type: "err", text: err.response?.data?.message || "No se pudo reintentar el pago" });
+      setRetryLoading(false);
+    }
+  }
+
   async function handleCancel() {
     setActionLoading(true);
     try {
@@ -574,6 +586,10 @@ export default function Subscription() {
 
   // pending_plan_id solo es relevante si el plan está activo/pago
   const hasPending = isActive && !!current?.pending_plan_id;
+
+  // El pago más reciente rechazado — se intentó debitar y no se pudo (distinto de "scheduled",
+  // que solo significa que todavía no se intentó).
+  const lastFailedPayment = payments[0]?.status === "rejected" ? payments[0] : null;
 
   function planBtnLabel(plan) {
     if (hasPending && current?.pending_plan_id === plan.id)
@@ -638,6 +654,19 @@ export default function Subscription() {
       {msg && (
         <div className={`sub-msg sub-msg--${msg.type}`} onClick={() => setMsg(null)}>
           {msg.type === "ok" ? <Check size={15}/> : <AlertTriangle size={15}/>} {msg.text}
+        </div>
+      )}
+
+      {/* Pago rechazado — se intentó debitar la renovación y no se pudo */}
+      {lastFailedPayment && (
+        <div className="sub-payment-failed">
+          <span className="sub-payment-failed__text">
+            <AlertTriangle size={15} />
+            Pago de {money(lastFailedPayment.amount)} rechazado — no pudimos cobrar tu suscripción.
+          </span>
+          <button className="sub-payment-failed__btn" onClick={handleRetry} disabled={retryLoading}>
+            {retryLoading ? <Loader2 size={13} className="spin" /> : "Reintentar pago"}
+          </button>
         </div>
       )}
 
