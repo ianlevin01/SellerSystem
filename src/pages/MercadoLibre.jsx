@@ -712,7 +712,51 @@ function WizardProgress({ step, total }) {
   );
 }
 
-function PublishModal({ product, onClose, onPublished }) {
+// Umbral real de Mercado Libre Argentina a partir del cual el envío gratis deja de ser
+// opcional y pasa a ser obligatorio para el vendedor (público en su centro de ayuda). Mercado
+// Libre lo actualiza de tanto en tanto y no hay ningún endpoint que lo devuelva — no hay forma
+// de leerlo de la API, así que este número hay que actualizarlo a mano cuando ML lo cambie.
+const FREE_SHIPPING_MANDATORY_THRESHOLD_MLA = 33000;
+
+// Pantalla de bloqueo compartida por PublishModal y PublishComboModal — se muestra en vez del
+// wizard cuando el domicilio de despacho de la cuenta de ML no coincide con el depósito real de
+// Ventaz (ver mlListingService.getShippingAddressInfo). El backend igual rechaza el publish si
+// se intenta igual (defensa en profundidad), esto es solo para no dejar entrar al wizard.
+function AddressBlockNotice({ addressStatus, onRecheck, checking }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center", textAlign: "center", padding: "12px 0" }}>
+      <AlertTriangle size={32} color="#f59e0b" />
+      <div>
+        <strong style={{ fontSize: ".95rem", display: "block", marginBottom: 6 }}>No podés publicar todavía</strong>
+        <p style={{ margin: 0, fontSize: ".84rem", color: "var(--text-secondary)" }}>
+          El domicilio de despacho cargado en tu cuenta de Mercado Libre
+          {addressStatus?.currentAddress ? ` (${addressStatus.currentAddress})` : ""} no coincide con el depósito
+          de Ventaz ({addressStatus?.warehouseAddress}). Cambialo en Mercado Libre y volvé a revisar.
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <a href={addressStatus?.changeAddressUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--sm">
+          Cambiar dirección
+        </a>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onRecheck} disabled={checking}>
+          {checking ? <Loader2 size={13} className="spin" /> : "Ya la cambié, revisar de nuevo"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) {
+  const [localAddressStatus, setLocalAddressStatus] = useState(addressStatus);
+  const [checkingAddress, setCheckingAddress] = useState(false);
+  function recheckAddress() {
+    setCheckingAddress(true);
+    client.get("/seller/ml/shipping-address-status")
+      .then(r => setLocalAddressStatus(r.data))
+      .catch(() => {})
+      .finally(() => setCheckingAddress(false));
+  }
+
   const [step, setStep] = useState(0);
   const [query, setQuery] = useState(product.custom_name || product.name);
   const [suggestions, setSuggestions] = useState([]);
@@ -726,7 +770,18 @@ function PublishModal({ product, onClose, onPublished }) {
   const [weightGrams, setWeightGrams] = useState(0);
   const [volumeCm3, setVolumeCm3] = useState(0);
   const [shippingFree, setShippingFree] = useState(false);
-  const [withInstallments, setWithInstallments] = useState(false);
+  // "none" = sin cuotas (interés lo paga el comprador/banco) — o el id de una de las campañas
+  // reales de ML que vengan en fees.installmentOptions (cuota-simple-3/6/9/12, pcj-co-funded).
+  const [selectedInstallment, setSelectedInstallment] = useState("none");
+
+  const shippingFreeMandatory = siteId === "MLA" && Number(price) >= FREE_SHIPPING_MANDATORY_THRESHOLD_MLA;
+
+  // Si el precio cruza el umbral obligatorio, se tilda solo y no se puede destildar — evita que
+  // el vendedor publique sin envío gratis creyendo que es opcional y que después ML se lo fuerce
+  // en el reintento automático sin haberlo visto venir en el wizard.
+  useEffect(() => {
+    if (shippingFreeMandatory) setShippingFree(true);
+  }, [shippingFreeMandatory]);
   const [existingImages, setExistingImages] = useState([]); // [{id, key, url}]
   const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [newPictures, setNewPictures] = useState([]); // [{previewUrl, ref, uploading}]
@@ -799,7 +854,9 @@ function PublishModal({ product, onClose, onPublished }) {
   const [fees, setFees] = useState(null);
   const [feesLoading, setFeesLoading] = useState(false);
 
-  // Recalcula "Recibís" cada vez que cambia precio/categoría/envío — igual que la propia UI de ML.
+  // Recalcula "Recibís" cada vez que cambia precio/categoría — igual que la propia UI de ML.
+  // El costo de envío se calcula siempre que haya peso/volumen (no solo cuando el checkbox está
+  // tildado) para que el vendedor vea cuánto le costaría ANTES de decidir si lo ofrece.
   useEffect(() => {
     const p = Number(price);
     if (!categoryId || !p || p <= 0) { setFees(null); return; }
@@ -809,7 +866,7 @@ function PublishModal({ product, onClose, onPublished }) {
       client.get("/seller/ml/listing-fees", {
         params: {
           price: p, categoryId,
-          ...(weightGrams > 0 ? { weightGrams, volumeCm3, freeShipping: String(shippingFree) } : {}),
+          ...(weightGrams > 0 ? { weightGrams, volumeCm3 } : {}),
         },
       })
         .then(r => { if (!cancelled) setFees(r.data); })
@@ -817,12 +874,18 @@ function PublishModal({ product, onClose, onPublished }) {
         .finally(() => { if (!cancelled) setFeesLoading(false); });
     }, 400);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [price, categoryId, weightGrams, volumeCm3, shippingFree]);
+  }, [price, categoryId, weightGrams, volumeCm3]);
 
   const missingAttrs = requiredAttrs.filter(a => !attrValues[a.id]?.trim());
 
-  const shippingCost     = shippingFree ? Number(fees?.shippingCost || 0) : 0;
-  const installmentsCost = withInstallments ? Number(fees?.installments?.extraCost || 0) : 0;
+  const installmentOptions = fees?.installmentOptions || [];
+  const selectedOption     = installmentOptions.find(o => o.id === selectedInstallment) || null;
+  // shippingCostKnown se calcula siempre que ML haya podido cotizarlo (independiente de si el
+  // checkbox está tildado) — shippingCost (el que realmente se descuenta de "Recibís") solo
+  // aplica si además el vendedor decidió ofrecerlo.
+  const shippingCostKnown = fees?.shippingCost != null;
+  const shippingCost      = shippingFree && shippingCostKnown ? Number(fees.shippingCost) : 0;
+  const installmentsCost  = selectedOption ? Number(selectedOption.extraCost || 0) : 0;
   const netFinal    = fees ? Number(fees.netAmount) - shippingCost - installmentsCost : null;
   const sellingAtLoss = netFinal != null && priceFloor != null && netFinal < priceFloor;
 
@@ -966,12 +1029,22 @@ function PublishModal({ product, onClose, onPublished }) {
         title, description,
         imageKeys: Array.from(selectedKeys),
         pictureRefs,
-        listingTypeId: withInstallments ? "gold_pro" : "gold_special",
+        listingTypeId: selectedOption?.listingTypeId || "gold_special",
+        installmentTags: selectedOption?.tags || [],
       });
-      onPublished(res.data);
+      onPublished({ ...res.data, requestedShippingFree: shippingFree });
     } catch (err) {
       const missing = err.response?.data?.missingAttribute;
-      if (missing) {
+      if (err.response?.data?.addressMismatch) {
+        // El backend lo detectó recién ahora (el chequeo previo pudo quedar "unknown" o
+        // desactualizado) — mostramos la misma pantalla de bloqueo en vez de un error suelto.
+        setLocalAddressStatus({
+          connected: true, valid: false,
+          currentAddress: err.response.data.currentAddress,
+          warehouseAddress: err.response.data.warehouseAddress,
+          changeAddressUrl: err.response.data.changeAddressUrl,
+        });
+      } else if (missing) {
         setMlMissingAttr(missing);
         setMlMissingValue("");
         setError("");
@@ -981,6 +1054,14 @@ function PublishModal({ product, onClose, onPublished }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (localAddressStatus?.connected && localAddressStatus.valid === false) {
+    return (
+      <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={480}>
+        <AddressBlockNotice addressStatus={localAddressStatus} onRecheck={recheckAddress} checking={checkingAddress} />
+      </Modal>
+    );
   }
 
   return (
@@ -1154,17 +1235,59 @@ function PublishModal({ product, onClose, onPublished }) {
           )}
 
           {weightGrams > 0 && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 10 }}>
-              <input type="checkbox" checked={shippingFree} onChange={e => setShippingFree(e.target.checked)} />
-              Ofrecer envío gratis (a veces Mercado Libre lo exige a partir de cierto precio)
-            </label>
+            <button type="button"
+              className={`ml-cuota-card ml-toggle-card${shippingFree ? " is-active" : ""}${shippingFreeMandatory ? " is-locked" : ""}`}
+              style={{ marginBottom: 16 }}
+              disabled={shippingFreeMandatory}
+              onClick={() => setShippingFree(v => !v)}>
+              <span className="ml-toggle-card__box" />
+              <span className="ml-cuota-card__body">
+                <span className="ml-cuota-card__label">Ofrecer envío gratis</span>
+                <span className="ml-cuota-card__desc">
+                  {shippingFreeMandatory
+                    ? `Obligatorio: Mercado Libre lo exige a partir de $${FREE_SHIPPING_MANDATORY_THRESHOLD_MLA.toLocaleString("es-AR")} y este producto lo supera.`
+                    : "A veces Mercado Libre lo exige a partir de cierto precio o categoría — si publicás sin tildarlo y ML lo requiere igual, lo activamos automáticamente y te avisamos."}
+                </span>
+              </span>
+              <span className="ml-cuota-card__price">
+                {feesLoading ? "…" : shippingCostKnown
+                  ? `$${Math.round(fees.shippingCost).toLocaleString("es-AR")}`
+                  : (fees ? "No calculado" : "—")}
+              </span>
+            </button>
           )}
 
-          {fees?.installments && (
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".84rem", marginBottom: 16 }}>
-              <input type="checkbox" checked={withInstallments} onChange={e => setWithInstallments(e.target.checked)} />
-              Ofrecer cuotas sin interés (publicación Premium)
-            </label>
+          {installmentOptions.length > 0 && (
+            <div style={{ marginTop: weightGrams > 0 ? 6 : 0, marginBottom: 6 }}>
+              <p style={{ fontSize: ".82rem", fontWeight: 700, marginBottom: 8 }}>Agregá cuotas y vendé más</p>
+              <div className="ml-cuota-list">
+                <button type="button"
+                  className={`ml-cuota-card${selectedInstallment === "none" ? " is-active" : ""}`}
+                  onClick={() => setSelectedInstallment("none")}>
+                  <span className="ml-cuota-card__radio" />
+                  <span className="ml-cuota-card__body">
+                    <span className="ml-cuota-card__label">No quiero agregar cuotas</span>
+                    <span className="ml-cuota-card__desc">Tus compradores igual tienen cuotas con el interés que cobran los bancos.</span>
+                  </span>
+                  <span className="ml-cuota-card__price">Sin costo</span>
+                </button>
+                {installmentOptions.map(opt => (
+                  <button key={opt.id} type="button"
+                    className={`ml-cuota-card${selectedInstallment === opt.id ? " is-active" : ""}`}
+                    onClick={() => setSelectedInstallment(opt.id)}>
+                    <span className="ml-cuota-card__radio" />
+                    <span className="ml-cuota-card__body">
+                      {opt.badge && <span className="ml-cuota-card__badge">{opt.badge}</span>}
+                      <span className="ml-cuota-card__label">
+                        {opt.label}{opt.percentageFee != null && ` (${opt.percentageFee.toFixed(1).replace(".0", "")}%)`}
+                      </span>
+                      {opt.desc && <span className="ml-cuota-card__desc">{opt.desc}</span>}
+                    </span>
+                    <span className="ml-cuota-card__price">${Math.round(opt.extraCost).toLocaleString("es-AR")}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {priceValid && categoryId && (
@@ -1177,8 +1300,8 @@ function PublishModal({ product, onClose, onPublished }) {
                 {[
                   ["Precio de venta", `$${Math.round(Number(price)).toLocaleString("es-AR")}`],
                   ["Cargo por vender", `-$${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}`],
-                  ["Costo por ofrecer cuotas", installmentsCost > 0 ? `-$${Math.round(installmentsCost).toLocaleString("es-AR")}` : "$0"],
-                  ...(shippingFree ? [["Costo por envío", shippingCost > 0 ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "$0"]] : []),
+                  ...(selectedOption ? [["Costo por ofrecer cuotas", `-$${Math.round(installmentsCost).toLocaleString("es-AR")}`]] : []),
+                  ...(shippingFree ? [["Costo por envío", shippingCostKnown ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "No calculado"]] : []),
                   ["Impuestos estimados", "$0"],
                 ].map(([label, value]) => (
                   <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
@@ -1238,7 +1361,17 @@ function PublishModal({ product, onClose, onPublished }) {
 // Mismo flujo que PublishModal (categoría, atributos, precio, envío gratis), con 3
 // diferencias: no hay selector de fotos (se completan solas con las de cada producto del
 // combo), hay un stepper de cantidad por producto, y el precio piso es la suma de costos.
-function PublishComboModal({ comboId, onClose, onPublished }) {
+function PublishComboModal({ comboId, addressStatus, onClose, onPublished }) {
+  const [localAddressStatus, setLocalAddressStatus] = useState(addressStatus);
+  const [checkingAddress, setCheckingAddress] = useState(false);
+  function recheckAddress() {
+    setCheckingAddress(true);
+    client.get("/seller/ml/shipping-address-status")
+      .then(r => setLocalAddressStatus(r.data))
+      .catch(() => {})
+      .finally(() => setCheckingAddress(false));
+  }
+
   const [detail, setDetail] = useState(null); // { products, priceFloor }
   const [savingQty, setSavingQty] = useState(false);
   const [query, setQuery] = useState("");
@@ -1368,10 +1501,17 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
         mlCategoryId: categoryId, price: Number(price), shippingFree, attributes,
         title, description,
       });
-      onPublished(res.data);
+      onPublished({ ...res.data, requestedShippingFree: shippingFree });
     } catch (err) {
       const missing = err.response?.data?.missingAttribute;
-      if (missing) {
+      if (err.response?.data?.addressMismatch) {
+        setLocalAddressStatus({
+          connected: true, valid: false,
+          currentAddress: err.response.data.currentAddress,
+          warehouseAddress: err.response.data.warehouseAddress,
+          changeAddressUrl: err.response.data.changeAddressUrl,
+        });
+      } else if (missing) {
         setMlMissingAttr(missing);
         setMlMissingValue("");
         setError("");
@@ -1389,6 +1529,14 @@ function PublishComboModal({ comboId, onClose, onPublished }) {
         <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
           <Loader2 size={20} className="spin" />
         </div>
+      </Modal>
+    );
+  }
+
+  if (localAddressStatus?.connected && localAddressStatus.valid === false) {
+    return (
+      <Modal title="Publicar combo en Mercado Libre" onClose={onClose} maxWidth={480}>
+        <AddressBlockNotice addressStatus={localAddressStatus} onRecheck={recheckAddress} checking={checkingAddress} />
       </Modal>
     );
   }
@@ -1838,6 +1986,8 @@ export default function MercadoLibre() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
   const [listingError, setListingError] = useState("");
+  const [addressStatus, setAddressStatus] = useState(null);
+  const [checkingAddress, setCheckingAddress] = useState(false);
 
   function loadAll() {
     Promise.all([
@@ -1858,7 +2008,16 @@ export default function MercadoLibre() {
           .then(r => setListingStats(prev => ({ ...prev, [x.ml_item_id]: r.data })))
           .catch(() => {});
       });
+      if (s.data?.connected) checkAddress();
     }).catch(() => {}).finally(() => setLoading(false));
+  }
+
+  function checkAddress() {
+    setCheckingAddress(true);
+    client.get("/seller/ml/shipping-address-status")
+      .then(r => setAddressStatus(r.data))
+      .catch(() => setAddressStatus(null))
+      .finally(() => setCheckingAddress(false));
   }
 
   useEffect(() => { loadAll(); }, []);
@@ -1938,6 +2097,33 @@ export default function MercadoLibre() {
         <>
           <MercadoLibreConnection status={status} summary={summary} onConnected={loadAll} onDisconnected={loadAll} />
 
+          {status?.connected && addressStatus?.connected && addressStatus.valid === false && (
+            <div style={{
+              display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16,
+              padding: "14px 16px", borderRadius: 12,
+              background: "rgba(217,119,6,.08)", border: "1px solid #f59e0b",
+            }}>
+              <AlertTriangle size={18} color="#92400e" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1 }}>
+                <strong style={{ fontSize: ".88rem", color: "#92400e" }}>No podés publicar en Mercado Libre todavía</strong>
+                <p style={{ margin: "4px 0 8px", fontSize: ".82rem", color: "#92400e" }}>
+                  El domicilio de despacho cargado en tu cuenta de Mercado Libre
+                  {addressStatus.currentAddress ? ` (${addressStatus.currentAddress})` : ""} no coincide con el
+                  depósito de Ventaz ({addressStatus.warehouseAddress}). Cambialo en tu cuenta de Mercado Libre y
+                  volvé a revisar acá.
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <a href={addressStatus.changeAddressUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--sm">
+                    Cambiar dirección
+                  </a>
+                  <button type="button" className="btn btn--ghost btn--sm" onClick={checkAddress} disabled={checkingAddress}>
+                    {checkingAddress ? <Loader2 size={13} className="spin" /> : "Ya la cambié, revisar de nuevo"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {status?.connected && (
             <>
               <div className="ml-tabs" style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: "1px solid var(--border)" }}>
@@ -2011,6 +2197,8 @@ export default function MercadoLibre() {
           {publishTarget && (
             <PublishModal
               product={publishTarget}
+              siteId={status?.site_id}
+              addressStatus={addressStatus}
               onClose={() => setPublishTarget(null)}
               onPublished={(listing) => { setPublishTarget(null); setPublishPending(listing); loadAll(); }}
             />
@@ -2019,6 +2207,7 @@ export default function MercadoLibre() {
           {comboToPublish && (
             <PublishComboModal
               comboId={comboToPublish}
+              addressStatus={addressStatus}
               onClose={() => setComboToPublish(null)}
               onPublished={(listing) => { setComboToPublish(null); setPublishPending(listing); loadAll(); }}
             />
@@ -2051,6 +2240,11 @@ export default function MercadoLibre() {
                   <p style={{ margin: "2px 0 0", fontSize: ".8rem", color: "var(--text-secondary)" }}>
                     Tu producto ya está publicado en tu cuenta de Mercado Libre.
                   </p>
+                  {publishSuccess.shipping_free && publishSuccess.requestedShippingFree === false && (
+                    <p style={{ margin: "6px 0 0", fontSize: ".78rem", color: "#92400e", background: "rgba(217,119,6,.1)", padding: "6px 8px", borderRadius: 6 }}>
+                      Mercado Libre exige envío gratis para este producto a este precio — se activó automáticamente.
+                    </p>
+                  )}
                 </div>
                 <button type="button" onClick={() => setPublishSuccess(null)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: 2, flexShrink: 0 }}>
