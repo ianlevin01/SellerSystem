@@ -783,8 +783,12 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     if (shippingFreeMandatory) setShippingFree(true);
   }, [shippingFreeMandatory]);
   const [existingImages, setExistingImages] = useState([]); // [{id, key, url}]
-  const [selectedKeys, setSelectedKeys] = useState(new Set());
   const [newPictures, setNewPictures] = useState([]); // [{previewUrl, ref, uploading}]
+  // Orden final en el que se publican las fotos (la primera es la portada en ML) — mezcla
+  // imágenes del catálogo y subidas nuevas en una sola lista arrastrable, en vez de mandar
+  // siempre "primero las del catálogo, después las nuevas" sin control del vendedor.
+  const [imageOrder, setImageOrder] = useState([]); // [{ type: "existing", key } | { type: "new", previewUrl }]
+  const [dragImgIndex, setDragImgIndex] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [suggestingTitle, setSuggestingTitle] = useState(false);
@@ -818,7 +822,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       .then(r => {
         const imgs = r.data || [];
         setExistingImages(imgs);
-        setSelectedKeys(new Set(imgs.map(i => i.key)));
+        setImageOrder(imgs.map(i => ({ type: "existing", key: i.key })));
       })
       .catch(() => {});
   }, []); // eslint-disable-line
@@ -890,10 +894,10 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   const sellingAtLoss = netFinal != null && priceFloor != null && netFinal < priceFloor;
 
   function toggleImage(key) {
-    setSelectedKeys(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
+    setImageOrder(prev => {
+      const isIncluded = prev.some(item => item.type === "existing" && item.key === key);
+      if (isIncluded) return prev.filter(item => !(item.type === "existing" && item.key === key));
+      return [...prev, { type: "existing", key }];
     });
   }
 
@@ -904,6 +908,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       const previewUrl = URL.createObjectURL(file);
       const entry = { previewUrl, ref: null, uploading: true };
       setNewPictures(prev => [...prev, entry]);
+      setImageOrder(prev => [...prev, { type: "new", previewUrl }]);
       try {
         const form = new FormData();
         form.append("image", file);
@@ -919,6 +924,25 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
 
   function removeNewPicture(previewUrl) {
     setNewPictures(prev => prev.filter(p => p.previewUrl !== previewUrl));
+    setImageOrder(prev => prev.filter(item => !(item.type === "new" && item.previewUrl === previewUrl)));
+  }
+
+  function moveImage(fromIndex, toIndex) {
+    setImageOrder(prev => {
+      if (toIndex < 0 || toIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  // Imágenes del catálogo siempre cuentan (ya están subidas); las nuevas solo cuando terminaron
+  // de subirse con éxito (tienen .ref) — mientras suben o si fallaron, no cuentan todavía.
+  function readyImageCount() {
+    return imageOrder.filter(item =>
+      item.type === "existing" || newPictures.find(p => p.previewUrl === item.previewUrl)?.ref
+    ).length;
   }
 
   function goBack() { setError(""); setStep(s => Math.max(0, s - 1)); }
@@ -929,8 +953,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     if (step === 1 && missingAttrs.length > 0) { setError(`Faltan completar: ${missingAttrs.map(a => a.name).join(", ")}`); return; }
     if (step === 2) {
       if (newPictures.some(p => p.uploading)) { setError("Esperá a que terminen de subirse las imágenes"); return; }
-      const pictureCount = selectedKeys.size + newPictures.filter(p => p.ref).length;
-      if (pictureCount === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
+      if (readyImageCount() === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
     }
     if (step === 3 && !title.trim()) { setError("Ingresá un título"); return; }
     setStep(s => Math.min(WIZARD_STEPS.length - 1, s + 1));
@@ -1000,8 +1023,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       return;
     }
     if (newPictures.some(p => p.uploading)) { setError("Esperá a que terminen de subirse las imágenes"); return; }
-    const pictureCount = selectedKeys.size + newPictures.filter(p => p.ref).length;
-    if (pictureCount === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
+    if (readyImageCount() === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
 
     if (mlMissingAttr && !mlMissingValue.trim()) {
       setError(`Completá "${mlMissingAttr.name}" para poder publicar`);
@@ -1022,13 +1044,21 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
           value_name: mlMissingAttr.valueType === "number_unit" ? formatNumberUnitValue(mlMissingAttr, mlMissingValue) : mlMissingValue,
         });
       }
-      const pictureRefs = newPictures.filter(p => p.ref).map(p => p.ref);
+      // Se manda en el orden elegido por el vendedor (la primera es la portada en ML) — el
+      // backend resuelve cada ítem en secuencia en vez de asumir "primero catálogo, después
+      // subidas nuevas" como antes.
+      const orderedImages = imageOrder
+        .map(item => {
+          if (item.type === "existing") return { type: "existing", key: item.key };
+          const pic = newPictures.find(p => p.previewUrl === item.previewUrl);
+          return pic?.ref ? { type: "new", ref: pic.ref } : null;
+        })
+        .filter(Boolean);
 
       const res = await client.post(`/seller/ml/products/${product.id}/publish`, {
         mlCategoryId: categoryId, price: Number(price), shippingFree, attributes,
         title, description,
-        imageKeys: Array.from(selectedKeys),
-        pictureRefs,
+        orderedImages,
         listingTypeId: selectedOption?.listingTypeId || "gold_special",
         installmentTags: selectedOption?.tags || [],
       });
@@ -1123,48 +1153,74 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
 
       {step === 2 && (
         <div>
-          {existingImages.length > 0 && (
+          {imageOrder.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              {existingImages.map(img => {
-                const selected = selectedKeys.has(img.key);
+              {imageOrder.map((item, index) => {
+                const isExisting = item.type === "existing";
+                const src = isExisting
+                  ? existingImages.find(i => i.key === item.key)?.url
+                  : newPictures.find(p => p.previewUrl === item.previewUrl)?.previewUrl;
+                const newPic = isExisting ? null : newPictures.find(p => p.previewUrl === item.previewUrl);
+                if (!src) return null;
                 return (
-                  <button key={img.id || img.key} type="button" onClick={() => toggleImage(img.key)}
+                  <div key={isExisting ? `e:${item.key}` : `n:${item.previewUrl}`}
+                    draggable
+                    onDragStart={() => setDragImgIndex(index)}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={() => { if (dragImgIndex !== null && dragImgIndex !== index) moveImage(dragImgIndex, index); setDragImgIndex(null); }}
+                    onDragEnd={() => setDragImgIndex(null)}
                     style={{
-                      position: "relative", width: 72, height: 72, padding: 0, borderRadius: 8, overflow: "hidden",
-                      border: selected ? "2px solid var(--brand,#6366f1)" : "2px solid var(--border)",
-                      opacity: selected ? 1 : .4, cursor: "pointer", background: "none",
+                      position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden",
+                      border: index === 0 ? "2px solid var(--brand,#6366f1)" : "2px solid var(--border)",
+                      cursor: "grab", opacity: dragImgIndex === index ? .45 : 1,
                     }}>
-                    <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </button>
+                    <img src={src} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
+                    {index === 0 && (
+                      <span style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,.65)", color: "#fff", fontSize: ".58rem", fontWeight: 700, textAlign: "center", padding: "2px 0" }}>
+                        PORTADA
+                      </span>
+                    )}
+                    {newPic?.uploading && (
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Loader2 size={16} className="spin" />
+                      </div>
+                    )}
+                    {newPic?.failed && (
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(239,68,68,.15)" }} title="No se pudo subir" />
+                    )}
+                    <button type="button"
+                      onClick={() => isExisting ? toggleImage(item.key) : removeNewPicture(item.previewUrl)}
+                      style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                      <X size={10} color="#fff" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
           )}
           <p style={{ margin: "0 0 10px", fontSize: ".76rem", color: "var(--text-secondary)" }}>
-            Las imágenes de tu catálogo aparecen tildadas por defecto — desmarcá las que no quieras incluir en Mercado Libre.
+            Arrastrá las imágenes para cambiar el orden — la primera es la portada en Mercado Libre.
           </p>
 
-          {newPictures.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              {newPictures.map(p => (
-                <div key={p.previewUrl} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: "2px solid var(--border)" }}>
-                  <img src={p.previewUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  {p.uploading && (
-                    <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Loader2 size={16} className="spin" />
-                    </div>
-                  )}
-                  {p.failed && (
-                    <div style={{ position: "absolute", inset: 0, background: "rgba(239,68,68,.15)" }} title="No se pudo subir" />
-                  )}
-                  <button type="button" onClick={() => removeNewPicture(p.previewUrl)}
-                    style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                    <X size={10} color="#fff" />
+          {existingImages.some(img => !imageOrder.some(item => item.type === "existing" && item.key === img.key)) && (
+            <div style={{ marginBottom: 10 }}>
+              <p style={{ margin: "0 0 6px", fontSize: ".74rem", color: "var(--text-secondary)" }}>
+                Imágenes del catálogo sin incluir — clickeá para sumarlas:
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {existingImages.filter(img => !imageOrder.some(item => item.type === "existing" && item.key === img.key)).map(img => (
+                  <button key={img.id || img.key} type="button" onClick={() => toggleImage(img.key)}
+                    style={{
+                      position: "relative", width: 72, height: 72, padding: 0, borderRadius: 8, overflow: "hidden",
+                      border: "2px dashed var(--border)", opacity: .45, cursor: "pointer", background: "none",
+                    }}>
+                    <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <label className="btn btn--ghost btn--sm" style={{ display: "inline-flex", cursor: "pointer" }}>
               <Plus size={13} /> Subir imagen nueva
