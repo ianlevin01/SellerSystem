@@ -84,10 +84,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(form.email.trim(), form.password);
+      const freshSeller = await login(form.email.trim(), form.password);
       trackStdEvent("Login", { method: "email" });
       setSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 650);
+      const dest = freshSeller?.onboarding_track ? "/dashboard" : "/start";
+      setTimeout(() => navigate(dest), 650);
     } catch (err) {
       setError(err.response?.data?.message || "Email o contraseña incorrectos");
       setLoading(false);
@@ -99,10 +100,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await loginWithGoogle();
+      const freshSeller = await loginWithGoogle();
       trackStdEvent("Login", { method: "google" });
       setSuccess(true);
-      setTimeout(() => navigate("/dashboard"), 650);
+      const dest = freshSeller?.onboarding_track ? "/dashboard" : "/start";
+      setTimeout(() => navigate(dest), 650);
     } catch (err) {
       if (err.code === "auth/popup-closed-by-user") {
         setLoading(false);

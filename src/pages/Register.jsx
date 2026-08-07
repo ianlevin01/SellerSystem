@@ -182,9 +182,10 @@ export default function Register() {
     setError("");
     setLoadingGoogle(true);
     try {
-      await loginWithGoogle();
+      const freshSeller = await loginWithGoogle();
       trackStdEvent("CompleteRegistration", { method: "google" });
-      setTimeout(() => navigate("/dashboard"), 300);
+      const dest = freshSeller?.onboarding_track ? "/dashboard" : "/start";
+      setTimeout(() => navigate(dest), 300);
     } catch (err) {
       if (
         err.code === "auth/popup-closed-by-user" ||

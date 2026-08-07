@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Store, Loader2, ArrowRight } from "lucide-react";
+import { Store, Loader2, ArrowRight, History, Sparkles } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 
@@ -29,20 +29,98 @@ export default function StartChoice() {
   const { updateSeller } = useAuth();
   const [saving, setSaving] = useState(null);
   const [error, setError] = useState("");
+  // Al elegir Mercado Libre no navegamos todavía — primero preguntamos si ya vendía por ML,
+  // para guardarlo en la cuenta y en el futuro poder adaptar la guía de onboarding según
+  // si es alguien nuevo en ML o ya tiene experiencia.
+  const [step, setStep] = useState("choose"); // "choose" | "ml-experience"
 
   async function choose(track) {
     setSaving(track); setError("");
     try {
       await client.patch("/seller/onboarding/track", { track });
       updateSeller({ onboarding_track: track });
+      if (track === "mercadolibre") {
+        setSaving(null);
+        setStep("ml-experience");
+        return;
+      }
       // Sin ?new=true: ese param abre el modal de "crear tienda" automáticamente, lo que
       // chocaba con el tooltip de la guía apuntando al botón real (quedaban los dos
       // superpuestos, tapándose entre sí) — la guía ya lleva de la mano al botón visible.
-      navigate(track === "mercadolibre" ? "/mercado-libre?guide=true" : "/pages?guide=true", { replace: true });
+      navigate("/pages?guide=true", { replace: true });
     } catch {
       setError("No se pudo guardar tu elección. Probá de nuevo.");
       setSaving(null);
     }
+  }
+
+  async function answerSoldBefore(soldBefore) {
+    setSaving("ml-experience"); setError("");
+    try {
+      await client.patch("/seller/onboarding/sold-before", { soldBefore });
+      navigate("/mercado-libre?guide=true", { replace: true });
+    } catch {
+      setError("No se pudo guardar tu respuesta. Probá de nuevo.");
+      setSaving(null);
+    }
+  }
+
+  if (step === "ml-experience") {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", padding: 24, background: "var(--bg, #f6f7f4)",
+      }}>
+        <div style={{ textAlign: "center", marginBottom: 36, maxWidth: 560 }}>
+          <h1 style={{ margin: "0 0 10px", fontSize: "1.6rem", fontWeight: 800 }}>¿Ya vendiste antes por Mercado Libre?</h1>
+          <p style={{ margin: 0, color: "var(--text-secondary, #666)", fontSize: ".95rem" }}>
+            Nos ayuda a mostrarte la guía justa para vos, seas nuevo en Mercado Libre o ya tengas experiencia vendiendo.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", justifyContent: "center", maxWidth: 760 }}>
+          {[
+            { value: true, icon: History, title: "Sí, ya vendía por Mercado Libre", description: "Ya tengo experiencia publicando y vendiendo en mi cuenta.", cta: "Sí, ya vendía" },
+            { value: false, icon: Sparkles, title: "No, es mi primera vez", description: "Nunca vendí por Mercado Libre — quiero empezar desde cero.", cta: "Es mi primera vez" },
+          ].map(opt => {
+            const Icon = opt.icon;
+            const isSaving = saving === "ml-experience";
+            return (
+              <button
+                key={String(opt.value)}
+                type="button"
+                disabled={!!saving}
+                onClick={() => answerSoldBefore(opt.value)}
+                className="card"
+                style={{
+                  width: 320, textAlign: "left", padding: 26, cursor: saving ? "default" : "pointer",
+                  border: "1px solid var(--border)", background: "#fff", opacity: saving && !isSaving ? .5 : 1,
+                  display: "flex", flexDirection: "column", gap: 14,
+                }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, background: "#2D3277", overflow: "hidden",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <Icon size={22} color="#fff" />
+                </div>
+                <div>
+                  <h3 style={{ margin: "0 0 6px", fontSize: "1.05rem", fontWeight: 700 }}>{opt.title}</h3>
+                  <p style={{ margin: 0, fontSize: ".85rem", color: "var(--text-secondary, #666)", lineHeight: 1.5 }}>
+                    {opt.description}
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: ".85rem", fontWeight: 700, color: "var(--brand, #4db81a)", marginTop: "auto" }}>
+                  {isSaving ? <><Loader2 size={14} className="spin" /> Guardando...</> : <>{opt.cta} <ArrowRight size={14} /></>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {error && <p style={{ marginTop: 20, color: "var(--danger, #ef4444)", fontSize: ".85rem" }}>{error}</p>}
+      </div>
+    );
   }
 
   return (
