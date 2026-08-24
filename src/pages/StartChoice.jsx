@@ -1,8 +1,32 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Store, Loader2, ArrowRight, History, Sparkles } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+
+const LANDING_TRACK_KEY = "ventaz_landing_track";
+const LANDING_TRACK_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Si la persona llegó por /ml o /ecom (landings de campaña, ver LandingMl.jsx/LandingEcom.jsx),
+// esas páginas dejan la pista acá antes de ir a /register. Como el registro por email pasa por
+// la verificación de mail (puede tardar minutos/horas y a veces abre en otra pestaña del mismo
+// navegador), localStorage es lo único que sobrevive ese salto — sessionStorage no, porque no
+// se comparte entre pestañas. Se limpia siempre al leerla, y se ignora si tiene más de un día
+// (evita aplicar una elección vieja de una visita anterior a otra landing).
+function consumeLandingTrackHint() {
+  try {
+    const raw = localStorage.getItem(LANDING_TRACK_KEY);
+    localStorage.removeItem(LANDING_TRACK_KEY);
+    if (!raw) return null;
+    const { track, ts } = JSON.parse(raw);
+    if ((track === "ecommerce" || track === "mercadolibre") && Date.now() - ts < LANDING_TRACK_MAX_AGE_MS) {
+      return track;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 const OPTIONS = [
   {
@@ -33,6 +57,15 @@ export default function StartChoice() {
   // para guardarlo en la cuenta y en el futuro poder adaptar la guía de onboarding según
   // si es alguien nuevo en ML o ya tiene experiencia.
   const [step, setStep] = useState("choose"); // "choose" | "ml-experience"
+  const [autoHint] = useState(consumeLandingTrackHint);
+
+  // Si vino de una landing específica, ya sabemos la elección — se aplica sola, sin mostrarle
+  // las dos tarjetas (igual va a ver la pregunta de "¿ya vendiste por ML?" si corresponde, esa
+  // no se saltea nunca).
+  useEffect(() => {
+    if (autoHint) choose(autoHint);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function choose(track) {
     setSaving(track); setError("");
@@ -63,6 +96,20 @@ export default function StartChoice() {
       setError("No se pudo guardar tu respuesta. Probá de nuevo.");
       setSaving(null);
     }
+  }
+
+  // Mientras se aplica la elección automática (o si por algún motivo tarda), no mostrar las
+  // tarjetas de elegir — solo si falla (error) se cae al "choose" normal para que la persona
+  // pueda elegir a mano.
+  if (step === "choose" && autoHint && !error) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg, #f6f7f4)",
+      }}>
+        <Loader2 size={28} className="spin" />
+      </div>
+    );
   }
 
   if (step === "ml-experience") {
