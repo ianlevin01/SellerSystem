@@ -8,14 +8,13 @@
     }
   ],
   "rewrites": [
-    { "source": "/", "destination": "/home/index.html" },
     { "source": "/ecom", "destination": "/ecom/index.html" },
     { "source": "/ml", "destination": "/ml/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/app-shell.html" }
   ],
   "headers": [
     {
-      "source": "/(index.html|home/index.html|ecom/index.html|ml/index.html)",
+      "source": "/(index.html|app-shell.html|ecom/index.html|ml/index.html)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
         { "key": "Pragma",        "value": "no-cache" },

@@ -14,6 +14,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, "..", "dist");
 const template = fs.readFileSync(path.join(distDir, "index.html"), "utf-8");
 
+// Vercel sirve dist/index.html para "/" por comportamiento propio del hosting ANTES de mirar
+// vercel.json (probado en producción: un rewrite "/" -> "/home/index.html" nunca se aplicaba,
+// / seguía sirviendo la cáscara vacía). Por eso el shell genérico de la SPA (el que usan
+// /login, /dashboard, etc. vía el catch-all de vercel.json) se copia primero a app-shell.html
+// — así queda libre reescribir dist/index.html con el contenido real de "/" sin que las demás
+// rutas destellen ese contenido antes de que React las reemplace.
+fs.copyFileSync(path.join(distDir, "index.html"), path.join(distDir, "app-shell.html"));
+
 function escapeForAttr(value) {
   return value.replace(/"/g, "&quot;");
 }
@@ -55,15 +63,13 @@ for (const [route, { seo, faqs }] of Object.entries(ROUTES)) {
     pageHtml = pageHtml.replace("</head>", `${script}\n  </head>`);
   }
 
-  // OJO: dist/index.html NO se toca acá — ese archivo es también el fallback de SPA que
-  // Vercel sirve para cualquier ruta no listada (/login, /dashboard, etc. — ver rewrites en
-  // vercel.json). Si lo pisáramos con el contenido de "/", esas otras rutas destellarían la
-  // landing antes de que React las reemplace. "/" se escribe en su propia carpeta (home/) y
-  // vercel.json la redirige ahí con una regla específica, igual que /ecom y /ml.
-  const slug = route === "/" ? "home" : route.replace(/^\//, "");
-  const outDir = path.join(distDir, slug);
-  fs.mkdirSync(outDir, { recursive: true });
-  const outFile = path.join(outDir, "index.html");
+  // "/" pisa directamente dist/index.html (ver por qué arriba, junto a app-shell.html).
+  // /ecom y /ml sí necesitan su propia carpeta + rewrite en vercel.json, porque ahí Vercel no
+  // tiene un archivo con ese nombre exacto compitiendo con el rewrite.
+  const outFile = route === "/"
+    ? path.join(distDir, "index.html")
+    : path.join(distDir, route.replace(/^\//, ""), "index.html");
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
   fs.writeFileSync(outFile, pageHtml);
   console.log(`[prerender] ${route} -> ${path.relative(distDir, outFile)}`);
 }
