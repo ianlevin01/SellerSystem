@@ -7,10 +7,15 @@
       "permanent": true
     }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    { "source": "/", "destination": "/home/index.html" },
+    { "source": "/ecom", "destination": "/ecom/index.html" },
+    { "source": "/ml", "destination": "/ml/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
-      "source": "/index.html",
+      "source": "/(index.html|home/index.html|ecom/index.html|ml/index.html)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
         { "key": "Pragma",        "value": "no-cache" },

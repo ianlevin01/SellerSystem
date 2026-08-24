@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+Allow: /ecom
+Allow: /ml
+Allow: /legal
 Allow: /login
 Allow: /register
 
@@ -13,5 +16,21 @@ Disallow: /profile
 Disallow: /products
 Disallow: /store-config
 Disallow: /discounts
+Disallow: /about
+Disallow: /contact
+Disallow: /start
+
+# Crawlers de motores de IA (GEO) — permitidos explícitamente, mismas reglas que el resto.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
 
 Sitemap: https://ventaz.com.ar/sitemap.xml

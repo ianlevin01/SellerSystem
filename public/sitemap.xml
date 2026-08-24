@@ -4,7 +4,24 @@
     <loc>https://ventaz.com.ar/</loc>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
-    <lastmod>2026-05-03</lastmod>
+    <lastmod>2026-08-23</lastmod>
+  </url>
+  <url>
+    <loc>https://ventaz.com.ar/ecom</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-23</lastmod>
+  </url>
+  <url>
+    <loc>https://ventaz.com.ar/ml</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-08-23</lastmod>
+  </url>
+  <url>
+    <loc>https://ventaz.com.ar/legal</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
   <url>
     <loc>https://ventaz.com.ar/login</loc>

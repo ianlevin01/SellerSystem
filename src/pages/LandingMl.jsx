@@ -1,6 +1,9 @@
-// src/pages/Landing.jsx
-// Landing pública premium de Ventaz
-// cambio hecho por Yolo
+// src/pages/LandingMl.jsx
+// Landing de campaña — Mercado Libre (ruta /ml)
+// Mismo esqueleto/estética que LandingEcom.jsx (misma paleta, misma estructura de secciones),
+// pero con el copy adaptado: acá no hay "tienda propia" — el vendedor conecta su propia cuenta
+// de Mercado Libre y publica el catálogo de Ventaz. Nosotros ponemos productos + logística +
+// integración con ML, el vendedor solo publica.
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -8,7 +11,7 @@ import "../styles/Landing.css";
 import useSeo from "../hooks/useSeo";
 import useJsonLd from "../hooks/useJsonLd";
 import { buildFaqSchema } from "../utils/seo";
-import { SEO, FAQS } from "../content/landing";
+import { SEO, FAQS } from "../content/landingMl";
 import {
   ArrowRight,
   BadgeCheck,
@@ -26,16 +29,13 @@ import {
   Rocket,
   ShieldCheck,
   Sparkles,
-  Store,
   Truck,
   Users,
   X,
-  Zap,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "que-es", label: "Qué es" },
-  { id: "como-vender", label: "Cómo vender" },
   { id: "quienes-somos", label: "Quiénes somos" },
   { id: "como-funciona", label: "Cómo funciona" },
   { id: "beneficios", label: "Beneficios" },
@@ -47,41 +47,7 @@ const HERO_POINTS = [
   "Sin comprar stock",
   "Sin guardar mercadería",
   "Sin resolver envíos solo",
-  "Con soporte y operación centralizada",
-];
-
-// Los dos canales de venta que arma un vendedor una vez que entiende el modelo de
-// dropshipping de Ventaz — no son excluyentes, se pueden usar los dos a la vez.
-const CHANNELS = [
-  {
-    id: "page",
-    logo: "/ventaz.png",
-    kicker: "Tu marca, tu tienda",
-    title: "Página propia",
-    text: "Tu propia tienda online con el catálogo de Ventaz, tu nombre, tu diseño y tu forma de vender.",
-    points: [
-      "Elegís vos el precio de venta sobre un piso ya calculado",
-      "Checkout integrado con Mercado Pago",
-      "Integración con Meta (Facebook e Instagram) para potenciar tus ventas",
-      "Diseño, catálogo y precios 100% personalizables",
-    ],
-    cta: "Crear mi tienda propia",
-  },
-  {
-    id: "ml",
-    logo: "/mercadolibre-logo.png",
-    kicker: "Tu cuenta, su alcance",
-    title: "Mercado Libre",
-    text: "Publicás el catálogo de Ventaz directo en tu propia cuenta de Mercado Libre.",
-    points: [
-      "Sin comisión de Ventaz sobre tus ventas",
-      "Aprovechás el tráfico y la confianza que ya tiene Mercado Libre",
-      "Precio, stock y despacho sincronizados en automático",
-      "Publicación asistida con IA para categorías, atributos y descripciones",
-    ],
-    note: "Las comisiones propias de Mercado Libre siguen aplicando — son ajenas a Ventaz.",
-    cta: "Empezar con Mercado Libre",
-  },
+  "Sin comisión de Ventaz sobre tus ventas",
 ];
 
 const FLOW_STEPS = [
@@ -94,19 +60,19 @@ const FLOW_STEPS = [
     icon: Boxes,
   },
   {
-    id: "tienda",
+    id: "cuenta",
     number: "02",
-    title: "Elegís tu canal",
-    subtitle: "Página propia o Mercado Libre",
-    text: "Activás tu tienda con tu marca o conectás tu cuenta de Mercado Libre — podés combinar las dos sin perder nada de lo que armaste.",
+    title: "Conectás tu cuenta",
+    subtitle: "Tu cuenta de Mercado Libre, tu precio",
+    text: "Conectás tu propia cuenta de Mercado Libre y publicás el catálogo de Ventaz con el precio que vos elijas, en minutos.",
     icon: Link2,
   },
   {
     id: "ventas",
     number: "03",
-    title: "Conseguís clientes",
+    title: "Vendés en Mercado Libre",
     subtitle: "Vos te enfocás en vender",
-    text: "Te ocupás de mostrar, promocionar y cerrar ventas. La parte pesada queda organizada por la plataforma.",
+    text: "Tus productos aparecen en las búsquedas de Mercado Libre. Vos respondés consultas y cerrás ventas — la parte pesada queda organizada por la plataforma.",
     icon: Users,
   },
   {
@@ -137,7 +103,7 @@ const BENEFITS = [
   {
     id: "estructura",
     title: "Tenés una estructura seria",
-    text: "Catálogo, tienda, pedidos y control viven en un mismo sistema.",
+    text: "Catálogo, publicaciones, pedidos y control viven en un mismo sistema.",
     icon: Layers,
     detail: "Cada operación queda ordenada. Eso permite vender con más claridad y evita que todo dependa de mensajes sueltos.",
   },
@@ -156,11 +122,11 @@ const BENEFITS = [
     detail: "El sistema ayuda a ordenar cada movimiento y a que el modelo pueda crecer sin convertirse en un caos.",
   },
   {
-    id: "marca",
-    title: "Vendés con tu marca",
-    text: "Tu tienda puede tener tu identidad, tus productos elegidos y tu precio.",
+    id: "alcance",
+    title: "Vendés con la confianza que ya tiene Mercado Libre",
+    text: "No tenés que construir reputación desde cero — tus productos aparecen dentro de la plataforma que los compradores ya conocen.",
     icon: BadgeCheck,
-    detail: "Ventaz no busca que todos vendan igual: te da infraestructura para que puedas construir tu propio canal de venta.",
+    detail: "Ventaz te da el catálogo y la operación; Mercado Libre te da el tráfico y la confianza que ya construyó con millones de compradores.",
   },
 ];
 
@@ -190,8 +156,8 @@ const BEHIND_THE_SCENES = [
 const AUDIENCE = [
   "Estudiantes que quieren ingresos extra",
   "Personas que trabajan y tienen poco tiempo",
-  "Vendedores que no quieren comprar stock",
-  "Emprendedores que buscan una estructura más profesional",
+  "Vendedores que ya venden por Mercado Libre y quieren dejar de manejar stock",
+  "Emprendedores que quieren arrancar en Mercado Libre sin comprar mercadería",
 ];
 
 const FOUNDERS = [
@@ -256,7 +222,7 @@ function useSmoothNavigation() {
   return { activeSection, progress, goTo };
 }
 
-export default function Landing() {
+export default function LandingMl() {
   const { activeSection, progress, goTo } = useSmoothNavigation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(FLOW_STEPS[0].id);
@@ -286,12 +252,11 @@ export default function Landing() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Esta es la landing genérica (combina los dos canales) — si quedó una pista de una visita
-  // anterior a /ml o /ecom en este mismo navegador, se descarta: al venir de acá, StartChoice
-  // tiene que preguntar siempre, no aplicar una elección de otra visita.
+  // Si se registra desde acá, StartChoice (/start) lee esto y salta directo al track
+  // "mercadolibre" sin mostrarle la elección — ver consumeLandingTrackHint en StartChoice.jsx.
   useEffect(() => {
     try {
-      localStorage.removeItem("ventaz_landing_track");
+      localStorage.setItem("ventaz_landing_track", JSON.stringify({ track: "mercadolibre", ts: Date.now() }));
     } catch {
       // ignore
     }
@@ -336,7 +301,7 @@ export default function Landing() {
             Ingresar
           </Link>
           <Link to="/register" className="vtz-nav-cta">
-            Crear mi tienda
+            Empezar a vender
           </Link>
 
           <button
@@ -355,11 +320,11 @@ export default function Landing() {
           <div className="vtz-hero__copy">
             <div className="vtz-eyebrow">
               <Sparkles size={16} />
-              Plataforma para vender online con estructura real
+              Plataforma para vender por Mercado Libre con estructura real
             </div>
 
             <h1>
-              Tu tienda.
+              Tu cuenta.
               <br />
               Tu precio.
               <br />
@@ -367,13 +332,13 @@ export default function Landing() {
             </h1>
 
             <p>
-              Ventaz permite que cualquier persona tenga su propia tienda online
-              sin comprar stock, sin encargarse de la logística y sin empezar desde cero.
+              Ventaz te da el catálogo de productos, la logística de cada envío y la integración
+              con tu cuenta de Mercado Libre. Vos solo publicás — nada más.
             </p>
 
             <div className="vtz-hero__buttons">
               <Link to="/register" className="vtz-btn vtz-btn--primary vtz-btn--hero">
-                Crear mi tienda <ArrowRight size={20} />
+                Empezar en Mercado Libre <ArrowRight size={20} />
               </Link>
               <button type="button" className="vtz-btn vtz-btn--secondary" onClick={() => goTo("como-funciona")}>
                 Ver cómo funciona
@@ -392,7 +357,7 @@ export default function Landing() {
             <div className="vtz-principle">
               <ShieldCheck size={18} />
               <span>
-                No prometemos plata fácil. Creamos una estructura seria para que vender online sea más simple, ordenado y posible.
+                No prometemos plata fácil. Creamos una estructura seria para que vender por Mercado Libre sea más simple, ordenado y posible.
               </span>
             </div>
           </div>
@@ -411,8 +376,8 @@ export default function Landing() {
               </div>
               <i />
               <div>
-                <Store size={20} />
-                <span>Tienda</span>
+                <Link2 size={20} />
+                <span>Tu cuenta ML</span>
               </div>
               <i />
               <div>
@@ -429,7 +394,7 @@ export default function Landing() {
             <div className="vtz-hero-card__bottom">
               <div>
                 <small>El vendedor se enfoca en</small>
-                <strong>conseguir clientes y vender</strong>
+                <strong>publicar y vender</strong>
               </div>
               <div>
                 <small>Ventaz se encarga de</small>
@@ -445,12 +410,12 @@ export default function Landing() {
             <span>compra inicial de stock</span>
           </div>
           <div>
-            <strong>1 link</strong>
-            <span>para compartir tu tienda</span>
+            <strong>0%</strong>
+            <span>comisión de Ventaz sobre tus ventas</span>
           </div>
           <div>
             <strong>24/7</strong>
-            <span>negocio online abierto</span>
+            <span>tu cuenta de Mercado Libre activa</span>
           </div>
         </div>
       </section>
@@ -460,10 +425,10 @@ export default function Landing() {
       <section className="vtz-section vtz-intro" id="que-es">
         <div className="vtz-section__head">
           <span className="vtz-kicker">Qué es Ventaz</span>
-          <h2>Un modelo de dropshipping pensado para que solo tengas que vender.</h2>
+          <h2>Un modelo de dropshipping para vender por Mercado Libre sin cargar con la parte complicada.</h2>
           <p>
-            Nosotros te damos los productos, nos encargamos de la logística de cada envío y resolvemos
-            todo el trabajo operativo molesto. Vos te ocupás de una sola cosa: conseguir clientes y vender.
+            Muchas personas quieren vender por Mercado Libre, pero se frenan porque creen que necesitan
+            comprar productos, guardar stock, hacer envíos, atender reclamos y armar todo desde cero.
           </p>
         </div>
 
@@ -474,69 +439,24 @@ export default function Landing() {
             <ul>
               <li>Comprar productos antes de vender</li>
               <li>Guardar mercadería y controlar stock a mano</li>
-              <li>Coordinar pedidos y entregas uno por uno</li>
+              <li>Publicar, actualizar precio y stock a mano en Mercado Libre</li>
               <li>Resolver reclamos sin respaldo</li>
             </ul>
           </article>
 
           <article className="vtz-contrast-card vtz-contrast-card--after">
             <span className="vtz-card-label">Con Ventaz</span>
-            <h3>El vendedor arranca con un dropshipping ya armado.</h3>
+            <h3>El vendedor arranca con un dropshipping para Mercado Libre ya armado.</h3>
             <p>
               Ventaz pone el catálogo de productos, los compra, los guarda, los empaqueta y los envía
-              a cada cliente. Vos elegís qué vender, armás tu propuesta y conseguís clientes —
-              el resto lo resolvemos nosotros.
+              a cada cliente que te compre por Mercado Libre. Vos conectás tu cuenta, publicás y
+              conseguís clientes — el resto lo resolvemos nosotros.
             </p>
             <div className="vtz-highlight-line">
               <BadgeCheck size={20} />
-              <span>Nosotros compramos, guardamos y enviamos. Vos vendés.</span>
+              <span>Nosotros compramos, guardamos y enviamos. Vos publicás y vendés.</span>
             </div>
           </article>
-        </div>
-      </section>
-
-      <section className="vtz-section vtz-channels" id="como-vender">
-        <div className="vtz-section__head">
-          <span className="vtz-kicker">Cómo vender</span>
-          <h2>Con ese modelo ya armado, elegís dónde poner tu negocio.</h2>
-          <p>
-            El dropshipping es el mismo de los dos lados: catálogo, stock, logística y soporte los
-            resolvemos nosotros. Lo único que cambia es dónde mostrás tus productos.
-          </p>
-        </div>
-
-        <div className="vtz-channels__grid">
-          {CHANNELS.map((channel) => (
-            <article key={channel.id} className={`vtz-channel-card vtz-channel-card--${channel.id}`}>
-              <div className={`vtz-channel-card__badge vtz-channel-card__badge--${channel.id}`}>
-                <img src={channel.logo} alt="" />
-              </div>
-
-              <span className="vtz-card-label">{channel.kicker}</span>
-              <h3>{channel.title}</h3>
-              <p>{channel.text}</p>
-
-              <ul className="vtz-channel-card__points">
-                {channel.points.map((point) => (
-                  <li key={point}>
-                    <CheckCircle2 size={16} />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {channel.note && <p className="vtz-channel-card__note">{channel.note}</p>}
-
-              <Link to="/register" className="vtz-channel-card__cta">
-                {channel.cta} <ArrowRight size={16} />
-              </Link>
-            </article>
-          ))}
-        </div>
-
-        <div className="vtz-channels__footer">
-          <Zap size={18} />
-          <span>Podés activar las dos formas de vender al mismo tiempo — no hay que elegir una sola.</span>
         </div>
       </section>
 
@@ -548,14 +468,14 @@ export default function Landing() {
           <p>
             Ventaz surge desde experiencia concreta en venta, stock, pedidos y atención al cliente.
             La idea no es vender humo: es convertir una estructura que ya funciona en una plataforma
-            que cualquier vendedor pueda usar para construir su propio negocio.
+            que cualquier vendedor pueda usar para construir su propio negocio en Mercado Libre.
           </p>
         </div>
 
         <div className="vtz-about__grid">
           <article className="vtz-about-card">
             <span className="vtz-card-label">Nuestra mirada</span>
-            <h3>Vender online debería ser más accesible, no más caótico.</h3>
+            <h3>Vender por Mercado Libre debería ser más accesible, no más caótico.</h3>
             <p>
               Muchas personas tienen ganas de vender, pero se frenan por todo lo que hay alrededor:
               stock, entregas, reclamos, herramientas, organización y tiempo. Ventaz ordena esa parte
@@ -564,7 +484,7 @@ export default function Landing() {
 
             <div className="vtz-about-card__quote">
               <Sparkles size={18} />
-              <strong>Tu tienda. Tu precio. Tu negocio.</strong>
+              <strong>Tu cuenta. Tu precio. Tu negocio.</strong>
             </div>
           </article>
 
@@ -646,7 +566,7 @@ export default function Landing() {
       <section className="vtz-section vtz-benefits" id="beneficios">
         <div className="vtz-section__head">
           <span className="vtz-kicker">Beneficios</span>
-          <h2>No es solo una tienda. Es una forma más fácil de empezar.</h2>
+          <h2>No es solo una publicación. Es una forma más fácil de empezar.</h2>
         </div>
 
         <div className="vtz-benefits__grid">
@@ -722,7 +642,7 @@ export default function Landing() {
             <>
               <h3>Vos te enfocás en vender.</h3>
               <p>
-                Ventaz te da catálogo, tienda, operación, seguimiento y soporte para que puedas
+                Ventaz te da catálogo, publicaciones, operación, seguimiento y soporte para que puedas
                 arrancar con una base mucho más clara.
               </p>
               <ul>
@@ -805,15 +725,15 @@ export default function Landing() {
           <div className="vtz-final__icon">
             <Rocket size={30} />
           </div>
-          <h2>Creá tu tienda y empezá con una estructura lista para vender.</h2>
+          <h2>Conectá tu cuenta y empezá a vender por Mercado Libre con una estructura lista.</h2>
           <p>
-            Tu tienda. Tu precio. Tu negocio. Ventaz te da la base para enfocarte en conseguir clientes,
-            construir confianza y generar ventas con una operación mucho más ordenada.
+            Tu cuenta. Tu precio. Tu negocio. Ventaz te da el catálogo, la logística y la integración
+            con Mercado Libre para que vos solo tengas que publicar.
           </p>
 
           <div className="vtz-hero__buttons vtz-hero__buttons--center">
             <Link to="/register" className="vtz-btn vtz-btn--primary">
-              Crear mi tienda <ArrowRight size={18} />
+              Empezar en Mercado Libre <ArrowRight size={18} />
             </Link>
             <Link to="/login" className="vtz-btn vtz-btn--secondary">
               Ya tengo cuenta
@@ -827,7 +747,7 @@ export default function Landing() {
           <img src="/ventaz.png" alt="Ventaz" style={{ height: 28, objectFit: "contain" }} />
         </button>
 
-        <p>© {year} Ventaz. Plataforma para vendedores online.</p>
+        <p>© {year} Ventaz. Plataforma para vender por Mercado Libre.</p>
 
         <button type="button" className="vtz-footer__top" onClick={() => goTo("inicio")}>
           Volver arriba

@@ -10,10 +10,10 @@
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Title (50–60 chars) -->
-    <title>Ventaz — Vendé online con tu propia tienda digital</title>
+    <title>Ventaz — Vendé online con tu tienda propia o por Mercado Libre, sin stock</title>
 
     <!-- Meta description (150–160 chars) -->
-    <meta name="description" content="Ventaz te permite crear tu tienda online, gestionar productos, pedidos y cobros desde un panel centralizado. Empezá a vender hoy." />
+    <meta name="description" content="Ventaz te da el catálogo, la logística y la operación para vender online en Argentina, con tienda propia o publicando en Mercado Libre, sin comprar stock." />
 
     <!-- Canonical -->
     <link rel="canonical" href="https://ventaz.com.ar/" />
@@ -25,15 +25,15 @@
     <meta property="og:type"        content="website" />
     <meta property="og:url"         content="https://ventaz.com.ar/" />
     <meta property="og:site_name"   content="Ventaz" />
-    <meta property="og:title"       content="Ventaz — Vendé online con tu propia tienda digital" />
-    <meta property="og:description" content="Creá tu tienda, publicá productos y cobrá tus ganancias. Ventaz es la plataforma para vendedores independientes." />
+    <meta property="og:title"       content="Ventaz — Vendé online con tu tienda propia o por Mercado Libre, sin stock" />
+    <meta property="og:description" content="Ventaz te da el catálogo, la logística y la operación para vender online en Argentina, sin comprar stock." />
     <meta property="og:image"       content="https://ventaz.com.ar/ventaz.png" />
     <meta property="og:locale"      content="es_AR" />
 
     <!-- Twitter Cards -->
     <meta name="twitter:card"        content="summary_large_image" />
-    <meta name="twitter:title"       content="Ventaz — Vendé online con tu propia tienda digital" />
-    <meta name="twitter:description" content="Creá tu tienda, publicá productos y cobrá tus ganancias." />
+    <meta name="twitter:title"       content="Ventaz — Vendé online con tu tienda propia o por Mercado Libre, sin stock" />
+    <meta name="twitter:description" content="Ventaz te da el catálogo, la logística y la operación para vender online en Argentina, sin comprar stock." />
     <meta name="twitter:image"       content="https://ventaz.com.ar/ventaz.png" />
 
     <!-- JSON-LD: Organization -->
@@ -44,11 +44,42 @@
       "name": "Ventaz",
       "url": "https://ventaz.com.ar",
       "logo": "https://ventaz.com.ar/ventaz.png",
-      "description": "Plataforma para vendedores independientes: tienda online, gestión de productos y cobros.",
+      "description": "Ventaz es una plataforma de dropshipping en Argentina: le da el catálogo de productos, la logística y la operación a vendedores que quieren vender online con su tienda propia o publicando en Mercado Libre, sin comprar stock.",
+      "areaServed": { "@type": "Country", "name": "Argentina" },
+      "sameAs": [
+        "https://www.instagram.com/ventaz.oficial"
+      ],
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "customer support",
         "availableLanguage": "Spanish"
+      }
+    }
+    </script>
+
+    <!-- JSON-LD: Service (el modelo de dropshipping en sí — catálogo + logística + operación) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "serviceType": "Dropshipping",
+      "name": "Ventaz",
+      "provider": { "@type": "Organization", "name": "Ventaz", "url": "https://ventaz.com.ar" },
+      "areaServed": { "@type": "Country", "name": "Argentina" },
+      "description": "Servicio de dropshipping: catálogo de productos, compra, guarda y despacho de cada pedido a nombre del vendedor. Disponible con tienda online propia o publicando en Mercado Libre.",
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Formas de vender con Ventaz",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": { "@type": "Service", "name": "Página propia", "description": "Tienda online con marca propia, precio propio e integración con Meta." }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": { "@type": "Service", "name": "Mercado Libre", "description": "Publicación del catálogo de Ventaz en la cuenta de Mercado Libre del vendedor, sin comisión de Ventaz." }
+          }
+        ]
       }
     }
     </script>

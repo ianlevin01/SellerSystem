@@ -16,6 +16,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 
 import Landing      from "./pages/Landing";
+import LandingEcom  from "./pages/LandingEcom";
+import LandingMl    from "./pages/LandingMl";
 import Login        from "./pages/Login";
 import Register     from "./pages/Register";
 import VerifyEmail  from "./pages/VerifyEmail";
@@ -47,6 +49,16 @@ import StartChoice     from "./pages/StartChoice";
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
   return isLoggedIn ? <Navigate to="/dashboard" replace /> : <Landing />;
+}
+
+// Landings de campaña — mismo criterio que HomeRoute (si ya está logueado, directo al panel).
+function EcomLandingRoute() {
+  const { isLoggedIn } = useAuth();
+  return isLoggedIn ? <Navigate to="/dashboard" replace /> : <LandingEcom />;
+}
+function MlLandingRoute() {
+  const { isLoggedIn } = useAuth();
+  return isLoggedIn ? <Navigate to="/dashboard" replace /> : <LandingMl />;
 }
 
 // Lleva al vendedor directo a los productos de su primera página (para links de email)
@@ -103,6 +115,8 @@ export default function App() {
         <Routes>
           {/* Públicas */}
           <Route path="/"             element={<HomeRoute />} />
+          <Route path="/ecom"         element={<EcomLandingRoute />} />
+          <Route path="/ml"           element={<MlLandingRoute />} />
           <Route path="/login"        element={<Login />} />
           <Route path="/register"     element={<Register />} />
           <Route path="/verify-email"     element={<VerifyEmail />} />

@@ -1,6 +1,7 @@
-// src/pages/Landing.jsx
-// Landing pública premium de Ventaz
-// cambio hecho por Yolo
+// src/pages/LandingEcom.jsx
+// Landing de campaña — página propia / ecommerce (ruta /ecom)
+// Restaurada tal cual la versión original de Landing.jsx (antes de mezclarla con Mercado Libre),
+// para usar como destino del creativo publicitario de la campaña de ecommerce.
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -8,7 +9,7 @@ import "../styles/Landing.css";
 import useSeo from "../hooks/useSeo";
 import useJsonLd from "../hooks/useJsonLd";
 import { buildFaqSchema } from "../utils/seo";
-import { SEO, FAQS } from "../content/landing";
+import { SEO, FAQS } from "../content/landingEcom";
 import {
   ArrowRight,
   BadgeCheck,
@@ -35,7 +36,6 @@ import {
 
 const NAV_ITEMS = [
   { id: "que-es", label: "Qué es" },
-  { id: "como-vender", label: "Cómo vender" },
   { id: "quienes-somos", label: "Quiénes somos" },
   { id: "como-funciona", label: "Cómo funciona" },
   { id: "beneficios", label: "Beneficios" },
@@ -50,40 +50,6 @@ const HERO_POINTS = [
   "Con soporte y operación centralizada",
 ];
 
-// Los dos canales de venta que arma un vendedor una vez que entiende el modelo de
-// dropshipping de Ventaz — no son excluyentes, se pueden usar los dos a la vez.
-const CHANNELS = [
-  {
-    id: "page",
-    logo: "/ventaz.png",
-    kicker: "Tu marca, tu tienda",
-    title: "Página propia",
-    text: "Tu propia tienda online con el catálogo de Ventaz, tu nombre, tu diseño y tu forma de vender.",
-    points: [
-      "Elegís vos el precio de venta sobre un piso ya calculado",
-      "Checkout integrado con Mercado Pago",
-      "Integración con Meta (Facebook e Instagram) para potenciar tus ventas",
-      "Diseño, catálogo y precios 100% personalizables",
-    ],
-    cta: "Crear mi tienda propia",
-  },
-  {
-    id: "ml",
-    logo: "/mercadolibre-logo.png",
-    kicker: "Tu cuenta, su alcance",
-    title: "Mercado Libre",
-    text: "Publicás el catálogo de Ventaz directo en tu propia cuenta de Mercado Libre.",
-    points: [
-      "Sin comisión de Ventaz sobre tus ventas",
-      "Aprovechás el tráfico y la confianza que ya tiene Mercado Libre",
-      "Precio, stock y despacho sincronizados en automático",
-      "Publicación asistida con IA para categorías, atributos y descripciones",
-    ],
-    note: "Las comisiones propias de Mercado Libre siguen aplicando — son ajenas a Ventaz.",
-    cta: "Empezar con Mercado Libre",
-  },
-];
-
 const FLOW_STEPS = [
   {
     id: "catalogo",
@@ -96,10 +62,10 @@ const FLOW_STEPS = [
   {
     id: "tienda",
     number: "02",
-    title: "Elegís tu canal",
-    subtitle: "Página propia o Mercado Libre",
-    text: "Activás tu tienda con tu marca o conectás tu cuenta de Mercado Libre — podés combinar las dos sin perder nada de lo que armaste.",
-    icon: Link2,
+    title: "Armás tu tienda",
+    subtitle: "Tu tienda, tu link, tu precio",
+    text: "Publicás productos en tu tienda propia, con tu identidad, tu nombre y tu forma de vender.",
+    icon: Store,
   },
   {
     id: "ventas",
@@ -256,7 +222,7 @@ function useSmoothNavigation() {
   return { activeSection, progress, goTo };
 }
 
-export default function Landing() {
+export default function LandingEcom() {
   const { activeSection, progress, goTo } = useSmoothNavigation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(FLOW_STEPS[0].id);
@@ -286,12 +252,11 @@ export default function Landing() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  // Esta es la landing genérica (combina los dos canales) — si quedó una pista de una visita
-  // anterior a /ml o /ecom en este mismo navegador, se descarta: al venir de acá, StartChoice
-  // tiene que preguntar siempre, no aplicar una elección de otra visita.
+  // Si se registra desde acá, StartChoice (/start) lee esto y salta directo al track
+  // "ecommerce" sin mostrarle la elección — ver consumeLandingTrackHint en StartChoice.jsx.
   useEffect(() => {
     try {
-      localStorage.removeItem("ventaz_landing_track");
+      localStorage.setItem("ventaz_landing_track", JSON.stringify({ track: "ecommerce", ts: Date.now() }));
     } catch {
       // ignore
     }
@@ -460,10 +425,10 @@ export default function Landing() {
       <section className="vtz-section vtz-intro" id="que-es">
         <div className="vtz-section__head">
           <span className="vtz-kicker">Qué es Ventaz</span>
-          <h2>Un modelo de dropshipping pensado para que solo tengas que vender.</h2>
+          <h2>Una plataforma para vender online sin cargar con toda la parte complicada.</h2>
           <p>
-            Nosotros te damos los productos, nos encargamos de la logística de cada envío y resolvemos
-            todo el trabajo operativo molesto. Vos te ocupás de una sola cosa: conseguir clientes y vender.
+            Muchas personas quieren vender, pero se frenan porque creen que necesitan comprar productos,
+            guardar stock, hacer envíos, atender reclamos y armar todo desde cero.
           </p>
         </div>
 
@@ -481,62 +446,17 @@ export default function Landing() {
 
           <article className="vtz-contrast-card vtz-contrast-card--after">
             <span className="vtz-card-label">Con Ventaz</span>
-            <h3>El vendedor arranca con un dropshipping ya armado.</h3>
+            <h3>El vendedor arranca con una estructura lista.</h3>
             <p>
-              Ventaz pone el catálogo de productos, los compra, los guarda, los empaqueta y los envía
-              a cada cliente. Vos elegís qué vender, armás tu propuesta y conseguís clientes —
-              el resto lo resolvemos nosotros.
+              Ventaz centraliza catálogo, tienda, pedidos, stock, logística y soporte.
+              Así el vendedor puede concentrarse en lo que realmente mueve el negocio:
+              conseguir clientes y cerrar ventas.
             </p>
             <div className="vtz-highlight-line">
               <BadgeCheck size={20} />
-              <span>Nosotros compramos, guardamos y enviamos. Vos vendés.</span>
+              <span>Vos vendés. Ventaz se encarga del resto.</span>
             </div>
           </article>
-        </div>
-      </section>
-
-      <section className="vtz-section vtz-channels" id="como-vender">
-        <div className="vtz-section__head">
-          <span className="vtz-kicker">Cómo vender</span>
-          <h2>Con ese modelo ya armado, elegís dónde poner tu negocio.</h2>
-          <p>
-            El dropshipping es el mismo de los dos lados: catálogo, stock, logística y soporte los
-            resolvemos nosotros. Lo único que cambia es dónde mostrás tus productos.
-          </p>
-        </div>
-
-        <div className="vtz-channels__grid">
-          {CHANNELS.map((channel) => (
-            <article key={channel.id} className={`vtz-channel-card vtz-channel-card--${channel.id}`}>
-              <div className={`vtz-channel-card__badge vtz-channel-card__badge--${channel.id}`}>
-                <img src={channel.logo} alt="" />
-              </div>
-
-              <span className="vtz-card-label">{channel.kicker}</span>
-              <h3>{channel.title}</h3>
-              <p>{channel.text}</p>
-
-              <ul className="vtz-channel-card__points">
-                {channel.points.map((point) => (
-                  <li key={point}>
-                    <CheckCircle2 size={16} />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {channel.note && <p className="vtz-channel-card__note">{channel.note}</p>}
-
-              <Link to="/register" className="vtz-channel-card__cta">
-                {channel.cta} <ArrowRight size={16} />
-              </Link>
-            </article>
-          ))}
-        </div>
-
-        <div className="vtz-channels__footer">
-          <Zap size={18} />
-          <span>Podés activar las dos formas de vender al mismo tiempo — no hay que elegir una sola.</span>
         </div>
       </section>
 

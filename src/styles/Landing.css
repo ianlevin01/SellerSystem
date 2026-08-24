@@ -642,6 +642,171 @@ html {
   flex: 0 0 auto;
 }
 
+/* CHANNELS — página propia vs Mercado Libre, las dos formas de vender */
+.vtz-channels {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(77,184,26,.09), transparent 26rem),
+    var(--soft-2);
+}
+
+.vtz-channels__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.vtz-channel-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 34px;
+  padding: clamp(26px, 4vw, 40px);
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.86);
+  box-shadow: 0 24px 80px rgba(15,23,42,.07);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+.vtz-channel-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 32px 100px rgba(15,23,42,.11);
+}
+
+.vtz-channel-card--page:hover { border-color: rgba(77,184,26,.35); }
+.vtz-channel-card--ml:hover { border-color: rgba(45,50,119,.28); }
+
+.vtz-channel-card__badge {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.vtz-channel-card__badge--page {
+  height: 40px;
+}
+
+.vtz-channel-card__badge--page img {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.vtz-channel-card__badge--ml {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  padding: 10px;
+  background: #FFE600;
+  box-shadow: 0 16px 34px rgba(255,230,0,.35);
+  justify-content: center;
+}
+
+.vtz-channel-card__badge--ml img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.vtz-channel-card h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: clamp(1.5rem, 2.6vw, 2.05rem);
+  line-height: 1.05;
+  letter-spacing: -.05em;
+}
+
+.vtz-channel-card > p {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.vtz-channel-card__points {
+  list-style: none;
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0 0 22px;
+}
+
+.vtz-channel-card__points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--ink);
+  font-weight: 750;
+  font-size: .94rem;
+  line-height: 1.4;
+}
+
+.vtz-channel-card__points svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #329f10;
+}
+
+.vtz-channel-card--ml .vtz-channel-card__points svg {
+  color: #2D3277;
+}
+
+.vtz-channel-card__note {
+  margin: -8px 0 20px;
+  color: var(--muted);
+  font-size: .82rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.vtz-channel-card__cta {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  border-radius: 16px;
+  font-weight: 950;
+  font-size: .96rem;
+  text-decoration: none;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.vtz-channel-card--page .vtz-channel-card__cta {
+  color: #fff;
+  background: linear-gradient(135deg, #73e43b, #329f10);
+  box-shadow: 0 16px 38px rgba(77,184,26,.3);
+}
+
+.vtz-channel-card--ml .vtz-channel-card__cta {
+  color: #2D3277;
+  background: #FFE600;
+  box-shadow: 0 16px 38px rgba(255,230,0,.35);
+}
+
+.vtz-channel-card__cta:hover {
+  transform: translateY(-2px);
+}
+
+.vtz-channels__footer {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 20px;
+  background: rgba(77,184,26,.1);
+  color: #246c10;
+  font-weight: 900;
+  font-size: .92rem;
+  text-align: center;
+}
+
+.vtz-channels__footer svg {
+  flex: 0 0 auto;
+  color: #329f10;
+}
+
 /* HOW */
 .vtz-how {
   background:
@@ -1203,6 +1368,7 @@ html {
 @media (max-width: 1120px) {
   .vtz-hero__grid,
   .vtz-intro__grid,
+  .vtz-channels__grid,
   .vtz-how__grid,
   .vtz-benefits__grid,
   .vtz-compare,

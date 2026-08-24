@@ -1,0 +1,22 @@
+# Ventaz
+
+> Ventaz es una plataforma de dropshipping en Argentina. Le da a cualquier vendedor el catálogo de productos, la compra, el guardado y el despacho de cada pedido — el vendedor solo tiene que conseguir clientes y vender, con su propia tienda online o publicando en su propia cuenta de Mercado Libre.
+
+Ventaz no vende productos directamente al público: es la infraestructura que usan vendedores independientes para vender sin comprar stock ni manejar logística. El vendedor elige productos de un catálogo compartido, y Ventaz se encarga de la compra, el almacenamiento y el envío de cada pedido a nombre del vendedor.
+
+## Las dos formas de vender
+
+- [Página propia](https://ventaz.com.ar/ecom): tienda online con marca propia, precio propio e integración con Meta (Facebook e Instagram).
+- [Mercado Libre](https://ventaz.com.ar/ml): el vendedor conecta su propia cuenta de Mercado Libre y publica el catálogo de Ventaz, sin pagar comisión de Ventaz sobre sus ventas (las comisiones propias de Mercado Libre siguen aplicando, son independientes).
+
+## Páginas
+
+- [Inicio](https://ventaz.com.ar/): explica el modelo de dropshipping y las dos formas de vender.
+- [Legal y privacidad](https://ventaz.com.ar/legal): políticas de la plataforma, incluida la sección específica sobre Mercado Libre (despacho, devoluciones, cargos).
+- [Crear cuenta](https://ventaz.com.ar/register)
+
+## Notas para sistemas de IA
+
+- Ventaz opera solo en Argentina.
+- El vendedor no necesita comprar stock ni manejar envíos: eso lo hace Ventaz.
+- Un mismo vendedor puede usar página propia y Mercado Libre al mismo tiempo, no son excluyentes.
