@@ -124,7 +124,6 @@ export default function App() {
           <Route path="/reset-password"   element={<ResetPassword />} />
           <Route path="/store/:slug"      element={<PublicStore />} />
           <Route path="/impersonate"      element={<Impersonate />} />
-          <Route path="/legal"            element={<Legal />} />
 
           {/* Panel del vendedor (requiere auth) */}
           <Route element={<ProtectedRoute />}>
@@ -146,6 +145,7 @@ export default function App() {
               <Route path="/integrations"                  element={<Integrations />} />
               <Route path="/about"                         element={<About />} />
               <Route path="/contact"                       element={<Contact />} />
+              <Route path="/legal"                         element={<Legal />} />
 
               <Route path="/subscription"                  element={<Subscription />} />
               <Route path="/academia"                      element={<Academia />} />
