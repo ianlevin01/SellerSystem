@@ -121,7 +121,7 @@ export default function Layout() {
         setShowExpired(true);
         localStorage.setItem("ventaz_expired_shown", "1");
       }
-      const freeRoutes = ["/subscription", "/contact", "/cobros"];
+      const freeRoutes = ["/subscription", "/contact", "/cobros", "/legal"];
       if (isPlanBlocked(current) && !freeRoutes.includes(location.pathname)) {
         navigate("/subscription", { replace: true });
       }
@@ -142,7 +142,7 @@ export default function Layout() {
   useEffect(() => {
     setMobileOpen(false);
     setStoreOpen(false);
-    const freeRoutes = ["/subscription", "/contact", "/cobros"];
+    const freeRoutes = ["/subscription", "/contact", "/cobros", "/legal"];
     if (isPlanBlocked(planInfo) && !freeRoutes.includes(location.pathname)) {
       navigate("/subscription", { replace: true });
     }
