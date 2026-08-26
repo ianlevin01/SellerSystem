@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   BadgeCheck,
   CheckCircle2,
+  Flame,
   Image as ImageIcon,
   Info,
   Layers,
@@ -156,6 +157,80 @@ function ProductImage({ product }) {
     <div className="seller-product-card__image">
       <img src={img} alt={productName(product)} loading="lazy" />
     </div>
+  );
+}
+
+// Imagen de la card de catálogo ML — clase propia, sin compartir seller-product-card__image:
+// esa clase tiene varias reglas !important de "Mis productos" (alturas por breakpoint,
+// aspect-ratio) que pisaban cualquier override e inflaban la imagen tapando el título.
+function MlCatalogImage({ product }) {
+  const img = firstImage(product);
+  if (!img) {
+    return (
+      <div className="ml-catalog-card__image ml-catalog-card__image--empty">
+        <ImageIcon size={26} />
+      </div>
+    );
+  }
+  return (
+    <div className="ml-catalog-card__image">
+      <img src={img} alt={productName(product)} loading="lazy" />
+    </div>
+  );
+}
+
+// ── Card del catálogo en modo ML — el flujo acá es "elegir qué publicar", no fijar precio
+// de tienda propia (por eso no comparte el DOM del card de "Mis productos": ese arrastra
+// bloques de precio/promo/ganancia que nunca aplican del lado ML). ──────────────────────
+function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelected, saving, onPublish, onToggleCombo, onRequestSample, onReserve, canReserve }) {
+  return (
+    <article className={`ml-catalog-card${comboMode && isSelected ? " is-selected" : ""}`}>
+      <div className="ml-catalog-card__media">
+        <MlCatalogImage product={product} />
+        {isTopSeller ? (
+          <span className="ml-catalog-card__badge ml-catalog-card__badge--fire" title="Entre los 10 productos más vendidos de la última semana">
+            <Flame size={12} /> Top ventas
+          </span>
+        ) : isNew && (
+          <span className="ml-catalog-card__badge ml-catalog-card__badge--new">
+            <Sparkles size={11} /> Nuevo
+          </span>
+        )}
+      </div>
+      <div className="ml-catalog-card__body">
+        <h3 title={productName(product)}>{productName(product)}</h3>
+        <p className="ml-catalog-card__meta">
+          {productCode(product)} · Stock {fmt(productStock(product))}
+        </p>
+        <div className="ml-catalog-card__cost">
+          <span>Costo</span>
+          <strong>{money(cost)}</strong>
+        </div>
+        <div className="ml-catalog-card__actions">
+          {comboMode ? (
+            <button type="button" className={`ml-catalog-card__btn${isSelected ? " is-selected" : ""}`} onClick={onToggleCombo}>
+              {isSelected ? <CheckCircle2 size={14} /> : <Plus size={14} />}
+              {isSelected ? "En el combo" : "Agregar al combo"}
+            </button>
+          ) : (
+            <>
+              <button type="button" className="ml-catalog-card__btn ml-catalog-card__btn--primary" onClick={onPublish} disabled={saving}>
+                {saving && <Loader2 size={14} className="seller-products-spin" />}
+                Publicar en Mercado Libre
+              </button>
+              <div className="ml-catalog-card__secondary-row">
+                <button type="button" className="ml-catalog-card__icon-btn" onClick={onRequestSample} title="Solicitar una muestra para vos">
+                  <ShoppingBag size={14} />
+                </button>
+                <button type="button" className="ml-catalog-card__icon-btn" onClick={onReserve} disabled={!canReserve} title={canReserve ? "Reservar stock" : "Sin stock disponible para reservar"}>
+                  <Package size={14} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -593,6 +668,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
   const [requestModal, setRequestModal] = useState(null);
   const [reserveModal, setReserveModal] = useState(null);
   const [confirmBanner, setConfirmBanner] = useState(null);
+  const [topSellingIds, setTopSellingIds] = useState(() => new Set());
   const debounceRef  = useRef(null);
   const abortRef     = useRef(null);
   const sentinelRef  = useRef(null);
@@ -689,6 +765,14 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
     }).catch(() => {});
   }, [pageId, mode]);
 
+  // Badge "Top ventas" del catálogo ML — top 10 productos más vendidos (7 días), una sola vez.
+  useEffect(() => {
+    if (mode !== "ml") return;
+    client.get("/seller/products/top-selling").then(res => {
+      setTopSellingIds(new Set(res.data?.productIds || []));
+    }).catch(() => {});
+  }, [mode]);
+
   // Re-fetch cuando cambian los filtros (búsqueda con debounce)
   useEffect(() => {
     clearTimeout(debounceRef.current);
@@ -718,7 +802,12 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
     const params = { limit: PAGE_SIZE, offset };
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
-    if (mode === "ml" && minStock.trim() && Number(minStock) >= 0) params.min_stock = minStock.trim();
+    if (mode === "ml") {
+      // Nunca se puede publicar en ML algo sin stock real disponible (contando la reserva) —
+      // el filtro de stock mínimo que carga el vendedor solo puede subir ese piso, nunca bajarlo.
+      const typedMin = minStock.trim() ? Number(minStock) : 0;
+      params.min_stock = Math.max(1, typedMin);
+    }
     if (mode === "page") {
       // "en mi tienda"/"todos" es un concepto de página web — en modo ML se ve el catálogo completo
       if (onlyMine)        params.only_mine = "true";
@@ -1159,10 +1248,8 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
           </div>
         )}
         {mode === "ml" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <label htmlFor="ml-min-stock" style={{ fontSize: ".8rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-              Stock mayor a
-            </label>
+          <div className="ml-stock-filter">
+            <label htmlFor="ml-min-stock">Stock mayor a</label>
             <input
               id="ml-min-stock"
               type="number"
@@ -1170,7 +1257,6 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
               value={minStock}
               onChange={e => setMinStock(e.target.value)}
               placeholder="0"
-              style={{ width: 72, padding: "6px 8px", border: "1px solid var(--border,#d1d5db)", borderRadius: 7, fontSize: ".82rem" }}
             />
           </div>
         )}
@@ -1366,14 +1452,23 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
           </div>
         </section>
       ) : (
-        <section className="seller-products-intro">
+        <section className={`seller-products-intro${mode === "ml" ? " seller-products-intro--ml" : ""}`}>
           <div>
-            <span><Sparkles size={15} />Productos</span>
-            <h2>Elegí productos y definí tu precio de venta</h2>
-            <p>
-              El <strong>costo</strong> es tu base. <strong>Tu precio</strong> es el precio normal.
-              Si cargás un <strong>precio promo menor</strong>, la tienda muestra automáticamente el porcentaje de descuento.
-            </p>
+            {mode === "ml" ? (
+              <>
+                <span><Sparkles size={13} />Catálogo</span>
+                <h2>Elegí un producto para publicar en Mercado Libre</h2>
+              </>
+            ) : (
+              <>
+                <span><Sparkles size={15} />Productos</span>
+                <h2>Elegí productos y definí tu precio de venta</h2>
+                <p>
+                  El <strong>costo</strong> es tu base. <strong>Tu precio</strong> es el precio normal.
+                  Si cargás un <strong>precio promo menor</strong>, la tienda muestra automáticamente el porcentaje de descuento.
+                </p>
+              </>
+            )}
           </div>
           {mode === "page" && (
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
@@ -1407,10 +1502,10 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
         </section>
       )}
 
-      {renderToolbar("", { ref: toolbarRef })}
+      {renderToolbar(mode === "ml" ? "seller-products-toolbar--ml" : "", { ref: toolbarRef })}
 
       {fixedToolbar.show && createPortal(
-        renderToolbar("seller-products-toolbar--fixed", {
+        renderToolbar(`seller-products-toolbar--fixed${mode === "ml" ? " seller-products-toolbar--ml" : ""}`, {
           style: {
             left: `${fixedToolbar.left}px`,
             width: `${fixedToolbar.width}px`,
@@ -1420,7 +1515,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
         document.body
       )}
 
-      <section className="seller-products-cats">
+      <section className={`seller-products-cats${mode === "ml" ? " seller-products-cats--ml" : ""}`}>
         <button type="button" className={category === "all" ? "is-active" : ""} onClick={() => setCategory("all")}>
           Todas
         </button>
@@ -1428,6 +1523,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
           <button
             type="button"
             key={cat.id}
+            title={mode === "ml" ? cat.name : undefined}
             className={String(category) === String(cat.id) || String(category) === String(cat.name) ? "is-active" : ""}
             onClick={() => setCategory(cat.id)}
           >
@@ -1463,7 +1559,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
         </div>
       ) : (
         <>
-        <section className="seller-products-grid">
+        <section className={`seller-products-grid${mode === "ml" ? " seller-products-grid--ml" : ""}`}>
           {/* Combos — solo visibles en la tab "En mi tienda" */}
           {!comboMode && onlyMine && combos.map(combo => (
             <article
@@ -1657,6 +1753,25 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
             const promoPct   = promoPrice > 0 && info.sale > promoPrice
               ? Math.round(((info.sale - promoPrice) / info.sale) * 100)
               : 0;
+            if (mode === "ml") {
+              return (
+                <MlCatalogCard
+                  key={product.id}
+                  product={product}
+                  cost={info.cost}
+                  isNew={isNew}
+                  isTopSeller={topSellingIds.has(product.id)}
+                  comboMode={comboMode}
+                  isSelected={comboSelected.has(product.id)}
+                  saving={saving}
+                  onPublish={() => addProduct(product)}
+                  onToggleCombo={() => toggleComboProduct(product.id)}
+                  onRequestSample={() => setRequestModal(product)}
+                  onReserve={() => setReserveModal(product)}
+                  canReserve={Number(product.available_for_reserve || 0) > 0}
+                />
+              );
+            }
             return (
               <article
                 key={product.id}

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import {
   ExternalLink, Unlink, Loader2, CreditCard, Wallet, Plus, X,
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
-  ShoppingBag, TrendingUp, CheckCircle2, Ban,
+  ShoppingBag, TrendingUp, CheckCircle2, Ban, ArrowRight, Eye, Pencil, SlidersHorizontal,
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
@@ -45,7 +45,7 @@ function Modal({ title, onClose, children, maxWidth = 460 }) {
 
 // ── Conexión con Mercado Libre ──────────────────────────────────
 
-function MercadoLibreConnection({ status, summary, onConnected, onDisconnected }) {
+function MercadoLibreConnection({ status, summary, scrolled, onConnected, onDisconnected }) {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -116,42 +116,56 @@ function MercadoLibreConnection({ status, summary, onConnected, onDisconnected }
     );
   }
 
-  // Conectado: una vez vinculada la cuenta, lo único que importa es el estado —
-  // barra angosta con los números clave en vez de un encabezado grande y vacío.
+  // Conectado: primera fila del encabezado sticky — logo, cuenta conectada, métricas clave
+  // a la derecha. Se achica (64→48px) y pierde país/última venta cuando scrolled=true, para
+  // ganar altura de contenido sin perder la navegación de abajo (ver componente raíz).
   return (
-    <div className="card ml-connection-banner" style={{ padding: "12px 18px", marginBottom: 18, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+    <div className="ml-header__row" style={{
+      display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap",
+      height: scrolled ? 48 : 64, transition: "height .18s ease",
+    }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <div style={{
-          width: 30, height: 30, borderRadius: "50%", background: "#FFE600", overflow: "hidden",
+          width: scrolled ? 24 : 30, height: scrolled ? 24 : 30, borderRadius: "50%", background: "#FFE600", overflow: "hidden",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 4,
+          transition: "width .18s ease, height .18s ease",
         }}>
           <img src="/mercadolibre-logo.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "50%" }} />
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: ".84rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{status.ml_nickname || "—"}</div>
-          <div style={{ fontSize: ".68rem", color: "var(--text-secondary)" }}>{ML_SITE_NAMES[status.site_id] || status.site_id}</div>
+        <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: ".86rem", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--brand)", flexShrink: 0 }} title="Conectado" />
+            {status.ml_nickname || "—"}
+          </span>
+          {!scrolled && (
+            <span style={{ fontSize: ".72rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+              {ML_SITE_NAMES[status.site_id] || status.site_id}
+            </span>
+          )}
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", flex: 1, fontSize: ".78rem" }}>
+      <div style={{ display: "flex", gap: 18, flexWrap: "wrap", flex: 1, justifyContent: "flex-end", fontSize: ".78rem" }}>
         <StatChip icon={CheckCircle2} color="var(--success,#059669)" label="Activas" value={summary?.active_count ?? "—"} />
         <StatChip icon={PauseCircle} color="var(--text-secondary)" label="Pausadas" value={summary?.paused_count ?? "—"} />
         {Number(summary?.error_count) > 0 && (
           <StatChip icon={AlertTriangle} color="var(--danger,#ef4444)" label="Con error" value={summary.error_count} />
         )}
         <StatChip icon={TrendingUp} label="Ventas hoy" value={summary?.sales_today ?? "—"} />
-        <span style={{ color: "var(--text-secondary)" }}>
-          Última venta: {summary?.last_sale_at ? new Date(summary.last_sale_at).toLocaleDateString("es-AR") : "—"}
-        </span>
+        {!scrolled && (
+          <span style={{ color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+            Última venta: {summary?.last_sale_at ? new Date(summary.last_sale_at).toLocaleDateString("es-AR") : "—"}
+          </span>
+        )}
       </div>
 
       {error && <p style={{ margin: 0, fontSize: ".78rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
 
       <div ref={menuRef} style={{ position: "relative" }}>
         <button type="button" onClick={() => setMenuOpen(o => !o)}
-          style={{ display: "flex", padding: 6, borderRadius: 8, border: "1px solid var(--border)", background: "#fff", cursor: "pointer", color: "var(--text-secondary)" }}
+          className={`ml-header__menu-btn${menuOpen ? " is-open" : ""}`}
           aria-label="Opciones de la cuenta">
-          <MoreVertical size={15} />
+          <MoreVertical size={16} />
         </button>
         {menuOpen && (
           <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: "1px solid var(--border)",
@@ -460,6 +474,7 @@ function nextChargeLabel() {
 const TX_LABELS = {
   topup:     "Carga de saldo",
   sale_cost: "Costo de ventas de Mercado Libre",
+  refund:    "Reembolso por devolución",
 };
 
 const CHARGE_KIND_LABELS = {
@@ -485,20 +500,29 @@ function WalletHistory() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
+    <div className="ml-wallet-history">
+      <div className="ml-wallet-history__row ml-wallet-history__row--head">
+        <span>Concepto</span>
+        <span>Fecha</span>
+        <span>Método</span>
+        <span className="ml-wallet-history__amount">Monto</span>
+      </div>
       {history.map(item => {
         if (item.kind === "charge_failed") {
           return (
-            <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
-              <AlertTriangle size={14} color="var(--danger,#ef4444)" style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: ".82rem", fontWeight: 600 }}>{CHARGE_KIND_LABELS[item.chargeKind] || "Intento de cobro"}</div>
-                <div style={{ fontSize: ".72rem", color: "var(--text-secondary)" }}>
-                  {new Date(item.date).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                  {item.reason ? ` · ${item.reason}` : ""}
-                </div>
-              </div>
-              <strong style={{ fontSize: ".88rem", color: "var(--danger,#ef4444)", whiteSpace: "nowrap" }}>
+            <div key={item.id} className="ml-wallet-history__row is-failed">
+              <span className="ml-wallet-history__concept">
+                <AlertTriangle size={13} color="var(--danger,#ef4444)" />
+                <span>
+                  {CHARGE_KIND_LABELS[item.chargeKind] || "Intento de cobro"}
+                  {item.reason && <small>{item.reason}</small>}
+                </span>
+              </span>
+              <span className="ml-wallet-history__date">
+                {new Date(item.date).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <span className="ml-wallet-history__method">—</span>
+              <strong className="ml-wallet-history__amount is-negative">
                 Falló ${Number(item.amount).toLocaleString("es-AR")}
               </strong>
             </div>
@@ -506,15 +530,15 @@ function WalletHistory() {
         }
         const positive = Number(item.amount) >= 0;
         return (
-          <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: ".82rem", fontWeight: 600 }}>{TX_LABELS[item.type] || item.description || item.type}</div>
-              <div style={{ fontSize: ".72rem", color: "var(--text-secondary)" }}>
-                {new Date(item.date).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                {" · "}{item.method === "balance" ? "Desde saldo" : "Con tarjeta"}
-              </div>
-            </div>
-            <strong style={{ fontSize: ".88rem", color: positive ? "var(--success,#059669)" : "var(--danger,#ef4444)", whiteSpace: "nowrap" }}>
+          <div key={item.id} className="ml-wallet-history__row">
+            <span className="ml-wallet-history__concept">
+              <span>{TX_LABELS[item.type] || item.description || item.type}</span>
+            </span>
+            <span className="ml-wallet-history__date">
+              {new Date(item.date).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+            </span>
+            <span className="ml-wallet-history__method">{item.method === "balance" ? "Saldo" : "Tarjeta"}</span>
+            <strong className={`ml-wallet-history__amount ${positive ? "is-positive" : "is-negative"}`}>
               {positive ? "+" : "−"}${Math.abs(Number(item.amount)).toLocaleString("es-AR")}
             </strong>
           </div>
@@ -611,39 +635,40 @@ function WalletSection({ wallet, onChanged }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 24, marginBottom: 8, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Saldo disponible</div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, marginTop: 2 }}>${Number(wallet.balance || 0).toLocaleString("es-AR")}</div>
+      <div className="ml-wallet-metrics">
+        <div className="ml-wallet-metric ml-wallet-metric--hero">
+          <span>Saldo disponible</span>
+          <strong>${Number(wallet.balance || 0).toLocaleString("es-AR")}</strong>
         </div>
-        <div>
-          <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>
-            {hasGrace ? "Deuda pendiente (total)" : "Deuda pendiente"}
-          </div>
-          <div style={{ fontSize: "1.3rem", fontWeight: 800, marginTop: 2, color: Number(wallet.pendingDebt) > 0 ? "var(--danger,#ef4444)" : undefined }}>
-            ${Number(wallet.pendingDebt || 0).toLocaleString("es-AR")}
-          </div>
+        <div className={`ml-wallet-metric ml-wallet-metric--hero${Number(wallet.pendingDebt) > 0 ? " is-danger" : ""}`}>
+          <span>{hasGrace ? "Deuda pendiente (total)" : "Deuda pendiente"}</span>
+          <strong>${Number(wallet.pendingDebt || 0).toLocaleString("es-AR")}</strong>
         </div>
         {hasGrace && (
-          <div>
-            <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Deuda obligatoria (vencida)</div>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800, marginTop: 2, color: Number(wallet.blockedDebt) > 0 ? "var(--danger,#ef4444)" : undefined }}>
-              ${Number(wallet.blockedDebt || 0).toLocaleString("es-AR")}
-            </div>
+          <div className={`ml-wallet-metric${Number(wallet.blockedDebt) > 0 ? " is-danger" : ""}`}>
+            <span>Deuda obligatoria (vencida)</span>
+            <strong>${Number(wallet.blockedDebt || 0).toLocaleString("es-AR")}</strong>
           </div>
         )}
-        <div>
-          <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Tarjeta</div>
-          <div style={{ fontSize: ".95rem", fontWeight: 600, marginTop: 2 }}>
-            {wallet.hasCard ? `•••• ${wallet.lastFour}` : "Sin tarjeta guardada"}
-          </div>
-        </div>
         {Number(wallet.pendingDebt) > 0 && (
-          <div>
-            <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase" }}>Próximo cobro</div>
-            <div style={{ fontSize: ".95rem", fontWeight: 600, marginTop: 2 }}>{nextChargeLabel()}</div>
+          <div className="ml-wallet-metric">
+            <span>Próximo cobro</span>
+            <strong className="is-small">{nextChargeLabel()}</strong>
           </div>
         )}
+      </div>
+
+      {/* Método de pago — un solo lugar unificado en vez de repartido entre la métrica
+          "Tarjeta" y un botón "Cambiar tarjeta" suelto entre las demás acciones. */}
+      <div className="ml-payment-method">
+        <div className="ml-payment-method__icon"><CreditCard size={17} /></div>
+        <div className="ml-payment-method__info">
+          <span>Método de pago</span>
+          <strong>{wallet.hasCard ? `•••• ${wallet.lastFour}` : "Sin tarjeta guardada"}</strong>
+        </div>
+        <button type="button" className="btn btn--ghost btn--sm" onClick={() => setShowCardModal(true)}>
+          {wallet.hasCard ? "Cambiar" : "Guardar tarjeta"}
+        </button>
       </div>
 
       {payError && <p style={{ margin: "12px 0 0", fontSize: ".8rem", color: "var(--danger,#ef4444)" }}>{payError}</p>}
@@ -665,9 +690,6 @@ function WalletSection({ wallet, onChanged }) {
             <Plus size={15} /> Agregar saldo
           </button>
         )}
-        <button type="button" className="btn btn--ghost" onClick={() => setShowCardModal(true)}>
-          <CreditCard size={14} /> {wallet.hasCard ? "Cambiar tarjeta" : "Guardar tarjeta"}
-        </button>
       </div>
 
       <h4 style={{ margin: "0 0 4px", fontSize: ".84rem", fontWeight: 700 }}>Historial de movimientos</h4>
@@ -696,18 +718,18 @@ const WIZARD_STEPS = ["Categoría", "Características principales", "Fotos", "T�
 
 function WizardProgress({ step, total }) {
   return (
-    <div style={{ marginBottom: 18 }}>
-      <div style={{ fontSize: ".74rem", color: "var(--text-secondary)", fontWeight: 700, marginBottom: 6 }}>
-        Paso {step + 1} de {total}
-      </div>
-      <div style={{ display: "flex", gap: 4 }}>
-        {Array.from({ length: total }).map((_, i) => (
-          <div key={i} style={{
-            flex: 1, height: 4, borderRadius: 99,
-            background: i <= step ? "var(--brand,#6366f1)" : "var(--border)",
-          }} />
-        ))}
-      </div>
+    <div className="ml-wizard-progress">
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} className="ml-wizard-progress__item">
+          <div
+            className={`ml-wizard-progress__circle${i < step ? " is-done" : ""}${i === step ? " is-active" : ""}`}
+            title={WIZARD_STEPS[i]}
+          >
+            {i < step ? <CheckCircle2 size={14} /> : i + 1}
+          </div>
+          {i < total - 1 && <div className={`ml-wizard-progress__line${i < step ? " is-done" : ""}`} />}
+        </div>
+      ))}
     </div>
   );
 }
@@ -1095,34 +1117,34 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   }
 
   return (
-    <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={640}>
+    <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={820}>
       <WizardProgress step={step} total={WIZARD_STEPS.length} />
       <h4 style={{ margin: "0 0 14px", fontSize: ".95rem" }}>{WIZARD_STEPS[step]}</h4>
 
       {step === 0 && (
         <>
-          <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Categoría de Mercado Libre</label>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <input className="form-input" value={query} onChange={e => setQuery(e.target.value)}
+          <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 6 }}>Categoría de Mercado Libre</label>
+          <div className="ml-category-search">
+            <Search size={15} />
+            <input value={query} onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && searchCategories()}
               placeholder="Palabras clave para buscar la categoría" />
-            <button type="button" className="btn btn--ghost btn--sm" onClick={searchCategories}><Search size={13} /></button>
+            <button type="button" onClick={searchCategories}>Buscar</button>
           </div>
           {suggestions.length === 0 ? (
             <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>Buscá una categoría para ver las opciones.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
+            <div className="ml-category-list">
               {suggestions.map(s => {
                 const selected = s.categoryId === categoryId;
                 return (
                   <button key={s.categoryId} type="button" onClick={() => setCategoryId(s.categoryId)}
-                    style={{
-                      textAlign: "left", padding: "10px 12px", borderRadius: 8, cursor: "pointer",
-                      border: selected ? "2px solid var(--brand,#6366f1)" : "1px solid var(--border)",
-                      background: selected ? "rgba(99,102,241,.06)" : "#fff",
-                    }}>
-                    <div style={{ fontWeight: 600, fontSize: ".86rem" }}>{s.categoryName}</div>
-                    {s.path && <div style={{ fontSize: ".72rem", color: "var(--text-secondary)", marginTop: 2 }}>{s.path}</div>}
+                    className={`ml-category-option${selected ? " is-selected" : ""}`}>
+                    <div>
+                      <div className="ml-category-option__name">{s.categoryName}</div>
+                      {s.path && <div className="ml-category-option__path">{s.path}</div>}
+                    </div>
+                    {selected && <CheckCircle2 size={17} />}
                   </button>
                 );
               })}
@@ -1154,7 +1176,16 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       {step === 2 && (
         <div>
           {imageOrder.length > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+            <div
+              style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => {
+                // Soltar en el espacio vacío del contenedor (después de la última imagen) la
+                // manda al final — sin esto, no había forma de soltar pasado el último ítem.
+                if (dragImgIndex !== null) moveImage(dragImgIndex, imageOrder.length - 1);
+                setDragImgIndex(null);
+              }}
+            >
               {imageOrder.map((item, index) => {
                 const isExisting = item.type === "existing";
                 const src = isExisting
@@ -1167,11 +1198,15 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
                     draggable
                     onDragStart={() => setDragImgIndex(index)}
                     onDragOver={e => e.preventDefault()}
-                    onDrop={() => { if (dragImgIndex !== null && dragImgIndex !== index) moveImage(dragImgIndex, index); setDragImgIndex(null); }}
+                    onDrop={e => {
+                      e.stopPropagation(); // si no, el drop también burbujea al contenedor y mueve dos veces
+                      if (dragImgIndex !== null && dragImgIndex !== index) moveImage(dragImgIndex, index);
+                      setDragImgIndex(null);
+                    }}
                     onDragEnd={() => setDragImgIndex(null)}
                     style={{
                       position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden",
-                      border: index === 0 ? "2px solid var(--brand,#6366f1)" : "2px solid var(--border)",
+                      border: index === 0 ? "2px solid var(--brand,#4db81a)" : "2px solid var(--border)",
                       cursor: "grab", opacity: dragImgIndex === index ? .45 : 1,
                     }}>
                     <img src={src} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
@@ -1654,7 +1689,7 @@ function PublishComboModal({ comboId, addressStatus, onClose, onPublished }) {
       {optionalAttrs.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <button type="button" onClick={() => setShowOptionalAttrs(v => !v)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--brand,#6366f1)", fontSize: ".8rem", fontWeight: 600, padding: 0 }}>
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--brand,#4db81a)", fontSize: ".8rem", fontWeight: 600, padding: 0 }}>
             {showOptionalAttrs ? "Ocultar" : "Mostrar"} características opcionales ({optionalAttrs.length})
           </button>
           {showOptionalAttrs && (
@@ -1798,6 +1833,14 @@ function statusMeta(status, pauseReason) {
   return { label: status, color: "#6b7280", bg: "rgba(107,114,128,.12)" };
 }
 
+// Quién/qué pausó una publicación — para el detalle de "Actividad reciente".
+function pauseReasonText(pauseReason) {
+  if (pauseReason === "stock") return "pausado automático por falta de stock";
+  if (pauseReason === "charge_failed") return "pausado automático por cobro fallido";
+  if (pauseReason === "plan_expired") return "pausado automático por plan vencido";
+  return "pausado manualmente";
+}
+
 function StatusLabel({ status, pauseReason, compact }) {
   const meta = statusMeta(status, pauseReason);
   return (
@@ -1820,15 +1863,33 @@ function editUrl(mlItemId) {
 }
 
 const LISTING_FILTERS = [
-  { id: "all",    label: "Todas" },
-  { id: "active", label: "Activas" },
-  { id: "paused", label: "Pausadas" },
-  { id: "error",  label: "Con error" },
+  { id: "all",    label: "Todas",     color: "#111827" },
+  { id: "active", label: "Activas",   color: "#059669" },
+  { id: "paused", label: "Pausadas",  color: "#6b7280" },
+  { id: "error",  label: "Con error", color: "#ef4444" },
+];
+
+const LISTING_SORTS = [
+  { id: "updated", label: "Últimas actualizadas" },
+  { id: "sales",   label: "Más vendidas" },
+  { id: "stock",   label: "Mayor stock" },
 ];
 
 function ListingsSection({ listings, statsByItem, onToggleStatus }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("updated");
+  const [showSort, setShowSort] = useState(false);
+  const sortRef = useRef(null);
+
+  useEffect(() => {
+    if (!showSort) return;
+    function onClickOutside(e) {
+      if (sortRef.current && !sortRef.current.contains(e.target)) setShowSort(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [showSort]);
 
   // Si el vendedor publicó todo con la misma cuenta de ML, no tiene sentido mostrar de cuál —
   // solo aporta cuando hay publicaciones de más de una cuenta distinta (alternó conexiones).
@@ -1839,14 +1900,19 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return listings.filter(l => {
+    const list = listings.filter(l => {
       if (filter === "active" && l.status !== "active") return false;
       if (filter === "paused" && l.status !== "paused") return false;
       if (filter === "error" && l.pause_reason !== "charge_failed") return false;
       if (q && !l.product_name?.toLowerCase().includes(q) && !l.sku?.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [listings, filter, query]);
+    const sorted = [...list];
+    if (sortBy === "sales") sorted.sort((a, b) => (b.units_sold ?? 0) - (a.units_sold ?? 0));
+    else if (sortBy === "stock") sorted.sort((a, b) => (b.available_stock ?? 0) - (a.available_stock ?? 0));
+    else sorted.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    return sorted;
+  }, [listings, filter, query, sortBy]);
 
   if (listings.length === 0) {
     return (
@@ -1856,23 +1922,39 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
     );
   }
 
+  const activeSortLabel = LISTING_SORTS.find(s => s.id === sortBy)?.label;
+
   return (
     <div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: "1 1 220px" }}>
-          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-secondary)" }} />
-          <input className="form-input" style={{ paddingLeft: 32 }} placeholder="Buscar por nombre o SKU..."
-            value={query} onChange={e => setQuery(e.target.value)} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: "1 1 320px", maxWidth: 520 }}>
+            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-secondary)" }} />
+            <input className="form-input" style={{ paddingLeft: 32 }} placeholder="Buscar por nombre o SKU..."
+              value={query} onChange={e => setQuery(e.target.value)} />
+          </div>
+          <div ref={sortRef} style={{ position: "relative" }}>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setShowSort(v => !v)} style={{ whiteSpace: "nowrap" }}>
+              <SlidersHorizontal size={13} /> {activeSortLabel}
+            </button>
+            {showSort && (
+              <div className="ml-sort-popover">
+                {LISTING_SORTS.map(s => (
+                  <button key={s.id} type="button"
+                    className={`ml-sort-popover__item${s.id === sortBy ? " is-active" : ""}`}
+                    onClick={() => { setSortBy(s.id); setShowSort(false); }}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {LISTING_FILTERS.map(f => (
             <button key={f.id} type="button" onClick={() => setFilter(f.id)}
-              style={{
-                padding: "6px 12px", borderRadius: 99, border: "1px solid var(--border)", cursor: "pointer",
-                background: filter === f.id ? "var(--brand)" : "#fff",
-                color: filter === f.id ? "#fff" : "var(--text)",
-                fontSize: ".78rem", fontWeight: 600,
-              }}>
+              className={`ml-filter-chip${filter === f.id ? " is-active" : ""}`}
+              style={{ "--chip-color": f.color }}>
               {f.label}
             </button>
           ))}
@@ -1884,20 +1966,27 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
           Ninguna publicación coincide con el filtro.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filtered.map(l => {
             const stats = statsByItem[l.ml_item_id];
             return (
-            <div key={l.ml_item_id} style={{ display: "flex", flexDirection: "column", gap: 10, padding: "12px 16px",
-              border: "1px solid var(--border)", borderRadius: 10 }}>
+            <div key={l.ml_item_id} className="ml-listing-card">
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ width: 48, height: 48, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
+                <div style={{ width: 64, height: 64, borderRadius: 9, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
                   {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                 </div>
-                <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontWeight: 600, fontSize: ".88rem" }}>{l.product_name}</div>
-                  <div style={{ fontSize: ".74rem", color: "var(--text-secondary)" }}>
-                    SKU {l.sku || "—"} · ${Number(l.price || 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{
+                      fontWeight: 600, fontSize: ".86rem", display: "-webkit-box",
+                      WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+                    }}>
+                      {l.product_name}
+                    </div>
+                    <StatusLabel status={l.status} pauseReason={l.pause_reason} compact />
+                  </div>
+                  <div style={{ fontSize: ".73rem", color: "var(--text-secondary)", marginTop: 3 }}>
+                    SKU {l.sku || "—"} · ${Number(stats?.price ?? l.price ?? 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
                     {showAccount && (
                       <span style={{
                         marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "1px 7px",
@@ -1907,34 +1996,38 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: ".72rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                  <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", marginTop: 2 }}>
                     {stats && `${stats.visits} visitas`}
                     {stats?.health != null && ` · Calidad: ${Math.round(stats.health.pct * 100)}%`}
                     {` · Actualizado ${new Date(l.updated_at).toLocaleDateString("es-AR")}`}
                   </div>
                 </div>
-                <StatusLabel status={l.status} pauseReason={l.pause_reason} />
-                {l.permalink && (
-                  <a href={l.permalink} target="_blank" rel="noreferrer" className="btn btn--ghost btn--sm" style={{ whiteSpace: "nowrap" }}>
-                    <ExternalLink size={13} /> Ver
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  {l.permalink && (
+                    <a href={l.permalink} target="_blank" rel="noreferrer" className="ml-icon-btn" title="Ver publicación">
+                      <Eye size={13} />
+                    </a>
+                  )}
+                  <a href={editUrl(l.ml_item_id)} target="_blank" rel="noreferrer" className="ml-icon-btn" title="Editar en Mercado Libre">
+                    <Pencil size={13} />
                   </a>
-                )}
-                <a href={editUrl(l.ml_item_id)} target="_blank" rel="noreferrer" className="btn btn--ghost btn--sm" style={{ whiteSpace: "nowrap" }}>
-                  Editar
-                </a>
-                <button type="button" className="btn btn--ghost btn--sm" style={{ whiteSpace: "nowrap" }}
-                  onClick={() => onToggleStatus(l.ml_item_id, l.status === "active" ? "paused" : "active")}>
-                  {l.status === "active" ? <PauseCircle size={13} /> : <CheckCircle2 size={13} />}
-                  {l.status === "active" ? "Pausar" : "Activar"}
-                </button>
+                  <button type="button" className="btn btn--ghost btn--sm" style={{ whiteSpace: "nowrap" }}
+                    onClick={() => onToggleStatus(l.ml_item_id, l.status === "active" ? "paused" : "active")}>
+                    {l.status === "active" ? <PauseCircle size={13} /> : <CheckCircle2 size={13} />}
+                    {l.status === "active" ? "Pausar" : "Activar"}
+                  </button>
+                </div>
               </div>
               {stats?.fees && (
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: ".76rem", color: "var(--text-secondary)",
-                  padding: "8px 12px", background: "var(--surface-2,#f9fafb)", borderRadius: 8 }}>
-                  <span>Cargo por vender: ${Math.round(stats.fees.saleFeeAmount).toLocaleString("es-AR")}</span>
-                  <span style={{ fontWeight: 700, color: "var(--success,#059669)" }}>
-                    Recibís: ${Math.round(stats.fees.netAmount).toLocaleString("es-AR")}
-                  </span>
+                <div className="ml-fee-box">
+                  <div className="ml-fee-box__item">
+                    <span className="ml-fee-box__label">Cargo por vender</span>
+                    <span className="ml-fee-box__value">${Math.round(stats.fees.saleFeeAmount).toLocaleString("es-AR")}</span>
+                  </div>
+                  <div className="ml-fee-box__item">
+                    <span className="ml-fee-box__label">Recibís</span>
+                    <span className="ml-fee-box__value ml-fee-box__value--main">${Math.round(stats.fees.netAmount).toLocaleString("es-AR")}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1949,38 +2042,44 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
 // ── Resumen — lo primero que ve el vendedor, responde "¿está todo bien?" sin
 // tener que entrar a cada publicación una por una. ──────────────────────────
 
-function SummaryCard({ icon, color, label, value, onClick }) {
+// size "hero" = las dos métricas que más le importan al vendedor de un vistazo (activas,
+// ventas de hoy) — número grande, título arriba. size "compact" = el resto, mismo orden
+// (título → número) pero más chico, para que el ícono no le gane protagonismo al número.
+function SummaryCard({ icon, color, label, value, onClick, size = "compact", tint }) {
   const Icon = icon;
   const Tag = onClick ? "button" : "div";
+  const isHero = size === "hero";
   return (
-    <Tag type={onClick ? "button" : undefined} onClick={onClick} className="card" style={{
-      padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, flex: "1 1 160px",
+    <Tag type={onClick ? "button" : undefined} onClick={onClick} className="card ml-summary-card" style={{
+      padding: isHero ? "13px 16px" : "11px 14px",
+      display: "flex", flexDirection: "column", gap: isHero ? 5 : 4,
+      flex: isHero ? "2 1 260px" : "1 1 150px",
       textAlign: "left", cursor: onClick ? "pointer" : "default", border: "1px solid var(--border)",
+      background: tint || "#fff",
     }}>
-      <div style={{ width: 36, height: 36, borderRadius: 9, background: `${color}18`, color,
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <Icon size={17} />
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: ".74rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+        <Icon size={13} color={color} />
+        {label}
       </div>
-      <div>
-        <div style={{ fontSize: "1.25rem", fontWeight: 800, lineHeight: 1 }}>{value}</div>
-        <div style={{ fontSize: ".76rem", color: "var(--text-secondary)", marginTop: 3 }}>{label}</div>
-      </div>
+      <div style={{ fontSize: isHero ? "24px" : "19px", fontWeight: 800, lineHeight: 1, color: "var(--text)" }}>{value}</div>
     </Tag>
   );
 }
 
-function SummaryTab({ summary, listings, onGoTo }) {
+function SummaryTab({ summary, listings, statsByItem, onGoTo }) {
   const recent = useMemo(() => [...listings].slice(0, 6), [listings]);
   const s = summary || {};
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <SummaryCard icon={CheckCircle2} color="#059669" label="Publicaciones activas" value={s.active_count ?? "—"} onClick={() => onGoTo("listings")} />
+        <SummaryCard icon={CheckCircle2} color="#059669" label="Publicaciones activas" value={s.active_count ?? "—"} onClick={() => onGoTo("listings")} size="hero" />
+        <SummaryCard icon={TrendingUp} color="var(--brand-text)" label="Ventas de hoy" value={s.sales_today ?? "—"} onClick={() => onGoTo("wallet")} size="hero" tint="var(--brand-light)" />
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
         <SummaryCard icon={PauseCircle} color="#6b7280" label="Pausadas" value={s.paused_count ?? "—"} onClick={() => onGoTo("listings")} />
         <SummaryCard icon={AlertTriangle} color="#ef4444" label="Con error de cobro" value={s.error_count ?? "—"} onClick={() => onGoTo("listings")} />
         <SummaryCard icon={Ban} color="#d97706" label="Pausadas sin stock" value={s.stock_paused_count ?? "—"} onClick={() => onGoTo("listings")} />
-        <SummaryCard icon={TrendingUp} color="#4db81a" label="Ventas de hoy" value={s.sales_today ?? "—"} onClick={() => onGoTo("wallet")} />
       </div>
 
       {Number(s.error_count) > 0 && (
@@ -1995,24 +2094,35 @@ function SummaryTab({ summary, listings, onGoTo }) {
       <div className="card" style={{ padding: "16px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: ".92rem", fontWeight: 700 }}>Actividad reciente</h3>
-          <button type="button" onClick={() => onGoTo("listings")} className="btn btn--ghost btn--sm">Ver todas</button>
+          <button type="button" onClick={() => onGoTo("listings")} className="btn btn--ghost btn--sm">
+            Ver todas <ArrowRight size={13} />
+          </button>
         </div>
         {recent.length === 0 ? (
           <p style={{ margin: 0, fontSize: ".84rem", color: "var(--text-secondary)" }}>Todavía no publicaste ningún producto.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {recent.map(l => (
-              <div key={l.ml_item_id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-                <div style={{ width: 32, height: 32, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
-                  {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {recent.map(l => {
+              const visits = statsByItem?.[l.ml_item_id]?.visits;
+              return (
+                <div key={l.ml_item_id} className="ml-activity-row" style={{ display: "flex", alignItems: "center", gap: 12, height: 72, padding: "0 8px", borderBottom: "1px solid var(--border)" }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
+                    {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: ".84rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l.product_name}</div>
+                    <div style={{ fontSize: ".74rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                      SKU {l.sku || "—"}{visits != null && <> · {visits} visitas</>}
+                      {l.status === "paused" && <> · {pauseReasonText(l.pause_reason)}</>}
+                    </div>
+                  </div>
+                  <StatusLabel status={l.status} pauseReason={l.pause_reason} compact />
+                  <span style={{ fontSize: ".74rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                    {new Date(l.updated_at).toLocaleDateString("es-AR")}
+                  </span>
                 </div>
-                <span style={{ flex: 1, minWidth: 0, fontSize: ".82rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l.product_name}</span>
-                <StatusLabel status={l.status} pauseReason={l.pause_reason} compact />
-                <span style={{ fontSize: ".74rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-                  {new Date(l.updated_at).toLocaleDateString("es-AR")}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -2044,6 +2154,15 @@ export default function MercadoLibre() {
   const [listingError, setListingError] = useState("");
   const [addressStatus, setAddressStatus] = useState(null);
   const [checkingAddress, setCheckingAddress] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Encabezado compacto al hacer scroll — no desaparece del todo (obligaría a volver arriba
+  // para cambiar de pestaña) ni se mantiene entero (roba espacio de contenido).
+  useEffect(() => {
+    function onScroll() { setScrolled(window.scrollY > 80); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   function loadAll() {
     Promise.all([
@@ -2119,11 +2238,9 @@ export default function MercadoLibre() {
 
   return (
     <main>
-      {status?.connected ? (
-        // Una vez conectado, la barra compacta de abajo ya muestra cuenta y estado —
-        // este encabezado grande dejaba de aportar nada y ocupaba un tercio de la pantalla.
-        <h1 style={{ margin: "0 0 12px", fontSize: "1.1rem", fontWeight: 800, letterSpacing: "-.02em" }}>Mercado Libre</h1>
-      ) : (
+      {/* Una vez conectado, el encabezado sticky de más abajo ya muestra cuenta y estado —
+          este banner grande solo tiene sentido antes de conectar. */}
+      {!status?.connected && !loading && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           marginBottom: 18, padding: "14px 20px",
@@ -2151,7 +2268,27 @@ export default function MercadoLibre() {
         </div>
       ) : (
         <>
-          <MercadoLibreConnection status={status} summary={summary} onConnected={loadAll} onDisconnected={loadAll} />
+          <div className={status?.connected ? "ml-header" : undefined}>
+            <MercadoLibreConnection status={status} summary={summary} scrolled={scrolled} onConnected={loadAll} onDisconnected={loadAll} />
+
+            {status?.connected && (
+              <div className="ml-nav">
+                {TABS.map(t => {
+                  const TabIcon = t.icon;
+                  const active = tab === t.id;
+                  return (
+                    <button key={t.id} type="button" onClick={() => setTab(t.id)}
+                      className={`ml-nav__tab${active ? " is-active" : ""}`}>
+                      <TabIcon size={14} /> {t.label}
+                      {t.id === "listings" && listings.length > 0 && (
+                        <span className="ml-nav__count">{listings.length}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {status?.connected && addressStatus?.connected && addressStatus.valid === false && (
             <div style={{
@@ -2182,30 +2319,6 @@ export default function MercadoLibre() {
 
           {status?.connected && (
             <>
-              <div className="ml-tabs" style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: "1px solid var(--border)" }}>
-                {TABS.map(t => {
-                  const TabIcon = t.icon;
-                  const active = tab === t.id;
-                  return (
-                    <button key={t.id} type="button" onClick={() => setTab(t.id)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 6, padding: "10px 16px",
-                        background: "none", border: "none", cursor: "pointer",
-                        borderBottom: active ? "2px solid #2D3277" : "2px solid transparent",
-                        color: active ? "var(--text)" : "var(--text-secondary)",
-                        fontWeight: active ? 700 : 500, fontSize: ".86rem", marginBottom: -1,
-                      }}>
-                      <TabIcon size={14} /> {t.label}
-                      {t.id === "listings" && listings.length > 0 && (
-                        <span style={{ fontSize: ".68rem", fontWeight: 700, padding: "1px 6px", borderRadius: 99, background: "var(--surface-2,#f3f4f6)", color: "var(--text-secondary)" }}>
-                          {listings.length}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
               {!wallet.hasCard && (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px",
                   background: "rgba(217,119,6,.08)", borderRadius: 9, marginBottom: 16, fontSize: ".82rem", color: "#b45309" }}>
@@ -2217,16 +2330,26 @@ export default function MercadoLibre() {
                   venta que genera deuda y desaparece sola apenas el corte diario la cobra (vuelve
                   a $0), hasta la próxima venta que la genere de nuevo. */}
               {wallet.pendingDebt > 0 && (
-                <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px",
-                  background: "rgba(239,68,68,.08)", borderRadius: 9, marginBottom: 16, fontSize: ".82rem", color: "#b91c1c" }}>
-                  <Wallet size={14} />
-                  Deuda acumulada hoy: <strong>${Math.round(wallet.pendingDebt).toLocaleString("es-AR")}</strong>
-                  &nbsp;— se cobra automáticamente {nextChargeLabel()}.
+                <div style={{
+                  display: "flex", gap: 10, alignItems: "center", padding: "12px 16px",
+                  background: "#FFF4F2", borderLeft: "4px solid var(--danger,#ef4444)", borderRadius: 10,
+                  marginBottom: 16, fontSize: ".84rem", color: "#374151",
+                }}>
+                  <CreditCard size={16} color="var(--danger,#ef4444)" style={{ flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>
+                    Deuda acumulada hoy: <strong style={{ color: "var(--danger,#ef4444)" }}>${Math.round(wallet.pendingDebt).toLocaleString("es-AR")}</strong> — se cobra automáticamente.
+                  </span>
+                  <span style={{
+                    fontSize: ".72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 99,
+                    background: "#fff", border: "1px solid #fecaca", color: "#374151", whiteSpace: "nowrap",
+                  }}>
+                    {nextChargeLabel()}
+                  </span>
                 </div>
               )}
 
               {tab === "summary" && (
-                <SummaryTab summary={summary} listings={listings} onGoTo={setTab} />
+                <SummaryTab summary={summary} listings={listings} statsByItem={listingStats} onGoTo={setTab} />
               )}
 
               {tab === "listings" && (
