@@ -773,7 +773,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   const [checkingAddress, setCheckingAddress] = useState(false);
   function recheckAddress() {
     setCheckingAddress(true);
-    client.get("/seller/ml/shipping-address-status")
+    client.post("/seller/ml/shipping-address-ack")
       .then(r => setLocalAddressStatus(r.data))
       .catch(() => {})
       .finally(() => setCheckingAddress(false));
@@ -1457,7 +1457,7 @@ function PublishComboModal({ comboId, addressStatus, onClose, onPublished }) {
   const [checkingAddress, setCheckingAddress] = useState(false);
   function recheckAddress() {
     setCheckingAddress(true);
-    client.get("/seller/ml/shipping-address-status")
+    client.post("/seller/ml/shipping-address-ack")
       .then(r => setLocalAddressStatus(r.data))
       .catch(() => {})
       .finally(() => setCheckingAddress(false));
@@ -2183,13 +2183,22 @@ export default function MercadoLibre() {
           .then(r => setListingStats(prev => ({ ...prev, [x.ml_item_id]: r.data })))
           .catch(() => {});
       });
-      if (s.data?.connected) checkAddress();
+      if (s.data?.connected) refreshAddressStatus();
     }).catch(() => {}).finally(() => setLoading(false));
   }
 
+  // Chequeo pasivo — se corre solo al abrir el panel, nunca marca nada como "reconocido".
+  function refreshAddressStatus() {
+    client.get("/seller/ml/shipping-address-status")
+      .then(r => setAddressStatus(r.data))
+      .catch(() => setAddressStatus(null));
+  }
+
+  // Botón "Ya la cambié, revisar de nuevo" — a diferencia del chequeo pasivo, esto SÍ le avisa
+  // al backend que el vendedor dice haberlo arreglado (ver acknowledgeAddressFixed).
   function checkAddress() {
     setCheckingAddress(true);
-    client.get("/seller/ml/shipping-address-status")
+    client.post("/seller/ml/shipping-address-ack")
       .then(r => setAddressStatus(r.data))
       .catch(() => setAddressStatus(null))
       .finally(() => setCheckingAddress(false));
