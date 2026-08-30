@@ -397,6 +397,31 @@ export default function Orders() {
                               </div>
                             )}
 
+                            {order.channel === "mercadolibre" && !isUnpaid(order) && (
+                              <>
+                                {Number(order.costo_producto) > 0 && (
+                                  <div style={{ color: "var(--error, #dc2626)" }}>
+                                    <span>Costo del producto (Ventaz)</span>
+                                    <strong>− {money(order.costo_producto)}</strong>
+                                  </div>
+                                )}
+                                {Number(order.comision_ml) > 0 && (
+                                  <div style={{ color: "var(--error, #dc2626)" }}>
+                                    <span>Comisión Mercado Libre</span>
+                                    <strong>− {money(order.comision_ml)}</strong>
+                                  </div>
+                                )}
+                                {Number(order.envio_gratis_ml) > 0 && (
+                                  <div style={{ color: "var(--error, #dc2626)" }}>
+                                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                      <Truck size={13} /> Costo de envío gratis (ML)
+                                    </span>
+                                    <strong>− {money(order.envio_gratis_ml)}</strong>
+                                  </div>
+                                )}
+                              </>
+                            )}
+
                             {isUnpaid(order) ? (
                               <div className="is-highlight">
                                 <span>Tu ganancia neta</span>
