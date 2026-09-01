@@ -61,6 +61,13 @@ function MlLandingRoute() {
   return isLoggedIn ? <Navigate to="/dashboard" replace /> : <LandingMl />;
 }
 
+// Mismo criterio que HomeRoute/EcomLandingRoute/MlLandingRoute — si ya está logueado, /login
+// no tiene sentido mostrarlo, directo al panel.
+function LoginRoute() {
+  const { isLoggedIn } = useAuth();
+  return isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login />;
+}
+
 // Lleva al vendedor directo a los productos de su primera página (para links de email)
 function MyProductsRedirect() {
   const navigate = useNavigate();
@@ -117,7 +124,7 @@ export default function App() {
           <Route path="/"             element={<HomeRoute />} />
           <Route path="/ecom"         element={<EcomLandingRoute />} />
           <Route path="/ml"           element={<MlLandingRoute />} />
-          <Route path="/login"        element={<Login />} />
+          <Route path="/login"        element={<LoginRoute />} />
           <Route path="/register"     element={<Register />} />
           <Route path="/verify-email"     element={<VerifyEmail />} />
           <Route path="/forgot-password"  element={<ForgotPassword />} />
