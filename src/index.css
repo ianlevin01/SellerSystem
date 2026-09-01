@@ -8400,7 +8400,11 @@ body,
 .ml-header__menu-btn:hover { background: var(--surface-2, #f3f4f6); }
 .ml-header__menu-btn:focus-visible { opacity: 1; outline: 2px solid var(--brand); outline-offset: 1px; }
 
-.ml-nav { display: flex; gap: 4px; border-bottom: 1px solid var(--border); }
+.ml-nav {
+  display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.ml-nav::-webkit-scrollbar { display: none; }
 .ml-nav__tab {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 16px 9px;
@@ -8409,6 +8413,7 @@ body,
   color: var(--text-secondary);
   font-weight: 600; font-size: .86rem;
   margin-bottom: -1px;
+  white-space: nowrap; flex-shrink: 0;
   transition: color .18s ease, border-color .18s ease;
 }
 .ml-nav__tab:hover { color: var(--text); }

@@ -4,9 +4,14 @@ import {
   ExternalLink, Unlink, Loader2, CreditCard, Wallet, Plus, X,
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
   ShoppingBag, TrendingUp, CheckCircle2, Ban, ArrowRight, Eye, Pencil, SlidersHorizontal,
+  Layers, ChevronDown, ChevronRight, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag,
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
+import { Modal, AttributeField, IconBadge } from "./ml/mlShared";
+import { formatNumberUnitValue, readyImageCount } from "./ml/mlUtils";
+import ImageOrderPicker from "./ml/ImageOrderPicker";
+import PublishVariantsModal from "./ml/PublishVariantsModal";
 
 const ML_SITE_NAMES = {
   MLA: "Argentina", MLB: "Brasil", MLM: "México",
@@ -14,34 +19,6 @@ const ML_SITE_NAMES = {
 };
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
-
-// ── Modal genérico (portal a document.body — evita el bug de position:fixed
-// roto por algún transform en un contenedor padre, mismo patrón que usa PageProducts.jsx) ──
-
-function Modal({ title, onClose, children, maxWidth = 460 }) {
-  return createPortal(
-    <div
-      style={{
-        // z-index por encima de 5000: PageProducts porta una barra de búsqueda "sticky"
-        // a document.body con z-index 5000 al hacer scroll, y sin esto quedaba tapando el modal.
-        position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", zIndex: 6000,
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-      }}
-      onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="card" style={{ maxWidth, width: "100%", padding: 0, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 22px", borderBottom: "1px solid var(--border)" }}>
-          <h3 style={{ margin: 0, fontSize: "1.02rem", fontWeight: 700 }}>{title}</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", display: "flex", padding: 4 }}>
-            <X size={18} />
-          </button>
-        </div>
-        <div style={{ padding: "20px 22px", overflowY: "auto" }}>{children}</div>
-      </div>
-    </div>,
-    document.body
-  );
-}
 
 // ── Conexión con Mercado Libre ──────────────────────────────────
 
@@ -122,7 +99,7 @@ function MercadoLibreConnection({ status, summary, scrolled, onConnected, onDisc
   return (
     <div className="ml-header__row" style={{
       display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap",
-      height: scrolled ? 48 : 64, transition: "height .18s ease",
+      minHeight: scrolled ? 48 : 64, transition: "min-height .18s ease",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <div style={{
@@ -168,12 +145,14 @@ function MercadoLibreConnection({ status, summary, scrolled, onConnected, onDisc
           <MoreVertical size={16} />
         </button>
         {menuOpen && (
-          <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", background: "#fff", border: "1px solid var(--border)",
-            borderRadius: 9, boxShadow: "0 8px 24px rgba(0,0,0,.12)", zIndex: 10, minWidth: 160, overflow: "hidden" }}>
+          <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", border: "1px solid var(--border)",
+            borderRadius: 12, boxShadow: "0 10px 28px rgba(0,0,0,.14)", zIndex: 10, minWidth: 180, overflow: "hidden", padding: 4 }}>
             <button type="button" onClick={disconnect}
-              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 14px", background: "none", border: "none",
-                cursor: "pointer", fontSize: ".82rem", color: "var(--danger,#ef4444)", textAlign: "left" }}>
-              <Unlink size={13} /> Desconectar cuenta
+              style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "10px 12px", background: "none", border: "none",
+                borderRadius: 8, cursor: "pointer", fontSize: ".84rem", fontWeight: 600, color: "var(--danger,#ef4444)", textAlign: "left" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,.08)"}
+              onMouseLeave={e => e.currentTarget.style.background = "none"}>
+              <Unlink size={14} /> Desconectar cuenta
             </button>
           </div>
         )}
@@ -481,6 +460,7 @@ const CHARGE_KIND_LABELS = {
   mandatory: "Cobro obligatorio",
   optional:  "Cobro adicional",
   manual:    "Pago manual",
+  topup:     "Carga de saldo",
 };
 
 // Un solo listado: movimientos de plata reales (cargas, cobros exitosos) + intentos de cobro
@@ -715,6 +695,7 @@ function WalletSection({ wallet, onChanged }) {
 // ── Modal de publicación ─────────────────────────────────────────
 
 const WIZARD_STEPS = ["Categoría", "Características principales", "Fotos", "Título", "Características secundarias", "Descripción", "Precio"];
+const WIZARD_STEP_ICONS = [LayoutGrid, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag];
 
 function WizardProgress({ step, total }) {
   return (
@@ -746,24 +727,22 @@ const FREE_SHIPPING_MANDATORY_THRESHOLD_MLA = 33000;
 // se intenta igual (defensa en profundidad), esto es solo para no dejar entrar al wizard.
 function AddressBlockNotice({ addressStatus, onRecheck, checking }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center", textAlign: "center", padding: "12px 0" }}>
-      <AlertTriangle size={32} color="#f59e0b" />
-      <div>
-        <strong style={{ fontSize: ".95rem", display: "block", marginBottom: 6 }}>No podés publicar todavía</strong>
-        <p style={{ margin: 0, fontSize: ".84rem", color: "var(--text-secondary)" }}>
-          El domicilio de despacho cargado en tu cuenta de Mercado Libre
-          {addressStatus?.currentAddress ? ` (${addressStatus.currentAddress})` : ""} no coincide con el depósito
-          de Ventaz ({addressStatus?.warehouseAddress}). Cambialo en Mercado Libre y volvé a revisar.
-        </p>
-      </div>
-      <div style={{ display: "flex", gap: 8 }}>
-        <a href={addressStatus?.changeAddressUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--sm">
-          Cambiar dirección
-        </a>
-        <button type="button" className="btn btn--ghost btn--sm" onClick={onRecheck} disabled={checking}>
-          {checking ? <Loader2 size={13} className="spin" /> : "Ya la cambié, revisar de nuevo"}
-        </button>
-      </div>
+    <div style={{ textAlign: "center", maxWidth: 400, margin: "0 auto", padding: "8px 4px 14px" }}>
+      <IconBadge icon={AlertTriangle} color="#d97706" bg="rgba(217,119,6,.12)" />
+      <h4 style={{ margin: "16px 0 8px", fontSize: "1.15rem", fontWeight: 800 }}>No podés publicar todavía</h4>
+      <p style={{ margin: "0 0 24px", fontSize: ".88rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+        El domicilio de despacho cargado en tu cuenta de Mercado Libre
+        {addressStatus?.currentAddress ? ` (${addressStatus.currentAddress})` : ""} no coincide con el depósito
+        de Ventaz ({addressStatus?.warehouseAddress}). Cambialo en Mercado Libre y volvé a revisar.
+      </p>
+      <a href={addressStatus?.changeAddressUrl} target="_blank" rel="noreferrer" className="btn btn--primary"
+        style={{ width: "100%", padding: "13px", fontSize: ".96rem", justifyContent: "center", marginBottom: 10 }}>
+        Cambiar dirección
+      </a>
+      <button type="button" onClick={onRecheck} disabled={checking}
+        style={{ background: "none", border: "none", cursor: "pointer", fontSize: ".84rem", color: "var(--text-secondary)", textDecoration: "underline" }}>
+        {checking ? <Loader2 size={13} className="spin" /> : "Ya la cambié, revisar de nuevo"}
+      </button>
     </div>
   );
 }
@@ -810,7 +789,6 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   // imágenes del catálogo y subidas nuevas en una sola lista arrastrable, en vez de mandar
   // siempre "primero las del catálogo, después las nuevas" sin control del vendedor.
   const [imageOrder, setImageOrder] = useState([]); // [{ type: "existing", key } | { type: "new", previewUrl }]
-  const [dragImgIndex, setDragImgIndex] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [suggestingTitle, setSuggestingTitle] = useState(false);
@@ -915,58 +893,6 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   const netFinal    = fees ? Number(fees.netAmount) - shippingCost - installmentsCost : null;
   const sellingAtLoss = netFinal != null && priceFloor != null && netFinal < priceFloor;
 
-  function toggleImage(key) {
-    setImageOrder(prev => {
-      const isIncluded = prev.some(item => item.type === "existing" && item.key === key);
-      if (isIncluded) return prev.filter(item => !(item.type === "existing" && item.key === key));
-      return [...prev, { type: "existing", key }];
-    });
-  }
-
-  async function handleFileUpload(e) {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
-    for (const file of files) {
-      const previewUrl = URL.createObjectURL(file);
-      const entry = { previewUrl, ref: null, uploading: true };
-      setNewPictures(prev => [...prev, entry]);
-      setImageOrder(prev => [...prev, { type: "new", previewUrl }]);
-      try {
-        const form = new FormData();
-        form.append("image", file);
-        const res = await client.post("/seller/ml/pictures/upload", form, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        setNewPictures(prev => prev.map(p => p.previewUrl === previewUrl ? { ...p, ref: res.data.ref, uploading: false } : p));
-      } catch {
-        setNewPictures(prev => prev.map(p => p.previewUrl === previewUrl ? { ...p, uploading: false, failed: true } : p));
-      }
-    }
-  }
-
-  function removeNewPicture(previewUrl) {
-    setNewPictures(prev => prev.filter(p => p.previewUrl !== previewUrl));
-    setImageOrder(prev => prev.filter(item => !(item.type === "new" && item.previewUrl === previewUrl)));
-  }
-
-  function moveImage(fromIndex, toIndex) {
-    setImageOrder(prev => {
-      if (toIndex < 0 || toIndex >= prev.length) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }
-
-  // Imágenes del catálogo siempre cuentan (ya están subidas); las nuevas solo cuando terminaron
-  // de subirse con éxito (tienen .ref) — mientras suben o si fallaron, no cuentan todavía.
-  function readyImageCount() {
-    return imageOrder.filter(item =>
-      item.type === "existing" || newPictures.find(p => p.previewUrl === item.previewUrl)?.ref
-    ).length;
-  }
-
   function goBack() { setError(""); setStep(s => Math.max(0, s - 1)); }
 
   function goNext() {
@@ -975,7 +901,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     if (step === 1 && missingAttrs.length > 0) { setError(`Faltan completar: ${missingAttrs.map(a => a.name).join(", ")}`); return; }
     if (step === 2) {
       if (newPictures.some(p => p.uploading)) { setError("Esperá a que terminen de subirse las imágenes"); return; }
-      if (readyImageCount() === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
+      if (readyImageCount(imageOrder, newPictures) === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
     }
     if (step === 3 && !title.trim()) { setError("Ingresá un título"); return; }
     setStep(s => Math.min(WIZARD_STEPS.length - 1, s + 1));
@@ -1017,11 +943,11 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     finally { setSuggestingAttrs(false); }
   }
 
-  async function generateImageAi() {
+  async function generateImageAi(userPrompt) {
     setGeneratingImage(true); setError("");
     try {
       const res = await client.post("/seller/ml/pictures/generate",
-        { productName: product.name, description, imageUrls: existingImages.map(i => i.url) },
+        { productName: product.name, description, imageUrls: existingImages.map(i => i.url), userPrompt },
         { timeout: 90000 });
       setNewPictures(prev => [...prev, { previewUrl: res.data.previewUrl, ref: res.data.ref, uploading: false }]);
     } catch (err) {
@@ -1045,7 +971,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       return;
     }
     if (newPictures.some(p => p.uploading)) { setError("Esperá a que terminen de subirse las imágenes"); return; }
-    if (readyImageCount() === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
+    if (readyImageCount(imageOrder, newPictures) === 0) { setError("Seleccioná o subí al menos una imagen — Mercado Libre no permite publicar sin fotos"); return; }
 
     if (mlMissingAttr && !mlMissingValue.trim()) {
       setError(`Completá "${mlMissingAttr.name}" para poder publicar`);
@@ -1117,9 +1043,30 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   }
 
   return (
-    <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={820}>
+    <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={820} footer={
+      <>
+        {error && <p style={{ margin: "0 0 12px", fontSize: ".84rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
+        <div style={{ display: "flex", gap: 10 }}>
+          {step > 0 && (
+            <button type="button" className="btn btn--ghost" style={{ padding: "13px 20px", fontSize: ".92rem" }} onClick={goBack} disabled={saving}>Atrás</button>
+          )}
+          {step < WIZARD_STEPS.length - 1 ? (
+            <button type="button" className="btn btn--primary" style={{ flex: 1, padding: "13px", fontSize: ".96rem", justifyContent: "center" }} onClick={goNext}>
+              Siguiente <ArrowRight size={15} />
+            </button>
+          ) : (
+            <button type="button" className="btn btn--primary" style={{ flex: 1, padding: "13px", fontSize: ".96rem", justifyContent: "center" }} onClick={publish} disabled={saving}>
+              {saving ? <Loader2 size={14} className="spin" /> : mlMissingAttr ? "Reintentar publicación" : "Publicar"}
+            </button>
+          )}
+        </div>
+      </>
+    }>
       <WizardProgress step={step} total={WIZARD_STEPS.length} />
-      <h4 style={{ margin: "0 0 14px", fontSize: ".95rem" }}>{WIZARD_STEPS[step]}</h4>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <IconBadge icon={WIZARD_STEP_ICONS[step]} size={40} iconSize={19} />
+        <h4 style={{ margin: 0, fontSize: "1.12rem", fontWeight: 800 }}>{WIZARD_STEPS[step]}</h4>
+      </div>
 
       {step === 0 && (
         <>
@@ -1155,8 +1102,8 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
 
       {step === 1 && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <p style={{ margin: 0, fontSize: ".78rem", color: "var(--text-secondary)" }}>Datos requeridos por "{categoryName}"</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <p style={{ margin: 0, fontSize: ".82rem", color: "var(--text-secondary)" }}>Datos requeridos por "{categoryName}"</p>
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => suggestAttrsAi(requiredAttrs)} disabled={suggestingAttrs}>
               {suggestingAttrs ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
             </button>
@@ -1164,7 +1111,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
           {requiredAttrs.length === 0 ? (
             <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>Esta categoría no pide datos obligatorios.</p>
           ) : (
-            <div style={{ padding: "12px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ padding: "16px 18px", border: "1px solid var(--border)", borderRadius: 14, display: "flex", flexDirection: "column", gap: 12 }}>
               {requiredAttrs.map(a => (
                 <AttributeField key={a.id} attr={a} value={attrValues[a.id]} onChange={v => setAttrValues(p => ({ ...p, [a.id]: v }))} />
               ))}
@@ -1174,117 +1121,31 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       )}
 
       {step === 2 && (
-        <div>
-          {imageOrder.length > 0 && (
-            <div
-              style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}
-              onDragOver={e => e.preventDefault()}
-              onDrop={() => {
-                // Soltar en el espacio vacío del contenedor (después de la última imagen) la
-                // manda al final — sin esto, no había forma de soltar pasado el último ítem.
-                if (dragImgIndex !== null) moveImage(dragImgIndex, imageOrder.length - 1);
-                setDragImgIndex(null);
-              }}
-            >
-              {imageOrder.map((item, index) => {
-                const isExisting = item.type === "existing";
-                const src = isExisting
-                  ? existingImages.find(i => i.key === item.key)?.url
-                  : newPictures.find(p => p.previewUrl === item.previewUrl)?.previewUrl;
-                const newPic = isExisting ? null : newPictures.find(p => p.previewUrl === item.previewUrl);
-                if (!src) return null;
-                return (
-                  <div key={isExisting ? `e:${item.key}` : `n:${item.previewUrl}`}
-                    draggable
-                    onDragStart={() => setDragImgIndex(index)}
-                    onDragOver={e => e.preventDefault()}
-                    onDrop={e => {
-                      e.stopPropagation(); // si no, el drop también burbujea al contenedor y mueve dos veces
-                      if (dragImgIndex !== null && dragImgIndex !== index) moveImage(dragImgIndex, index);
-                      setDragImgIndex(null);
-                    }}
-                    onDragEnd={() => setDragImgIndex(null)}
-                    style={{
-                      position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden",
-                      border: index === 0 ? "2px solid var(--brand,#4db81a)" : "2px solid var(--border)",
-                      cursor: "grab", opacity: dragImgIndex === index ? .45 : 1,
-                    }}>
-                    <img src={src} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
-                    {index === 0 && (
-                      <span style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(0,0,0,.65)", color: "#fff", fontSize: ".58rem", fontWeight: 700, textAlign: "center", padding: "2px 0" }}>
-                        PORTADA
-                      </span>
-                    )}
-                    {newPic?.uploading && (
-                      <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Loader2 size={16} className="spin" />
-                      </div>
-                    )}
-                    {newPic?.failed && (
-                      <div style={{ position: "absolute", inset: 0, background: "rgba(239,68,68,.15)" }} title="No se pudo subir" />
-                    )}
-                    <button type="button"
-                      onClick={() => isExisting ? toggleImage(item.key) : removeNewPicture(item.previewUrl)}
-                      style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                      <X size={10} color="#fff" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <p style={{ margin: "0 0 10px", fontSize: ".76rem", color: "var(--text-secondary)" }}>
-            Arrastrá las imágenes para cambiar el orden — la primera es la portada en Mercado Libre.
-          </p>
-
-          {existingImages.some(img => !imageOrder.some(item => item.type === "existing" && item.key === img.key)) && (
-            <div style={{ marginBottom: 10 }}>
-              <p style={{ margin: "0 0 6px", fontSize: ".74rem", color: "var(--text-secondary)" }}>
-                Imágenes del catálogo sin incluir — clickeá para sumarlas:
-              </p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {existingImages.filter(img => !imageOrder.some(item => item.type === "existing" && item.key === img.key)).map(img => (
-                  <button key={img.id || img.key} type="button" onClick={() => toggleImage(img.key)}
-                    style={{
-                      position: "relative", width: 72, height: 72, padding: 0, borderRadius: 8, overflow: "hidden",
-                      border: "2px dashed var(--border)", opacity: .45, cursor: "pointer", background: "none",
-                    }}>
-                    <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <label className="btn btn--ghost btn--sm" style={{ display: "inline-flex", cursor: "pointer" }}>
-              <Plus size={13} /> Subir imagen nueva
-              <input type="file" accept="image/*" multiple onChange={handleFileUpload} style={{ display: "none" }} />
-            </label>
-            <button type="button" className="btn btn--ghost btn--sm" onClick={generateImageAi} disabled={generatingImage}>
-              {generatingImage ? <Loader2 size={13} className="spin" /> : "✨ Generar con IA"}
-            </button>
-          </div>
-        </div>
+        <ImageOrderPicker
+          existingImages={existingImages}
+          imageOrder={imageOrder} setImageOrder={setImageOrder}
+          newPictures={newPictures} setNewPictures={setNewPictures}
+          onGenerateAi={generateImageAi} generatingAi={generatingImage}
+        />
       )}
 
       {step === 3 && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <label style={{ fontSize: ".8rem", fontWeight: 600 }}>Título de la publicación</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <label style={{ fontSize: ".82rem", fontWeight: 700 }}>Título de la publicación</label>
             <button type="button" className="btn btn--ghost btn--sm" onClick={suggestTitleAi} disabled={suggestingTitle}>
               {suggestingTitle ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
             </button>
           </div>
-          <input className="form-input" maxLength={60} value={title} onChange={e => setTitle(e.target.value)} />
-          <small style={{ display: "block", marginTop: 4, textAlign: "right", color: "var(--text-secondary)" }}>{title.length}/60</small>
+          <input className="form-input" style={{ padding: "13px 14px", fontSize: "1rem" }} maxLength={60} value={title} onChange={e => setTitle(e.target.value)} />
+          <small style={{ display: "block", marginTop: 6, textAlign: "right", color: "var(--text-secondary)" }}>{title.length}/60</small>
         </div>
       )}
 
       {step === 4 && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <p style={{ margin: 0, fontSize: ".78rem", color: "var(--text-secondary)" }}>Opcional — mejora la exposición de la publicación</p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <p style={{ margin: 0, fontSize: ".82rem", color: "var(--text-secondary)" }}>Opcional — mejora la exposición de la publicación</p>
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => suggestAttrsAi(optionalAttrs)} disabled={suggestingAttrs || optionalAttrs.length === 0}>
               {suggestingAttrs ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
             </button>
@@ -1292,7 +1153,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
           {optionalAttrs.length === 0 ? (
             <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>Esta categoría no tiene características opcionales.</p>
           ) : (
-            <div style={{ padding: "12px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ padding: "16px 18px", border: "1px solid var(--border)", borderRadius: 14, display: "flex", flexDirection: "column", gap: 12 }}>
               {optionalAttrs.map(a => (
                 <AttributeField key={a.id} attr={a} value={attrValues[a.id]} onChange={v => setAttrValues(p => ({ ...p, [a.id]: v }))} />
               ))}
@@ -1303,24 +1164,30 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
 
       {step === 5 && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <label style={{ fontSize: ".8rem", fontWeight: 600 }}>Descripción</label>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <label style={{ fontSize: ".82rem", fontWeight: 700 }}>Descripción</label>
             <button type="button" className="btn btn--ghost btn--sm" onClick={suggestDescriptionAi} disabled={suggestingDesc}>
               {suggestingDesc ? <Loader2 size={13} className="spin" /> : "✨ Sugerir con IA"}
             </button>
           </div>
-          <textarea className="form-input" rows={8} style={{ resize: "vertical" }}
+          <textarea className="form-input" rows={8} style={{ resize: "vertical", padding: "13px 14px", fontSize: ".92rem", lineHeight: 1.5 }}
             value={description} onChange={e => setDescription(e.target.value)} />
         </div>
       )}
 
       {step === 6 && (
         <div>
-          <label style={{ fontSize: ".8rem", fontWeight: 600, display: "block", marginBottom: 4 }}>Precio en Mercado Libre</label>
-          <input className="form-input" type="number" value={price} onChange={e => setPrice(e.target.value)}
-            style={{ marginBottom: 4, borderColor: price && !priceValid ? "var(--danger,#ef4444)" : undefined }} />
+          <label style={{ fontSize: ".82rem", fontWeight: 700, display: "block", marginBottom: 8 }}>Precio en Mercado Libre</label>
+          <div style={{
+            display: "flex", alignItems: "baseline", gap: 4, padding: "14px 18px", borderRadius: 14, marginBottom: 6,
+            background: "var(--surface-2,#f9fafb)", border: price && !priceValid ? "1px solid var(--danger,#ef4444)" : "1px solid transparent",
+          }}>
+            <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-secondary)" }}>$</span>
+            <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0"
+              style={{ border: "none", background: "none", outline: "none", fontSize: "1.7rem", fontWeight: 800, color: "var(--text)", width: "100%" }} />
+          </div>
           {priceFloor != null && (
-            <small style={{ display: "block", marginBottom: 12, color: "var(--text-secondary)" }}>
+            <small style={{ display: "block", marginBottom: 14, color: "var(--text-secondary)" }}>
               Costo total: ${Math.round(priceFloor).toLocaleString("es-AR")}
             </small>
           )}
@@ -1387,7 +1254,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
                 <Loader2 size={12} className="spin" /> Calculando comisión...
               </p>
             ) : fees ? (
-              <div style={{ marginBottom: 16, padding: "4px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9 }}>
+              <div style={{ marginBottom: 16, padding: "6px 18px", border: "1px solid var(--border)", borderRadius: 14 }}>
                 {[
                   ["Precio de venta", `$${Math.round(Number(price)).toLocaleString("es-AR")}`],
                   ["Cargo por vender", `-$${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}`],
@@ -1395,14 +1262,14 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
                   ...(shippingFree ? [["Costo por envío", shippingCostKnown ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "No calculado"]] : []),
                   ["Impuestos estimados", "$0"],
                 ].map(([label, value]) => (
-                  <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>{label}</span>
-                    <strong style={{ fontSize: ".86rem" }}>{value}</strong>
+                  <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: ".84rem", color: "var(--text-secondary)" }}>{label}</span>
+                    <strong style={{ fontSize: ".88rem" }}>{value}</strong>
                   </div>
                 ))}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 8px" }}>
-                  <span style={{ fontSize: ".88rem", fontWeight: 600 }}>Recibís</span>
-                  <strong style={{ fontSize: "1.05rem", color: "var(--success,#059669)" }}>${Math.round(netFinal).toLocaleString("es-AR")}</strong>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0" }}>
+                  <span style={{ fontSize: ".9rem", fontWeight: 700 }}>Recibís</span>
+                  <strong style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--success,#059669)" }}>${Math.round(netFinal).toLocaleString("es-AR")}</strong>
                 </div>
               </div>
             ) : (
@@ -1421,29 +1288,14 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       )}
 
       {mlMissingAttr && step === WIZARD_STEPS.length - 1 && (
-        <div style={{ margin: "16px 0 0", padding: "12px 14px", background: "rgba(217,119,6,.08)",
-          border: "1px solid #f59e0b", borderRadius: 9 }}>
-          <p style={{ margin: "0 0 8px", fontSize: ".8rem", color: "#92400e", fontWeight: 600 }}>
+        <div style={{ margin: "16px 0 0", padding: "14px 16px", background: "rgba(217,119,6,.08)",
+          border: "1px solid #f59e0b", borderRadius: 12 }}>
+          <p style={{ margin: "0 0 10px", fontSize: ".82rem", color: "#92400e", fontWeight: 700 }}>
             Mercado Libre necesita este dato para publicar en esta categoría:
           </p>
           <AttributeField attr={mlMissingAttr} value={mlMissingValue} onChange={setMlMissingValue} />
         </div>
       )}
-
-      {error && <p style={{ margin: "16px 0 0", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
-
-      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-        {step > 0 && (
-          <button type="button" className="btn btn--ghost" onClick={goBack} disabled={saving}>Atrás</button>
-        )}
-        {step < WIZARD_STEPS.length - 1 ? (
-          <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={goNext}>Siguiente</button>
-        ) : (
-          <button type="button" className="btn btn--primary" style={{ flex: 1 }} onClick={publish} disabled={saving}>
-            {saving ? <Loader2 size={14} className="spin" /> : mlMissingAttr ? "Reintentar publicación" : "Publicar"}
-          </button>
-        )}
-      </div>
     </Modal>
   );
 }
@@ -1757,70 +1609,6 @@ function PublishComboModal({ comboId, addressStatus, onClose, onPublished }) {
   );
 }
 
-// ML rechaza los atributos "number_unit" (LENGTH, WIDTH, HEIGHT, WEIGHT, MIN_RECOMMENDED_AGE,
-// etc.) si el valor no trae una unidad ("50" no sirve, tiene que ser "50 cm") — como el
-// vendedor solo tipea el número, se la agregamos automáticamente al armar el payload de
-// publish(). Cada atributo tiene SU PROPIA unidad válida (cm, g, años...), que viaja desde ML
-// en attr.defaultUnit (mlService.getCategoryAttributes) — este mapa es solo un respaldo por si
-// ML no la informara para algún atributo puntual.
-const NUMBER_UNIT_DEFAULTS = { LENGTH: "cm", WIDTH: "cm", HEIGHT: "cm", DEPTH: "cm", WEIGHT: "g" };
-
-function unitFor(attr) {
-  return attr.defaultUnit || NUMBER_UNIT_DEFAULTS[attr.id] || "cm";
-}
-
-function formatNumberUnitValue(attr, raw) {
-  const trimmed = String(raw || "").trim();
-  if (!trimmed) return trimmed;
-  if (/[a-zA-Zµ"]/.test(trimmed)) return trimmed; // ya trae una unidad tipeada
-  return `${trimmed} ${unitFor(attr)}`;
-}
-
-// Mercado Libre a veces da una lista fija (marca, por ejemplo) que no siempre tiene la opción
-// real del producto — como igual mandamos value_name como texto (no value_id), ML acepta un
-// valor que no esté en la lista, así que dejamos una opción "Otra" que pasa a un input libre.
-function AttributeField({ attr, value, onChange }) {
-  const isNumberUnit = attr.valueType === "number_unit";
-  const hasOptions   = attr.values?.length > 0;
-  const matchesOption = hasOptions && attr.values.some(v => v.name === value);
-  const [customMode, setCustomMode] = useState(hasOptions && !!value && !matchesOption);
-
-  return (
-    <div>
-      <label style={{ fontSize: ".78rem", display: "block", marginBottom: 3 }}>
-        {attr.name}
-        {isNumberUnit && (
-          <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}> ({unitFor(attr)})</span>
-        )}
-      </label>
-      {hasOptions && !customMode ? (
-        <select className="form-input" value={value || ""} onChange={e => {
-          if (e.target.value === "__custom__") { setCustomMode(true); onChange(""); return; }
-          onChange(e.target.value);
-        }}>
-          <option value="">Seleccioná...</option>
-          {attr.values.map(v => <option key={v.id || v.name} value={v.name}>{v.name}</option>)}
-          <option value="__custom__">No está en la lista (escribir)...</option>
-        </select>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <input
-            className="form-input"
-            type={isNumberUnit ? "number" : "text"}
-            value={value || ""}
-            onChange={e => onChange(e.target.value)}
-          />
-          {hasOptions && (
-            <button type="button" onClick={() => { setCustomMode(false); onChange(""); }}
-              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: ".74rem", color: "var(--brand,#4db81a)", textAlign: "left" }}>
-              Elegir de la lista
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Estado de una publicación — etiqueta de texto en vez de un switch, que no aclaraba
 // si activaba, pausaba o sincronizaba. ────────────────────────────────────────────
@@ -1830,6 +1618,7 @@ function statusMeta(status, pauseReason) {
   if (status === "paused" && pauseReason === "stock") return { label: "Sin stock", color: "#d97706", bg: "rgba(217,119,6,.1)" };
   if (status === "paused" && pauseReason === "charge_failed") return { label: "Error de cobro", color: "#ef4444", bg: "rgba(239,68,68,.1)" };
   if (status === "paused") return { label: "Pausado", color: "#6b7280", bg: "rgba(107,114,128,.12)" };
+  if (status === "closed") return { label: "Cerrada en ML", color: "#ef4444", bg: "rgba(239,68,68,.1)" };
   return { label: status, color: "#6b7280", bg: "rgba(107,114,128,.12)" };
 }
 
@@ -1875,7 +1664,7 @@ const LISTING_SORTS = [
   { id: "stock",   label: "Mayor stock" },
 ];
 
-function ListingsSection({ listings, statsByItem, onToggleStatus }) {
+function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [sortBy, setSortBy] = useState("updated");
@@ -1890,6 +1679,25 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [showSort]);
+
+  // Menú "..." por fila — un solo estado compartido (qué fila está abierta) en vez de un
+  // useState/effect por cada publicación, mismo criterio que showSort de arriba. menuRef se
+  // reasigna solo al contenedor de la fila actualmente abierta (las demás no lo reciben).
+  const [openMenuFor, setOpenMenuFor] = useState(null);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!openMenuFor) return;
+    function onClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpenMenuFor(null);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [openMenuFor]);
+
+  // Filas que agrupan variantes de una misma familia — expandidas por default para que no
+  // parezca que faltan publicaciones (la mayoría de las filas son solitarias y no cambian nada
+  // visualmente, esto solo aplica cuando ml_family_id se repite).
+  const [expandedFamilies, setExpandedFamilies] = useState(() => new Set());
 
   // Si el vendedor publicó todo con la misma cuenta de ML, no tiene sentido mostrar de cuál —
   // solo aporta cuando hay publicaciones de más de una cuenta distinta (alternó conexiones).
@@ -1913,6 +1721,19 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
     else sorted.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     return sorted;
   }, [listings, filter, query, sortBy]);
+
+  // Agrupa las filas que comparten familia (variantes de un mismo producto) para mostrarlas
+  // juntas — una fila sin ml_family_id (la inmensa mayoría hoy) queda como grupo de una sola,
+  // se ve exactamente igual que antes de esto.
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const l of filtered) {
+      const key = l.ml_family_id || `solo:${l.ml_item_id}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(l);
+    }
+    return [...map.values()];
+  }, [filtered]);
 
   if (listings.length === 0) {
     return (
@@ -1967,76 +1788,130 @@ function ListingsSection({ listings, statsByItem, onToggleStatus }) {
         </p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {filtered.map(l => {
-            const stats = statsByItem[l.ml_item_id];
+          {groups.map(group => {
+            if (group.length === 1) return renderRow(group[0]);
+            const familyId = group[0].ml_family_id;
+            const expanded = expandedFamilies.has(familyId);
+            const cover = group[0];
             return (
-            <div key={l.ml_item_id} className="ml-listing-card">
-              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ width: 64, height: 64, borderRadius: 9, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
-                  {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                </div>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <div style={{
-                      fontWeight: 600, fontSize: ".86rem", display: "-webkit-box",
-                      WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-                    }}>
-                      {l.product_name}
-                    </div>
-                    <StatusLabel status={l.status} pauseReason={l.pause_reason} compact />
+              <div key={familyId} className="ml-listing-card" style={{ padding: expanded ? undefined : "10px 14px" }}>
+                <button type="button" onClick={() => setExpandedFamilies(prev => {
+                  const next = new Set(prev);
+                  next.has(familyId) ? next.delete(familyId) : next.add(familyId);
+                  return next;
+                })} style={{
+                  display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  background: "none", border: "none", cursor: "pointer", padding: 0, textAlign: "left",
+                }}>
+                  {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                  <div style={{ width: 40, height: 40, borderRadius: 7, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
+                    {cover.image_url && <img src={cover.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                   </div>
-                  <div style={{ fontSize: ".73rem", color: "var(--text-secondary)", marginTop: 3 }}>
-                    SKU {l.sku || "—"} · ${Number(stats?.price ?? l.price ?? 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
-                    {showAccount && (
-                      <span style={{
-                        marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "1px 7px",
-                        borderRadius: 99, background: "var(--surface-2,#f3f4f6)", color: "var(--text-secondary)",
-                      }}>
-                        {l.ml_account_nickname || l.ml_account_id}
-                      </span>
-                    )}
+                  <span style={{ fontWeight: 600, fontSize: ".86rem", flex: 1 }}>{cover.product_name}</span>
+                  <span className="badge badge--gray"><Layers size={11} /> {group.length} variantes</span>
+                </button>
+                {expanded && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+                    {group.map(l => renderRow(l, true))}
                   </div>
-                  <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", marginTop: 2 }}>
-                    {stats && `${stats.visits} visitas`}
-                    {stats?.health != null && ` · Calidad: ${Math.round(stats.health.pct * 100)}%`}
-                    {` · Actualizado ${new Date(l.updated_at).toLocaleDateString("es-AR")}`}
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  {l.permalink && (
-                    <a href={l.permalink} target="_blank" rel="noreferrer" className="ml-icon-btn" title="Ver publicación">
-                      <Eye size={13} />
-                    </a>
-                  )}
-                  <a href={editUrl(l.ml_item_id)} target="_blank" rel="noreferrer" className="ml-icon-btn" title="Editar en Mercado Libre">
-                    <Pencil size={13} />
-                  </a>
-                  <button type="button" className="btn btn--ghost btn--sm" style={{ whiteSpace: "nowrap" }}
-                    onClick={() => onToggleStatus(l.ml_item_id, l.status === "active" ? "paused" : "active")}>
-                    {l.status === "active" ? <PauseCircle size={13} /> : <CheckCircle2 size={13} />}
-                    {l.status === "active" ? "Pausar" : "Activar"}
-                  </button>
-                </div>
+                )}
               </div>
-              {stats?.fees && (
-                <div className="ml-fee-box">
-                  <div className="ml-fee-box__item">
-                    <span className="ml-fee-box__label">Cargo por vender</span>
-                    <span className="ml-fee-box__value">${Math.round(stats.fees.saleFeeAmount).toLocaleString("es-AR")}</span>
-                  </div>
-                  <div className="ml-fee-box__item">
-                    <span className="ml-fee-box__label">Recibís</span>
-                    <span className="ml-fee-box__value ml-fee-box__value--main">${Math.round(stats.fees.netAmount).toLocaleString("es-AR")}</span>
-                  </div>
-                </div>
-              )}
-            </div>
             );
           })}
         </div>
       )}
     </div>
   );
+
+  function renderRow(l, nested = false) {
+    const stats = statsByItem[l.ml_item_id];
+    const canAddVariants = !l.ml_combo_id && l.published_as_family !== false && l.status !== "closed";
+    return (
+      <div key={l.ml_item_id} className={nested ? undefined : "ml-listing-card"}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ width: 64, height: 64, borderRadius: 9, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
+            {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{
+                fontWeight: 600, fontSize: ".86rem", display: "-webkit-box",
+                WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+              }}>
+                {l.product_name}
+              </div>
+              {l.variant_value && <span className="badge badge--gray">{l.variant_value}</span>}
+              <StatusLabel status={l.status} pauseReason={l.pause_reason} compact />
+            </div>
+            <div style={{ fontSize: ".73rem", color: "var(--text-secondary)", marginTop: 3 }}>
+              SKU {l.sku || "—"} · ${Number(stats?.price ?? l.price ?? 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
+              {showAccount && (
+                <span style={{
+                  marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "1px 7px",
+                  borderRadius: 99, background: "var(--surface-2,#f3f4f6)", color: "var(--text-secondary)",
+                }}>
+                  {l.ml_account_nickname || l.ml_account_id}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: ".7rem", color: "var(--text-secondary)", marginTop: 2 }}>
+              {stats && `${stats.visits} visitas`}
+              {stats?.health != null && ` · Calidad: ${Math.round(stats.health.pct * 100)}%`}
+              {` · Actualizado ${new Date(l.updated_at).toLocaleDateString("es-AR")}`}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {l.permalink && (
+              <a href={l.permalink} target="_blank" rel="noreferrer" className="ml-icon-btn" title="Ver publicación">
+                <Eye size={13} />
+              </a>
+            )}
+            <a href={editUrl(l.ml_item_id)} target="_blank" rel="noreferrer" className="ml-icon-btn" title="Editar en Mercado Libre">
+              <Pencil size={13} />
+            </a>
+            {l.status !== "closed" && (
+              <button type="button" className="btn btn--ghost btn--sm" style={{ whiteSpace: "nowrap" }}
+                onClick={() => onToggleStatus(l.ml_item_id, l.status === "active" ? "paused" : "active")}>
+                {l.status === "active" ? <PauseCircle size={13} /> : <CheckCircle2 size={13} />}
+                {l.status === "active" ? "Pausar" : "Activar"}
+              </button>
+            )}
+            {onAddVariants && (
+              <div ref={openMenuFor === l.ml_item_id ? menuRef : null} style={{ position: "relative" }}>
+                <button type="button" className="ml-icon-btn" title="Más opciones"
+                  onClick={() => setOpenMenuFor(v => v === l.ml_item_id ? null : l.ml_item_id)}>
+                  <MoreVertical size={13} />
+                </button>
+                {openMenuFor === l.ml_item_id && (
+                  <div className="ml-sort-popover" style={{ right: 0, left: "auto" }}>
+                    <button type="button" className="ml-sort-popover__item" disabled={!canAddVariants}
+                      title={canAddVariants ? undefined : l.status === "closed"
+                        ? "Esta publicación ya no está activa en Mercado Libre"
+                        : "Esta categoría de Mercado Libre no admite variantes"}
+                      onClick={() => { setOpenMenuFor(null); onAddVariants(l); }}>
+                      <Layers size={13} /> Agregar variantes
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+        {stats?.fees && (
+          <div className="ml-fee-box">
+            <div className="ml-fee-box__item">
+              <span className="ml-fee-box__label">Cargo por vender</span>
+              <span className="ml-fee-box__value">${Math.round(stats.fees.saleFeeAmount).toLocaleString("es-AR")}</span>
+            </div>
+            <div className="ml-fee-box__item">
+              <span className="ml-fee-box__label">Recibís</span>
+              <span className="ml-fee-box__value ml-fee-box__value--main">${Math.round(stats.fees.netAmount).toLocaleString("es-AR")}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 }
 
 // ── Resumen — lo primero que ve el vendedor, responde "¿está todo bien?" sin
@@ -2149,6 +2024,7 @@ export default function MercadoLibre() {
   const [comboToPublish, setComboToPublish] = useState(null);
   const [publishSuccess, setPublishSuccess] = useState(null);
   const [publishPending, setPublishPending] = useState(null);
+  const [variantsTarget, setVariantsTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("summary");
   const [listingError, setListingError] = useState("");
@@ -2366,7 +2242,7 @@ export default function MercadoLibre() {
                   {listingError && (
                     <p style={{ margin: "0 0 14px", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{listingError}</p>
                   )}
-                  <ListingsSection listings={listings} statsByItem={listingStats} onToggleStatus={toggleListingStatus} />
+                  <ListingsSection listings={listings} statsByItem={listingStats} onToggleStatus={toggleListingStatus} onAddVariants={setVariantsTarget} />
                 </div>
               )}
 
@@ -2401,35 +2277,44 @@ export default function MercadoLibre() {
             />
           )}
 
+          {variantsTarget && (
+            <PublishVariantsModal
+              rootListing={variantsTarget}
+              siblings={listings.filter(l => variantsTarget.ml_family_id && l.ml_family_id === variantsTarget.ml_family_id && l.ml_item_id !== variantsTarget.ml_item_id)}
+              onClose={() => setVariantsTarget(null)}
+              onSaved={() => { setVariantsTarget(null); loadAll(); }}
+            />
+          )}
+
           {publishPending && createPortal(
             <div style={{
-              position: "fixed", bottom: 24, left: 24, zIndex: 7000, maxWidth: 300,
+              position: "fixed", bottom: 24, left: 24, zIndex: 7000, maxWidth: 320,
               background: "#fff", border: "1px solid var(--border,#e2e8f0)", borderRadius: 999,
-              boxShadow: "0 8px 24px rgba(0,0,0,.14)", padding: "9px 16px 9px 12px",
-              display: "flex", alignItems: "center", gap: 8,
+              boxShadow: "0 10px 28px rgba(0,0,0,.16)", padding: "11px 20px 11px 14px",
+              display: "flex", alignItems: "center", gap: 10,
             }}>
-              <Loader2 size={15} className="spin" style={{ flexShrink: 0, color: "var(--text-secondary)" }} />
-              <span style={{ fontSize: ".8rem", fontWeight: 600, color: "var(--text)" }}>Publicando en Mercado Libre...</span>
+              <Loader2 size={16} className="spin" style={{ flexShrink: 0, color: "var(--brand,#4db81a)" }} />
+              <span style={{ fontSize: ".84rem", fontWeight: 700, color: "var(--text)" }}>Publicando en Mercado Libre...</span>
             </div>,
             document.body
           )}
 
           {publishSuccess && createPortal(
             <div style={{
-              position: "fixed", bottom: 24, left: 24, zIndex: 7000, maxWidth: 380,
-              background: "#fff", border: "1px solid var(--success,#059669)", borderRadius: 12,
-              boxShadow: "0 12px 32px rgba(0,0,0,.16)", padding: "16px 18px",
-              display: "flex", flexDirection: "column", gap: 10,
+              position: "fixed", bottom: 24, left: 24, zIndex: 7000, maxWidth: 400,
+              background: "#fff", border: "1px solid var(--border)", borderRadius: 16,
+              boxShadow: "0 16px 40px rgba(0,0,0,.18)", padding: "18px 20px",
+              display: "flex", flexDirection: "column", gap: 14,
             }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                <CheckCircle2 size={20} color="var(--success,#059669)" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <IconBadge icon={CheckCircle2} color="var(--success,#059669)" bg="rgba(5,150,105,.12)" size={40} iconSize={20} />
                 <div style={{ flex: 1 }}>
-                  <strong style={{ fontSize: ".9rem" }}>¡Publicado en Mercado Libre!</strong>
-                  <p style={{ margin: "2px 0 0", fontSize: ".8rem", color: "var(--text-secondary)" }}>
+                  <strong style={{ fontSize: ".94rem", fontWeight: 800 }}>¡Publicado en Mercado Libre!</strong>
+                  <p style={{ margin: "3px 0 0", fontSize: ".82rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
                     Tu producto ya está publicado en tu cuenta de Mercado Libre.
                   </p>
                   {publishSuccess.shipping_free && publishSuccess.requestedShippingFree === false && (
-                    <p style={{ margin: "6px 0 0", fontSize: ".78rem", color: "#92400e", background: "rgba(217,119,6,.1)", padding: "6px 8px", borderRadius: 6 }}>
+                    <p style={{ margin: "8px 0 0", fontSize: ".78rem", color: "#92400e", background: "rgba(217,119,6,.1)", padding: "7px 9px", borderRadius: 8 }}>
                       Mercado Libre exige envío gratis para este producto a este precio — se activó automáticamente.
                     </p>
                   )}
@@ -2449,6 +2334,12 @@ export default function MercadoLibre() {
                   Editar
                 </a>
               </div>
+              {publishSuccess.product_id && (
+                <button type="button" className="btn btn--ghost btn--sm" style={{ justifyContent: "center" }}
+                  onClick={() => { setVariantsTarget(publishSuccess); setPublishSuccess(null); }}>
+                  <Layers size={13} /> Agregar variantes
+                </button>
+              )}
             </div>,
             document.body
           )}
