@@ -28,3 +28,11 @@ export function readyImageCount(imageOrder, newPictures) {
     item.type === "existing" || newPictures.find(p => p.previewUrl === item.previewUrl)?.ref
   ).length;
 }
+
+// Umbral real de Mercado Libre Argentina a partir del cual el envío gratis deja de ser
+// opcional y pasa a ser obligatorio para el vendedor (público en su centro de ayuda). Mercado
+// Libre lo actualiza de tanto en tanto y no hay ningún endpoint que lo devuelva — no hay forma
+// de leerlo de la API, así que este número hay que actualizarlo a mano cuando ML lo cambie.
+// Compartido entre el wizard de publicación propia y el de catálogo (PriceStep.jsx) para que
+// no queden dos copias del mismo número desincronizables.
+export const FREE_SHIPPING_MANDATORY_THRESHOLD_MLA = 33000;

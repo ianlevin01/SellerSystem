@@ -8,10 +8,11 @@ import {
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
-import { Modal, AttributeField, IconBadge } from "./ml/mlShared";
-import { formatNumberUnitValue, readyImageCount } from "./ml/mlUtils";
+import { Modal, AttributeField, IconBadge, WizardProgress, AddressBlockNotice } from "./ml/mlShared";
+import { formatNumberUnitValue, readyImageCount, FREE_SHIPPING_MANDATORY_THRESHOLD_MLA } from "./ml/mlUtils";
 import ImageOrderPicker from "./ml/ImageOrderPicker";
 import PublishVariantsModal from "./ml/PublishVariantsModal";
+import PriceStep from "./ml/PriceStep";
 
 const ML_SITE_NAMES = {
   MLA: "Argentina", MLB: "Brasil", MLM: "México",
@@ -697,55 +698,7 @@ function WalletSection({ wallet, onChanged }) {
 const WIZARD_STEPS = ["Categoría", "Características principales", "Fotos", "Título", "Características secundarias", "Descripción", "Precio"];
 const WIZARD_STEP_ICONS = [LayoutGrid, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag];
 
-function WizardProgress({ step, total }) {
-  return (
-    <div className="ml-wizard-progress">
-      {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className="ml-wizard-progress__item">
-          <div
-            className={`ml-wizard-progress__circle${i < step ? " is-done" : ""}${i === step ? " is-active" : ""}`}
-            title={WIZARD_STEPS[i]}
-          >
-            {i < step ? <CheckCircle2 size={14} /> : i + 1}
-          </div>
-          {i < total - 1 && <div className={`ml-wizard-progress__line${i < step ? " is-done" : ""}`} />}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // Umbral real de Mercado Libre Argentina a partir del cual el envío gratis deja de ser
-// opcional y pasa a ser obligatorio para el vendedor (público en su centro de ayuda). Mercado
-// Libre lo actualiza de tanto en tanto y no hay ningún endpoint que lo devuelva — no hay forma
-// de leerlo de la API, así que este número hay que actualizarlo a mano cuando ML lo cambie.
-const FREE_SHIPPING_MANDATORY_THRESHOLD_MLA = 33000;
-
-// Pantalla de bloqueo compartida por PublishModal y PublishComboModal — se muestra en vez del
-// wizard cuando el domicilio de despacho de la cuenta de ML no coincide con el depósito real de
-// Ventaz (ver mlListingService.getShippingAddressInfo). El backend igual rechaza el publish si
-// se intenta igual (defensa en profundidad), esto es solo para no dejar entrar al wizard.
-function AddressBlockNotice({ addressStatus, onRecheck, checking }) {
-  return (
-    <div style={{ textAlign: "center", maxWidth: 400, margin: "0 auto", padding: "8px 4px 14px" }}>
-      <IconBadge icon={AlertTriangle} color="#d97706" bg="rgba(217,119,6,.12)" />
-      <h4 style={{ margin: "16px 0 8px", fontSize: "1.15rem", fontWeight: 800 }}>No podés publicar todavía</h4>
-      <p style={{ margin: "0 0 24px", fontSize: ".88rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-        El domicilio de despacho cargado en tu cuenta de Mercado Libre
-        {addressStatus?.currentAddress ? ` (${addressStatus.currentAddress})` : ""} no coincide con el depósito
-        de Ventaz ({addressStatus?.warehouseAddress}). Cambialo en Mercado Libre y volvé a revisar.
-      </p>
-      <a href={addressStatus?.changeAddressUrl} target="_blank" rel="noreferrer" className="btn btn--primary"
-        style={{ width: "100%", padding: "13px", fontSize: ".96rem", justifyContent: "center", marginBottom: 10 }}>
-        Cambiar dirección
-      </a>
-      <button type="button" onClick={onRecheck} disabled={checking}
-        style={{ background: "none", border: "none", cursor: "pointer", fontSize: ".84rem", color: "var(--text-secondary)", textDecoration: "underline" }}>
-        {checking ? <Loader2 size={13} className="spin" /> : "Ya la cambié, revisar de nuevo"}
-      </button>
-    </div>
-  );
-}
 
 function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) {
   const [localAddressStatus, setLocalAddressStatus] = useState(addressStatus);
@@ -772,7 +725,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   const [volumeCm3, setVolumeCm3] = useState(0);
   const [shippingFree, setShippingFree] = useState(false);
   // "none" = sin cuotas (interés lo paga el comprador/banco) — o el id de una de las campañas
-  // reales de ML que vengan en fees.installmentOptions (cuota-simple-3/6/9/12, pcj-co-funded).
+  // reales de ML que vengan en fees.installmentOptions (3x_campaign/9x_campaign/12x_campaign, pcj-co-funded).
   const [selectedInstallment, setSelectedInstallment] = useState("none");
 
   const shippingFreeMandatory = siteId === "MLA" && Number(price) >= FREE_SHIPPING_MANDATORY_THRESHOLD_MLA;
@@ -891,7 +844,12 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   const shippingCost      = shippingFree && shippingCostKnown ? Number(fees.shippingCost) : 0;
   const installmentsCost  = selectedOption ? Number(selectedOption.extraCost || 0) : 0;
   const netFinal    = fees ? Number(fees.netAmount) - shippingCost - installmentsCost : null;
-  const sellingAtLoss = netFinal != null && priceFloor != null && netFinal < priceFloor;
+  // Ganancia real = lo que efectivamente deposita Mercado Pago menos el costo del producto
+  // (antes solo se mostraba "Recibís", que el vendedor podía confundir con ganancia sin notar
+  // que no restaba el costo). % sobre el precio de venta (margen), no sobre el costo.
+  const ganancia    = netFinal != null && priceFloor != null ? netFinal - priceFloor : null;
+  const gananciaPct = ganancia != null && Number(price) > 0 ? (ganancia / Number(price)) * 100 : null;
+  const margenTier  = ganancia == null ? null : ganancia < 0 ? "loss" : gananciaPct >= 8 ? "good" : "thin";
 
   function goBack() { setError(""); setStep(s => Math.max(0, s - 1)); }
 
@@ -949,7 +907,11 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       const res = await client.post("/seller/ml/pictures/generate",
         { productName: product.name, description, imageUrls: existingImages.map(i => i.url), userPrompt },
         { timeout: 90000 });
+      // ImageOrderPicker dibuja imageOrder, no newPictures — sin esto la imagen se generaba y
+      // quedaba guardada en el estado, pero nunca aparecía en pantalla ni contaba para validar
+      // "al menos una foto seleccionada" (mismo patrón que ya usa handleFileUpload).
       setNewPictures(prev => [...prev, { previewUrl: res.data.previewUrl, ref: res.data.ref, uploading: false }]);
+      setImageOrder(prev => [...prev, { type: "new", previewUrl: res.data.previewUrl }]);
     } catch (err) {
       console.error("[ml] generateImageAi:", err);
       setError(err.response?.data?.message || "No se pudo generar la imagen");
@@ -1062,7 +1024,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
         </div>
       </>
     }>
-      <WizardProgress step={step} total={WIZARD_STEPS.length} />
+      <WizardProgress step={step} total={WIZARD_STEPS.length} steps={WIZARD_STEPS} />
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <IconBadge icon={WIZARD_STEP_ICONS[step]} size={40} iconSize={19} />
         <h4 style={{ margin: 0, fontSize: "1.12rem", fontWeight: 800 }}>{WIZARD_STEPS[step]}</h4>
@@ -1176,115 +1138,13 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
       )}
 
       {step === 6 && (
-        <div>
-          <label style={{ fontSize: ".82rem", fontWeight: 700, display: "block", marginBottom: 8 }}>Precio en Mercado Libre</label>
-          <div style={{
-            display: "flex", alignItems: "baseline", gap: 4, padding: "14px 18px", borderRadius: 14, marginBottom: 6,
-            background: "var(--surface-2,#f9fafb)", border: price && !priceValid ? "1px solid var(--danger,#ef4444)" : "1px solid transparent",
-          }}>
-            <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-secondary)" }}>$</span>
-            <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0"
-              style={{ border: "none", background: "none", outline: "none", fontSize: "1.7rem", fontWeight: 800, color: "var(--text)", width: "100%" }} />
-          </div>
-          {priceFloor != null && (
-            <small style={{ display: "block", marginBottom: 14, color: "var(--text-secondary)" }}>
-              Costo total: ${Math.round(priceFloor).toLocaleString("es-AR")}
-            </small>
-          )}
-
-          {weightGrams > 0 && (
-            <button type="button"
-              className={`ml-cuota-card ml-toggle-card${shippingFree ? " is-active" : ""}${shippingFreeMandatory ? " is-locked" : ""}`}
-              style={{ marginBottom: 16 }}
-              disabled={shippingFreeMandatory}
-              onClick={() => setShippingFree(v => !v)}>
-              <span className="ml-toggle-card__box" />
-              <span className="ml-cuota-card__body">
-                <span className="ml-cuota-card__label">Ofrecer envío gratis</span>
-                <span className="ml-cuota-card__desc">
-                  {shippingFreeMandatory
-                    ? `Obligatorio: Mercado Libre lo exige a partir de $${FREE_SHIPPING_MANDATORY_THRESHOLD_MLA.toLocaleString("es-AR")} y este producto lo supera.`
-                    : "A veces Mercado Libre lo exige a partir de cierto precio o categoría — si publicás sin tildarlo y ML lo requiere igual, lo activamos automáticamente y te avisamos."}
-                </span>
-              </span>
-              <span className="ml-cuota-card__price">
-                {feesLoading ? "…" : shippingCostKnown
-                  ? `$${Math.round(fees.shippingCost).toLocaleString("es-AR")}`
-                  : (fees ? "No calculado" : "—")}
-              </span>
-            </button>
-          )}
-
-          {installmentOptions.length > 0 && (
-            <div style={{ marginTop: weightGrams > 0 ? 6 : 0, marginBottom: 6 }}>
-              <p style={{ fontSize: ".82rem", fontWeight: 700, marginBottom: 8 }}>Agregá cuotas y vendé más</p>
-              <div className="ml-cuota-list">
-                <button type="button"
-                  className={`ml-cuota-card${selectedInstallment === "none" ? " is-active" : ""}`}
-                  onClick={() => setSelectedInstallment("none")}>
-                  <span className="ml-cuota-card__radio" />
-                  <span className="ml-cuota-card__body">
-                    <span className="ml-cuota-card__label">No quiero agregar cuotas</span>
-                    <span className="ml-cuota-card__desc">Tus compradores igual tienen cuotas con el interés que cobran los bancos.</span>
-                  </span>
-                  <span className="ml-cuota-card__price">Sin costo</span>
-                </button>
-                {installmentOptions.map(opt => (
-                  <button key={opt.id} type="button"
-                    className={`ml-cuota-card${selectedInstallment === opt.id ? " is-active" : ""}`}
-                    onClick={() => setSelectedInstallment(opt.id)}>
-                    <span className="ml-cuota-card__radio" />
-                    <span className="ml-cuota-card__body">
-                      {opt.badge && <span className="ml-cuota-card__badge">{opt.badge}</span>}
-                      <span className="ml-cuota-card__label">
-                        {opt.label}{opt.percentageFee != null && ` (${opt.percentageFee.toFixed(1).replace(".0", "")}%)`}
-                      </span>
-                      {opt.desc && <span className="ml-cuota-card__desc">{opt.desc}</span>}
-                    </span>
-                    <span className="ml-cuota-card__price">${Math.round(opt.extraCost).toLocaleString("es-AR")}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {priceValid && categoryId && (
-            feesLoading ? (
-              <p style={{ fontSize: ".82rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 6, marginBottom: 16 }}>
-                <Loader2 size={12} className="spin" /> Calculando comisión...
-              </p>
-            ) : fees ? (
-              <div style={{ marginBottom: 16, padding: "6px 18px", border: "1px solid var(--border)", borderRadius: 14 }}>
-                {[
-                  ["Precio de venta", `$${Math.round(Number(price)).toLocaleString("es-AR")}`],
-                  ["Cargo por vender", `-$${Math.round(fees.saleFeeAmount).toLocaleString("es-AR")}`],
-                  ...(selectedOption ? [["Costo por ofrecer cuotas", `-$${Math.round(installmentsCost).toLocaleString("es-AR")}`]] : []),
-                  ...(shippingFree ? [["Costo por envío", shippingCostKnown ? `-$${Math.round(shippingCost).toLocaleString("es-AR")}` : "No calculado"]] : []),
-                  ["Impuestos estimados", "$0"],
-                ].map(([label, value]) => (
-                  <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: ".84rem", color: "var(--text-secondary)" }}>{label}</span>
-                    <strong style={{ fontSize: ".88rem" }}>{value}</strong>
-                  </div>
-                ))}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0" }}>
-                  <span style={{ fontSize: ".9rem", fontWeight: 700 }}>Recibís</span>
-                  <strong style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--success,#059669)" }}>${Math.round(netFinal).toLocaleString("es-AR")}</strong>
-                </div>
-              </div>
-            ) : (
-              <p style={{ fontSize: ".78rem", color: "var(--text-secondary)", marginBottom: 16 }}>No se pudo calcular la comisión</p>
-            )
-          )}
-
-          {sellingAtLoss && (
-            <p style={{ margin: "0 0 16px", padding: "10px 12px", background: "rgba(239,68,68,.1)",
-              border: "1px solid var(--danger,#ef4444)", borderRadius: 8, fontSize: ".8rem",
-              color: "var(--danger,#ef4444)", fontWeight: 600 }}>
-              ⚠ Estás vendiendo a pérdida: lo que recibís (${Math.round(netFinal).toLocaleString("es-AR")}) es menor al costo del producto (${Math.round(priceFloor).toLocaleString("es-AR")}).
-            </p>
-          )}
-        </div>
+        <PriceStep
+          price={price} setPrice={setPrice} priceValid={priceValid} priceFloor={priceFloor}
+          showShippingToggle={weightGrams > 0} shippingFree={shippingFree} setShippingFree={setShippingFree} shippingFreeMandatory={shippingFreeMandatory}
+          feesLoading={feesLoading} fees={fees} shippingCostKnown={shippingCostKnown} shippingCost={shippingCost}
+          installmentOptions={installmentOptions} selectedInstallment={selectedInstallment} setSelectedInstallment={setSelectedInstallment} installmentsCost={installmentsCost}
+          hasCategory={!!categoryId} netFinal={netFinal} ganancia={ganancia} gananciaPct={gananciaPct} margenTier={margenTier}
+        />
       )}
 
       {mlMissingAttr && step === WIZARD_STEPS.length - 1 && (
@@ -2316,6 +2176,11 @@ export default function MercadoLibre() {
                   {publishSuccess.shipping_free && publishSuccess.requestedShippingFree === false && (
                     <p style={{ margin: "8px 0 0", fontSize: ".78rem", color: "#92400e", background: "rgba(217,119,6,.1)", padding: "7px 9px", borderRadius: 8 }}>
                       Mercado Libre exige envío gratis para este producto a este precio — se activó automáticamente.
+                    </p>
+                  )}
+                  {publishSuccess.installmentTagsApplied === false && (
+                    <p style={{ margin: "8px 0 0", fontSize: ".78rem", color: "#92400e", background: "rgba(217,119,6,.1)", padding: "7px 9px", borderRadius: 8 }}>
+                      Mercado Libre no aceptó la campaña de cuotas que elegiste (a veces exige producto de fabricación nacional u otro requisito puntual) — se publicó igual, con el plan de cuotas estándar. El cargo por vender real puede ser distinto al que viste antes de publicar: revisalo en tu publicación de Mercado Libre.
                     </p>
                   )}
                 </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { X, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { unitFor } from "./mlUtils";
 
 // Insignia con ícono redondeado — mismo tratamiento visual que ya se usa en el primer paso de
@@ -14,6 +14,53 @@ export function IconBadge(props) {
       display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
     }}>
       <Icon size={iconSize} color={color} />
+    </div>
+  );
+}
+
+// Círculos de progreso del wizard — recibe los labels por prop (`steps`) en vez de leer una
+// constante de módulo fija, para que wizards de largo distinto (el de publicación propia de 7
+// pasos, el de catálogo de 2) puedan compartir el mismo componente visual.
+export function WizardProgress({ step, total, steps }) {
+  return (
+    <div className="ml-wizard-progress">
+      {Array.from({ length: total }).map((_, i) => (
+        <div key={i} className="ml-wizard-progress__item">
+          <div
+            className={`ml-wizard-progress__circle${i < step ? " is-done" : ""}${i === step ? " is-active" : ""}`}
+            title={steps[i]}
+          >
+            {i < step ? <CheckCircle2 size={14} /> : i + 1}
+          </div>
+          {i < total - 1 && <div className={`ml-wizard-progress__line${i < step ? " is-done" : ""}`} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Pantalla de bloqueo compartida por los distintos modales de publicar — se muestra en vez del
+// wizard cuando el domicilio de despacho de la cuenta de ML no coincide con el depósito real de
+// Ventaz (ver mlListingService.getShippingAddressInfo). El backend igual rechaza el publish si
+// se intenta igual (defensa en profundidad), esto es solo para no dejar entrar al wizard.
+export function AddressBlockNotice({ addressStatus, onRecheck, checking }) {
+  return (
+    <div style={{ textAlign: "center", maxWidth: 400, margin: "0 auto", padding: "8px 4px 14px" }}>
+      <IconBadge icon={AlertTriangle} color="#d97706" bg="rgba(217,119,6,.12)" />
+      <h4 style={{ margin: "16px 0 8px", fontSize: "1.15rem", fontWeight: 800 }}>No podés publicar todavía</h4>
+      <p style={{ margin: "0 0 24px", fontSize: ".88rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+        El domicilio de despacho cargado en tu cuenta de Mercado Libre
+        {addressStatus?.currentAddress ? ` (${addressStatus.currentAddress})` : ""} no coincide con el depósito
+        de Ventaz ({addressStatus?.warehouseAddress}). Cambialo en Mercado Libre y volvé a revisar.
+      </p>
+      <a href={addressStatus?.changeAddressUrl} target="_blank" rel="noreferrer" className="btn btn--primary"
+        style={{ width: "100%", padding: "13px", fontSize: ".96rem", justifyContent: "center", marginBottom: 10 }}>
+        Cambiar dirección
+      </a>
+      <button type="button" onClick={onRecheck} disabled={checking}
+        style={{ background: "none", border: "none", cursor: "pointer", fontSize: ".84rem", color: "var(--text-secondary)", textDecoration: "underline" }}>
+        {checking ? <Loader2 size={13} className="spin" /> : "Ya la cambié, revisar de nuevo"}
+      </button>
     </div>
   );
 }
