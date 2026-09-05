@@ -84,7 +84,10 @@ export default function Dashboard() {
     { label: "Ganancia total",     value: `$${fmt(totalGanancia)}`,   icon: TrendingUp,  color: "#16a34a", bg: "#f0fdf4" },
   ];
 
-  const profileIncomplete = !seller?.cvu;
+  // Los vendedores 100% Mercado Libre cobran directo por MP de ML, no por el circuito de
+  // payouts con CVU de Ventaz (ese es solo para ventas de tienda propia) — no tiene sentido
+  // pedirles que completen un CVU que nunca van a usar.
+  const profileIncomplete = seller?.onboarding_track !== "mercadolibre" && !seller?.cvu;
 
   return (
     <div>

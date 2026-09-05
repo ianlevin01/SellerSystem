@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, ChevronRight, ChevronLeft, MapPin } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
 
 // ─── Definición de tours por ruta ─────────────────────────────────────────────
 
@@ -241,13 +242,22 @@ const TOURS = {
   ],
 };
 
-function resolveSteps(pathname) {
-  if (TOURS[pathname]) return TOURS[pathname];
-  if (/^\/pages\/[^/]+\/products/.test(pathname)) return TOURS["/pages/:id/products"];
-  if (/^\/pages\/[^/]+\/discounts/.test(pathname)) return TOURS["/pages/:id/discounts"];
-  if (/^\/pages\/[^/]+\/integrations/.test(pathname)) return TOURS["/pages/:id/integrations"];
-  if (/^\/pages\/[^/]+/.test(pathname)) return TOURS["/pages/:id"];
-  return null;
+function resolveSteps(pathname, onboardingTrack) {
+  let steps = null;
+  if (TOURS[pathname]) steps = TOURS[pathname];
+  else if (/^\/pages\/[^/]+\/products/.test(pathname)) steps = TOURS["/pages/:id/products"];
+  else if (/^\/pages\/[^/]+\/discounts/.test(pathname)) steps = TOURS["/pages/:id/discounts"];
+  else if (/^\/pages\/[^/]+\/integrations/.test(pathname)) steps = TOURS["/pages/:id/integrations"];
+  else if (/^\/pages\/[^/]+/.test(pathname)) steps = TOURS["/pages/:id"];
+  if (!steps) return null;
+
+  // Los vendedores 100% Mercado Libre cobran directo por MP de ML, no configuran CVU en
+  // Ventaz (esa sección ni siquiera se les muestra en /profile) — mostrarles este paso
+  // apuntaría a algo que no existe en su pantalla.
+  if (pathname === "/profile" && onboardingTrack === "mercadolibre") {
+    steps = steps.filter(s => s.title !== "CVU para cobros");
+  }
+  return steps;
 }
 
 // ─── Posicionar el tooltip cerca del elemento ─────────────────────────────────
@@ -295,6 +305,7 @@ function getTooltipStyle(rect, position, tooltipSize = { w: 340, h: 180 }) {
 export default function GuidedTour() {
   const location  = useLocation();
   const navigate  = useNavigate();
+  const { seller } = useAuth();
   const [active, setActive]       = useState(false);
   const [steps,  setSteps]        = useState([]);
   const [stepIdx, setStepIdx]     = useState(0);
@@ -305,7 +316,7 @@ export default function GuidedTour() {
     const params = new URLSearchParams(location.search);
     if (params.get("guide") !== "true") return;
 
-    const tourSteps = resolveSteps(location.pathname);
+    const tourSteps = resolveSteps(location.pathname, seller?.onboarding_track);
     if (!tourSteps) return;
 
     // Limpiar el param de la URL

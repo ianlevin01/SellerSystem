@@ -59,7 +59,7 @@ function calculateAge(birthDate) {
 }
 
 export default function Profile() {
-  const { updateSeller, refreshSeller } = useAuth();
+  const { seller, updateSeller, refreshSeller } = useAuth();
   const avatarInputRef = useRef(null);
 
   const [form, setForm] = useState({
@@ -519,6 +519,10 @@ export default function Profile() {
           </section>
 
           {/* ── CVU / CBU ── */}
+          {/* Los vendedores 100% Mercado Libre cobran directo por MP de ML, no por el circuito
+              de payouts con CVU de Ventaz (ese es solo para ventas de tienda propia) — pedirles
+              un CVU que nunca van a usar es confuso. */}
+          {seller?.onboarding_track !== "mercadolibre" && (
           <section className="vtz-profile-card">
             <div className="vtz-profile-card__head">
               <div>
@@ -626,6 +630,7 @@ export default function Profile() {
               </div>
             )}
           </section>
+          )}
 
           <section className="vtz-profile-card vtz-profile-card--save">
             <ShieldCheck size={22} />
