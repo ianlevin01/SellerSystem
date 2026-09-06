@@ -893,7 +893,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     try {
       const res = await client.post("/seller/ml/suggest/attributes", {
         productName: product.name, description, categoryName,
-        attrDefs: pending.map(a => ({ id: a.id, name: a.name, values: a.values })),
+        attrDefs: pending.map(a => ({ id: a.id, name: a.name, values: a.values, valueType: a.valueType })),
         imageUrls: existingImages.map(i => i.url),
       });
       setAttrValues(prev => ({ ...prev, ...res.data.values }));
