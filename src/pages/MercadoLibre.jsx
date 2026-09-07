@@ -9,7 +9,7 @@ import {
 import client from "../api/client";
 import PageProducts from "./PageProducts";
 import { Modal, AttributeField, IconBadge, WizardProgress, AddressBlockNotice } from "./ml/mlShared";
-import { formatNumberUnitValue, readyImageCount, FREE_SHIPPING_MANDATORY_THRESHOLD_MLA } from "./ml/mlUtils";
+import { formatNumberUnitValue, readyImageCount, isValidAttrValue, FREE_SHIPPING_MANDATORY_THRESHOLD_MLA } from "./ml/mlUtils";
 import ImageOrderPicker from "./ml/ImageOrderPicker";
 import PublishVariantsModal from "./ml/PublishVariantsModal";
 import PriceStep from "./ml/PriceStep";
@@ -833,7 +833,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     return () => { cancelled = true; clearTimeout(timer); };
   }, [price, categoryId, weightGrams, volumeCm3]);
 
-  const missingAttrs = requiredAttrs.filter(a => !attrValues[a.id]?.trim());
+  const missingAttrs = requiredAttrs.filter(a => !isValidAttrValue(a, attrValues[a.id]));
 
   const installmentOptions = fees?.installmentOptions || [];
   const selectedOption     = installmentOptions.find(o => o.id === selectedInstallment) || null;
@@ -887,7 +887,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
   }
 
   async function suggestAttrsAi(attrsToFill) {
-    const pending = attrsToFill.filter(a => !attrValues[a.id]?.trim());
+    const pending = attrsToFill.filter(a => !isValidAttrValue(a, attrValues[a.id]));
     if (pending.length === 0) return;
     setSuggestingAttrs(true);
     try {
@@ -943,7 +943,7 @@ function PublishModal({ product, siteId, addressStatus, onClose, onPublished }) 
     setSaving(true); setError("");
     try {
       const attributes = attrDefs
-        .filter(a => attrValues[a.id]?.trim())
+        .filter(a => isValidAttrValue(a, attrValues[a.id]))
         .map(a => ({
           id: a.id,
           value_name: a.valueType === "number_unit" ? formatNumberUnitValue(a, attrValues[a.id]) : attrValues[a.id],
@@ -1241,7 +1241,7 @@ function PublishComboModal({ comboId, addressStatus, onClose, onPublished }) {
 
   const requiredAttrs = attrDefs.filter(a => a.required);
   const optionalAttrs = attrDefs.filter(a => !a.required);
-  const missingAttrs  = requiredAttrs.filter(a => !attrValues[a.id]?.trim());
+  const missingAttrs  = requiredAttrs.filter(a => !isValidAttrValue(a, attrValues[a.id]));
 
   const priceFloor = detail?.priceFloor ?? null;
   const priceValid = useMemo(() => {
@@ -1288,7 +1288,7 @@ function PublishComboModal({ comboId, addressStatus, onClose, onPublished }) {
     setSaving(true); setError("");
     try {
       const attributes = attrDefs
-        .filter(a => attrValues[a.id]?.trim())
+        .filter(a => isValidAttrValue(a, attrValues[a.id]))
         .map(a => ({
           id: a.id,
           value_name: a.valueType === "number_unit" ? formatNumberUnitValue(a, attrValues[a.id]) : attrValues[a.id],

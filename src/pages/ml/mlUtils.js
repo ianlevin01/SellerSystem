@@ -21,6 +21,25 @@ export function formatNumberUnitValue(attr, raw) {
   return `${trimmed} ${unitFor(attr)}`;
 }
 
+// Un valor cargado en attrValues puede quedar inválido sin que se note en pantalla — por
+// ejemplo, un <input type="number"> con un valor no numérico (una sugerencia de IA que no
+// siguió la instrucción de omitir lo que no sabe) se pinta vacío en el navegador, pero React
+// sigue teniendo ese valor viejo guardado hasta que algo lo pisa explícitamente. Se valida acá
+// (mismo criterio que stripInvalidAttributeValues del lado del backend) antes de contarlo como
+// "completo" — tanto para decidir qué mandarle a Mercado Libre como para el chequeo de
+// "Faltan completar" de los atributos obligatorios.
+export function isValidAttrValue(attr, rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) return false;
+  // "values" viene poblado en atributos que igual aceptan texto libre (ej. BRAND es "string"
+  // con marcas comunes sugeridas, pero acepta cualquier texto — confirmado contra la API real:
+  // su propio hint dice 'Genérica' como opción válida y no está en esa lista). Solo "list" es
+  // un enum cerrado de verdad, donde SÍ hay que exigir un match exacto.
+  if (attr.valueType === "list") return attr.values?.some(v => v.name === value) ?? false;
+  if (attr.valueType === "number_unit") return /^\d/.test(value);
+  return true;
+}
+
 // Imágenes del catálogo siempre cuentan (ya están subidas); las nuevas solo cuando terminaron
 // de subirse con éxito (tienen .ref) — mientras suben o si fallaron, no cuentan todavía.
 export function readyImageCount(imageOrder, newPictures) {
