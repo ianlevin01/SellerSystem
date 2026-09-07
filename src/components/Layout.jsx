@@ -4,6 +4,7 @@ import AiAssistant from "./AiAssistant";
 import TrialWelcomeModal, { TrialExpiredModal } from "./TrialWelcomeModal";
 import HowToUse from "./HowToUse";
 import GuidedTour, { GuidedTourStyles } from "./GuidedTour";
+import { PublishSessionProvider } from "../pages/ml/PublishSessionContext";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
@@ -404,7 +405,9 @@ export default function Layout() {
             </div>
           );
         })()}
-        <Outlet />
+        <PublishSessionProvider>
+          <Outlet />
+        </PublishSessionProvider>
       </main>
 
       <AiAssistant />

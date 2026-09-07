@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { X, CheckCircle2, AlertTriangle, Loader2, Minus } from "lucide-react";
 import { unitFor } from "./mlUtils";
 
 // Insignia con ícono redondeado — mismo tratamiento visual que ya se usa en el primer paso de
@@ -72,7 +72,13 @@ export function AddressBlockNotice({ addressStatus, onRecheck, checking }) {
 // queda FUERA del área con scroll, como tercer bloque fijo, para que nunca se pueda perder de
 // vista scrolleando el contenido (pasaba en el wizard de publicar: con muchas categorías
 // sugeridas, el botón "Siguiente" quedaba después de la lista y había que scrollear para verlo).
-export function Modal({ title, onClose, children, footer, maxWidth = 460 }) {
+// minimized/onMinimize son opt-in — sin onMinimize no aparece ningún botón nuevo, así que el
+// resto de los usos de Modal en la app quedan exactamente iguales. Con minimized=true, Modal no
+// pinta nada — el componente que lo llama (PublishModal, etc.) sigue montado en el árbol de
+// quien lo renderiza, con todo su estado y sus effects corriendo igual; solo se oculta la UI.
+export function Modal({ title, onClose, children, footer, maxWidth = 460, minimized = false, onMinimize }) {
+  if (minimized) return null;
+
   return createPortal(
     <div
       style={{
@@ -84,7 +90,19 @@ export function Modal({ title, onClose, children, footer, maxWidth = 460 }) {
     >
       <div className="card" style={{ maxWidth, width: "100%", padding: 0, maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 22px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-          <h3 style={{ margin: 0, fontSize: "1.02rem", fontWeight: 700 }}>{title}</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {onMinimize && (
+              <button type="button" onClick={onMinimize} title="Minimizar"
+                style={{
+                  background: "var(--brand-light,#eafbe0)", border: "none", borderRadius: 8, cursor: "pointer",
+                  color: "var(--brand,#4db81a)", display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 28, height: 28, flexShrink: 0,
+                }}>
+                <Minus size={16} />
+              </button>
+            )}
+            <h3 style={{ margin: 0, fontSize: "1.02rem", fontWeight: 700 }}>{title}</h3>
+          </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", display: "flex", padding: 4 }}>
             <X size={18} />
           </button>
