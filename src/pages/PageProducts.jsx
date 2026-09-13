@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import client from "../api/client";
+import { Modal } from "./ml/mlShared";
 import "../styles/Combos.css";
 import {
   AlertTriangle,
@@ -182,7 +183,7 @@ function MlCatalogImage({ product }) {
 // ── Card del catálogo en modo ML — el flujo acá es "elegir qué publicar", no fijar precio
 // de tienda propia (por eso no comparte el DOM del card de "Mis productos": ese arrastra
 // bloques de precio/promo/ganancia que nunca aplican del lado ML). ──────────────────────
-function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelected, saving, onPublish, onToggleCombo, onRequestSample, onReserve, canReserve }) {
+function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelected, saving, onPublish, onToggleCombo, onRequestSample, onReserve, canReserve, onShowInfo }) {
   return (
     <article className={`ml-catalog-card${comboMode && isSelected ? " is-selected" : ""}`}>
       <div className="ml-catalog-card__media">
@@ -225,6 +226,11 @@ function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelecte
                 <button type="button" className="ml-catalog-card__icon-btn" onClick={onReserve} disabled={!canReserve} title={canReserve ? "Reservar stock" : "Sin stock disponible para reservar"}>
                   <Package size={14} />
                 </button>
+                {product.admin_info && (
+                  <button type="button" className="ml-catalog-card__icon-btn" onClick={onShowInfo} title="Ver información del producto">
+                    <Info size={14} />
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -667,6 +673,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
   const [creatingCombo, setCreatingCombo] = useState(false);
   const [requestModal, setRequestModal] = useState(null);
   const [reserveModal, setReserveModal] = useState(null);
+  const [adminInfoModal, setAdminInfoModal] = useState(null);
   const [confirmBanner, setConfirmBanner] = useState(null);
   const [topSellingIds, setTopSellingIds] = useState(() => new Set());
   const debounceRef  = useRef(null);
@@ -1769,6 +1776,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
                   onRequestSample={() => setRequestModal(product)}
                   onReserve={() => setReserveModal(product)}
                   canReserve={Number(product.available_for_reserve || 0) > 0}
+                  onShowInfo={() => setAdminInfoModal(product)}
                 />
               );
             }
@@ -2027,6 +2035,17 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
                         <Package size={13} />
                         Reservar stock
                       </button>
+                      {product.admin_info && (
+                        <button
+                          type="button"
+                          className="seller-product-btn seller-product-btn--edit"
+                          style={{ flex: "0 0 auto", fontSize: 12, padding: "7px 10px" }}
+                          onClick={() => setAdminInfoModal(product)}
+                          title="Ver información del producto"
+                        >
+                          <Info size={13} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -2072,6 +2091,11 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
 
       {requestModal && <SellerRequestModal product={requestModal} onClose={() => setRequestModal(null)} pageId={pageId} />}
       {reserveModal && <StockReserveModal product={reserveModal} onClose={() => setReserveModal(null)} pageId={pageId} />}
+      {adminInfoModal && (
+        <Modal title={productName(adminInfoModal)} onClose={() => setAdminInfoModal(null)} maxWidth={480}>
+          <p style={{ whiteSpace: "pre-wrap", fontSize: ".88rem", lineHeight: 1.6, margin: 0 }}>{adminInfoModal.admin_info}</p>
+        </Modal>
+      )}
 
     </div>
   );

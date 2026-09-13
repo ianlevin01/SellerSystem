@@ -185,7 +185,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
   async function suggestTitleAi() {
     setSuggestingTitle(true);
     try {
-      const res = await client.post("/seller/ml/suggest/title", { productName: product.name, categoryName });
+      const res = await client.post("/seller/ml/suggest/title", { productName: product.name, categoryName, adminInfo: product.admin_info });
       setTitle(res.data.title);
     } catch { setError("No se pudo generar el título"); }
     finally { setSuggestingTitle(false); }
@@ -197,6 +197,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
       const res = await client.post("/seller/ml/suggest/description", {
         productName: product.name, description,
         imageUrls: existingImages.map(i => i.url),
+        adminInfo: product.admin_info,
       });
       setDescription(res.data.description);
     } catch { setError("No se pudo generar la descripción"); }
@@ -212,6 +213,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
         productName: product.name, description, categoryName,
         attrDefs: pending.map(a => ({ id: a.id, name: a.name, values: a.values, valueType: a.valueType })),
         imageUrls: existingImages.map(i => i.url),
+        adminInfo: product.admin_info,
       });
       setAttrValues(prev => ({ ...prev, ...res.data.values }));
     } catch { setError("No se pudieron sugerir las características"); }
@@ -222,7 +224,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
     setGeneratingImage(true); setError("");
     try {
       const res = await client.post("/seller/ml/pictures/generate",
-        { productName: product.name, description, imageUrls: existingImages.map(i => i.url), userPrompt },
+        { productName: product.name, description, imageUrls: existingImages.map(i => i.url), userPrompt, adminInfo: product.admin_info },
         { timeout: 90000 });
       // ImageOrderPicker dibuja imageOrder, no newPictures — sin esto la imagen se generaba y
       // quedaba guardada en el estado, pero nunca aparecía en pantalla ni contaba para validar
