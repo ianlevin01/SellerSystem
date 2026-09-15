@@ -4,7 +4,7 @@ import {
   LayoutGrid, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag,
 } from "lucide-react";
 import client from "../../api/client";
-import { Modal, AttributeField, IconBadge, WizardProgress, AddressBlockNotice } from "./mlShared";
+import { Modal, AttributeField, IconBadge, WizardProgress, AddressBlockNotice, AccountDataIncompleteNotice } from "./mlShared";
 import { formatNumberUnitValue, readyImageCount, isValidAttrValue, FREE_SHIPPING_MANDATORY_THRESHOLD_MLA } from "./mlUtils";
 import ImageOrderPicker from "./ImageOrderPicker";
 import PriceStep from "./PriceStep";
@@ -61,6 +61,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
   const [imageOrder, setImageOrder] = useState([]); // [{ type: "existing", key } | { type: "new", previewUrl }]
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [kycRequired, setKycRequired] = useState(null); // { message, kycUrl } | null
   const [suggestingTitle, setSuggestingTitle] = useState(false);
   const [suggestingDesc, setSuggestingDesc] = useState(false);
   const [suggestingAttrs, setSuggestingAttrs] = useState(false);
@@ -259,7 +260,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
       return;
     }
 
-    setSaving(true); setError("");
+    setSaving(true); setError(""); setKycRequired(null);
     try {
       const attributes = attrDefs
         .filter(a => isValidAttrValue(a, attrValues[a.id]))
@@ -294,7 +295,9 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
       onPublished({ ...res.data, requestedShippingFree: shippingFree });
     } catch (err) {
       const missing = err.response?.data?.missingAttribute;
-      if (err.response?.data?.addressMismatch) {
+      if (err.response?.data?.accountDataIncomplete) {
+        setKycRequired({ message: err.response.data.message, kycUrl: err.response.data.kycUrl });
+      } else if (err.response?.data?.addressMismatch) {
         // El backend lo detectó recién ahora (el chequeo previo pudo quedar "unknown" o
         // desactualizado) — mostramos la misma pantalla de bloqueo en vez de un error suelto.
         setLocalAddressStatus({
@@ -326,6 +329,7 @@ export default function PublishModal({ product, siteId, addressStatus, onClose, 
   return (
     <Modal title="Publicar en Mercado Libre" onClose={onClose} maxWidth={820} minimized={minimized} onMinimize={onMinimize} footer={
       <>
+        {kycRequired && <AccountDataIncompleteNotice message={kycRequired.message} kycUrl={kycRequired.kycUrl} />}
         {error && <p style={{ margin: "0 0 12px", fontSize: ".84rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
         <div style={{ display: "flex", gap: 10 }}>
           {step > 0 && (

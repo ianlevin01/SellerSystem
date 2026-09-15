@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Search, Loader2 } from "lucide-react";
 import client from "../../api/client";
-import { Modal, AttributeField, AddressBlockNotice } from "./mlShared";
+import { Modal, AttributeField, AddressBlockNotice, AccountDataIncompleteNotice } from "./mlShared";
 import { formatNumberUnitValue, isValidAttrValue } from "./mlUtils";
 
 // Modal de publicación de un combo — extraído de MercadoLibre.jsx (donde vivía inline) para que
@@ -35,6 +35,7 @@ export default function PublishComboModal({ comboId, addressStatus, onClose, onP
   const [shippingFree, setShippingFree] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [kycRequired, setKycRequired] = useState(null); // { message, kycUrl } | null
   const [mlMissingAttr, setMlMissingAttr] = useState(null);
   const [mlMissingValue, setMlMissingValue] = useState("");
 
@@ -131,7 +132,7 @@ export default function PublishComboModal({ comboId, addressStatus, onClose, onP
       return;
     }
 
-    setSaving(true); setError("");
+    setSaving(true); setError(""); setKycRequired(null);
     try {
       const attributes = attrDefs
         .filter(a => isValidAttrValue(a, attrValues[a.id]))
@@ -153,7 +154,9 @@ export default function PublishComboModal({ comboId, addressStatus, onClose, onP
       onPublished({ ...res.data, requestedShippingFree: shippingFree });
     } catch (err) {
       const missing = err.response?.data?.missingAttribute;
-      if (err.response?.data?.addressMismatch) {
+      if (err.response?.data?.accountDataIncomplete) {
+        setKycRequired({ message: err.response.data.message, kycUrl: err.response.data.kycUrl });
+      } else if (err.response?.data?.addressMismatch) {
         setLocalAddressStatus({
           connected: true, valid: false,
           currentAddress: err.response.data.currentAddress,
@@ -306,6 +309,7 @@ export default function PublishComboModal({ comboId, addressStatus, onClose, onP
         </div>
       )}
 
+      {kycRequired && <AccountDataIncompleteNotice message={kycRequired.message} kycUrl={kycRequired.kycUrl} />}
       {error && <p style={{ margin: "0 0 12px", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
 
       <button type="button" className="btn btn--primary" style={{ width: "100%" }} onClick={publish} disabled={saving}>

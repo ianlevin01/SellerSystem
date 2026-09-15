@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, ArrowRight, Loader2, PackageSearch, Tag, CheckCircle2 } from "lucide-react";
 import client from "../../api/client";
-import { Modal, IconBadge, AttributeField, WizardProgress, AddressBlockNotice } from "./mlShared";
+import { Modal, IconBadge, AttributeField, WizardProgress, AddressBlockNotice, AccountDataIncompleteNotice } from "./mlShared";
 import PriceStep from "./PriceStep";
 import { formatNumberUnitValue } from "./mlUtils";
 
@@ -38,6 +38,7 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [kycRequired, setKycRequired] = useState(null); // { message, kycUrl } | null
   const [mlMissingAttr, setMlMissingAttr] = useState(null);
   const [mlMissingValue, setMlMissingValue] = useState("");
 
@@ -121,7 +122,7 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
       return;
     }
 
-    setSaving(true); setError("");
+    setSaving(true); setError(""); setKycRequired(null);
     try {
       // Normalmente vacío — ML completa los atributos solo desde el catalog_product_id. Solo
       // se llena si Mercado Libre pidió un atributo puntual que no supimos resolver solos.
@@ -137,7 +138,9 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
       onPublished({ ...res.data, requestedShippingFree: shippingFree });
     } catch (err) {
       const missing = err.response?.data?.missingAttribute;
-      if (err.response?.data?.addressMismatch) {
+      if (err.response?.data?.accountDataIncomplete) {
+        setKycRequired({ message: err.response.data.message, kycUrl: err.response.data.kycUrl });
+      } else if (err.response?.data?.addressMismatch) {
         setLocalAddressStatus({
           connected: true, valid: false,
           currentAddress: err.response.data.currentAddress,
@@ -167,6 +170,7 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
   return (
     <Modal title="Publicación de catálogo — Mercado Libre" onClose={onClose} maxWidth={820} minimized={minimized} onMinimize={onMinimize} footer={
       <>
+        {kycRequired && <AccountDataIncompleteNotice message={kycRequired.message} kycUrl={kycRequired.kycUrl} />}
         {error && <p style={{ margin: "0 0 12px", fontSize: ".84rem", color: "var(--danger,#ef4444)" }}>{error}</p>}
         <div style={{ display: "flex", gap: 10 }}>
           {step > 0 && (

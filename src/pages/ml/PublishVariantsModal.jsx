@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Plus, Trash2, AlertTriangle, CheckCircle2, XCircle, Layers, Lock } from "lucide-react";
 import client from "../../api/client";
-import { Modal, AttributeField } from "./mlShared";
+import { Modal, AttributeField, AccountDataIncompleteNotice } from "./mlShared";
 import ImageOrderPicker from "./ImageOrderPicker";
 import { readyImageCount } from "./mlUtils";
 
@@ -80,6 +80,7 @@ export default function PublishVariantsModal({ rootListing, siblings = [], onClo
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [kycRequired, setKycRequired] = useState(null); // { message, kycUrl } | null
   const [result, setResult] = useState(null); // respuesta del backend — puede venir con "failed" parcial
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export default function PublishVariantsModal({ rootListing, siblings = [], onClo
   const canSubmit = attributeConfirmed && !!variantAttributeId && rootReady && rowsReady && priceReady && !saving;
 
   async function submit() {
-    setSaving(true); setError(""); setResult(null);
+    setSaving(true); setError(""); setKycRequired(null); setResult(null);
     try {
       const payload = {
         variantAttributeId, variantAttributeName,
@@ -186,7 +187,11 @@ export default function PublishVariantsModal({ rootListing, siblings = [], onClo
       setResult(res.data);
       if (!res.data.failed) onSaved?.(res.data);
     } catch (err) {
-      setError(err.response?.data?.message || "No se pudieron publicar las variantes");
+      if (err.response?.data?.accountDataIncomplete) {
+        setKycRequired({ message: err.response.data.message, kycUrl: err.response.data.kycUrl });
+      } else {
+        setError(err.response?.data?.message || "No se pudieron publicar las variantes");
+      }
     } finally {
       setSaving(false);
     }
@@ -205,6 +210,7 @@ export default function PublishVariantsModal({ rootListing, siblings = [], onClo
   return (
     <Modal title="Agregar variantes" onClose={onClose} maxWidth={attributeConfirmed ? 720 : 520} footer={attributeConfirmed && (
       <>
+        {kycRequired && <AccountDataIncompleteNotice message={kycRequired.message} kycUrl={kycRequired.kycUrl} />}
         {error && <p style={{ color: "var(--danger,#ef4444)", fontSize: ".84rem", margin: "0 0 12px" }}>{error}</p>}
         {result?.failed && (
           <p style={{ color: "var(--danger,#ef4444)", fontSize: ".84rem", margin: "0 0 12px" }}>

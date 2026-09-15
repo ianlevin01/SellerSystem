@@ -65,6 +65,25 @@ export function AddressBlockNotice({ addressStatus, onRecheck, checking }) {
   );
 }
 
+// Aviso compacto (no reemplaza el modal entero, a diferencia de AddressBlockNotice) para cuando
+// Mercado Libre bloquea la publicación por datos de cuenta sin completar (identidad/KYC) — se
+// muestra junto al resto del footer, con un botón directo a la pantalla real de ML para
+// completarlos.
+export function AccountDataIncompleteNotice({ message, kycUrl }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 12,
+      background: "rgba(217,119,6,.12)", border: "1px solid #d97706", marginBottom: 12,
+    }}>
+      <IconBadge icon={AlertTriangle} color="#d97706" bg="rgba(217,119,6,.16)" size={34} iconSize={16} />
+      <p style={{ margin: 0, flex: 1, fontSize: ".82rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>{message}</p>
+      <a href={kycUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--sm" style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+        Completar datos
+      </a>
+    </div>
+  );
+}
+
 // ── Modal genérico (portal a document.body — evita el bug de position:fixed
 // roto por algún transform en un contenedor padre, mismo patrón que usa PageProducts.jsx) ──
 
