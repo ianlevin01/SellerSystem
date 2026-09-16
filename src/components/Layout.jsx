@@ -12,7 +12,7 @@ import MercadoLibreIcon from "./icons/MercadoLibreIcon";
 import {
   LayoutDashboard, ShoppingBag,
   Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
-  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2, Megaphone
+  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2, Megaphone, Package
 } from "lucide-react";
 
 const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "https://academia.ventaz.com.ar";
@@ -24,6 +24,7 @@ const BETA_SELLER_EMAIL = "yolodercye@gmail.com";
 const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
   { to: "/pages",        label: "Mis tiendas",    icon: Layers },
+  { to: "/catalogo",     label: "Catálogo",       icon: Package },
   { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
   { to: "/estadisticas", label: "Estadísticas",   icon: BarChart2   },
   { to: "/cobros",       label: "Cobros",         icon: Wallet },
@@ -61,6 +62,7 @@ export default function Layout() {
   const filteredNav = nav.filter(item => {
     if (item.to === "/publicidad") return seller?.email === BETA_SELLER_EMAIL && !isMlTrack;
     if (item.to === "/mercado-libre") return isMlTrack;
+    if (item.to === "/catalogo") return isMlTrack;
     if (item.to === "/pages") return pages.length > 0;
     if (isMlTrack && (item.to === "/cobros" || item.to === "/chat")) return false;
     return true;

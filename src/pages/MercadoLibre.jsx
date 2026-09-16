@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   ExternalLink, Unlink, Loader2, CreditCard, Wallet, Plus, X,
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
   ShoppingBag, TrendingUp, CheckCircle2, Ban, ArrowRight, Eye, Pencil, SlidersHorizontal,
-  Layers, ChevronDown, ChevronRight, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag,
+  Layers, ChevronDown, ChevronRight, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag, Link2,
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
@@ -13,6 +14,7 @@ import { FREE_SHIPPING_MANDATORY_THRESHOLD_MLA } from "./ml/mlUtils";
 import ImageOrderPicker from "./ml/ImageOrderPicker";
 import PublishVariantsModal from "./ml/PublishVariantsModal";
 import PriceStep from "./ml/PriceStep";
+import LinkListingModal from "./ml/LinkListingModal";
 import { usePublishSession } from "./ml/PublishSessionContext";
 
 const ML_SITE_NAMES = {
@@ -748,7 +750,7 @@ const LISTING_SORTS = [
   { id: "stock",   label: "Mayor stock" },
 ];
 
-function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants }) {
+function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants, onChangeProduct }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [sortBy, setSortBy] = useState("updated");
@@ -915,8 +917,21 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants 
     return (
       <div key={l.ml_item_id} className={nested ? undefined : "ml-listing-card"}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ width: 64, height: 64, borderRadius: 9, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
-            {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+          <div style={{ width: 64, height: 64, borderRadius: 9, position: "relative", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
+            <div style={{ width: "100%", height: "100%", borderRadius: 9, overflow: "hidden" }}>
+              {(l.ml_thumbnail_url || l.image_url) && (
+                <img src={l.ml_thumbnail_url || l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  title={l.ml_thumbnail_url ? "Foto real de la publicación en Mercado Libre" : "Foto del producto asignado en Ventaz"} />
+              )}
+            </div>
+            {l.ml_thumbnail_url && l.image_url && (
+              <div style={{
+                position: "absolute", bottom: -5, right: -5, width: 32, height: 32, borderRadius: 8,
+                overflow: "hidden", border: "2px solid #fff", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.15)",
+              }} title={`Producto asignado en Ventaz: ${l.product_name}`}>
+                <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            )}
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -963,7 +978,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants 
                 {l.status === "active" ? "Pausar" : "Activar"}
               </button>
             )}
-            {onAddVariants && (
+            {(onAddVariants || onChangeProduct) && (
               <div ref={openMenuFor === l.ml_item_id ? menuRef : null} style={{ position: "relative" }}>
                 <button type="button" className="ml-icon-btn" title="Más opciones"
                   onClick={() => setOpenMenuFor(v => v === l.ml_item_id ? null : l.ml_item_id)}>
@@ -971,15 +986,28 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants 
                 </button>
                 {openMenuFor === l.ml_item_id && (
                   <div className="ml-sort-popover" style={{ right: 0, left: "auto" }}>
-                    <button type="button" className="ml-sort-popover__item" disabled={!canAddVariants}
-                      title={canAddVariants ? undefined : l.status === "closed"
-                        ? "Esta publicación ya no está activa en Mercado Libre"
-                        : l.catalog_product_id
-                          ? "Las publicaciones de catálogo no admiten variantes"
-                          : "Esta categoría de Mercado Libre no admite variantes"}
-                      onClick={() => { setOpenMenuFor(null); onAddVariants(l); }}>
-                      <Layers size={13} /> Agregar variantes
-                    </button>
+                    {onAddVariants && (
+                      <button type="button" className="ml-sort-popover__item" disabled={!canAddVariants}
+                        title={canAddVariants ? undefined : l.status === "closed"
+                          ? "Esta publicación ya no está activa en Mercado Libre"
+                          : l.catalog_product_id
+                            ? "Las publicaciones de catálogo no admiten variantes"
+                            : "Esta categoría de Mercado Libre no admite variantes"}
+                        onClick={() => { setOpenMenuFor(null); onAddVariants(l); }}>
+                        <Layers size={13} /> Agregar variantes
+                      </button>
+                    )}
+                    {onChangeProduct && (
+                      <button type="button" className="ml-sort-popover__item" disabled={!!l.ml_combo_id || l.status === "closed"}
+                        title={l.ml_combo_id
+                          ? "Esta publicación pertenece a un combo, no a un producto individual"
+                          : l.status === "closed"
+                            ? "Esta publicación ya no está activa en Mercado Libre"
+                            : undefined}
+                        onClick={() => { setOpenMenuFor(null); onChangeProduct(l); }}>
+                        <Link2 size={13} /> Cambiar producto asignado
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1113,8 +1141,11 @@ export default function MercadoLibre() {
   const [publishSuccess, setPublishSuccess] = useState(null);
   const [publishPending, setPublishPending] = useState(null);
   const [variantsTarget, setVariantsTarget] = useState(null);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [changeProductTarget, setChangeProductTarget] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("summary");
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(() => searchParams.get("tab") || "summary");
   const [listingError, setListingError] = useState("");
   const [addressStatus, setAddressStatus] = useState(null);
   const [checkingAddress, setCheckingAddress] = useState(false);
@@ -1341,8 +1372,48 @@ export default function MercadoLibre() {
                   {listingError && (
                     <p style={{ margin: "0 0 14px", fontSize: ".82rem", color: "var(--danger,#ef4444)" }}>{listingError}</p>
                   )}
-                  <ListingsSection listings={listings} statsByItem={listingStats} onToggleStatus={toggleListingStatus} onAddVariants={setVariantsTarget} />
+                  {/* Afuera de ListingsSection a propósito: ese componente corta y no
+                      renderiza nada más si todavía no hay ninguna publicación registrada en
+                      Ventaz — justo el caso de quien publicó todo directo en Mercado Libre y
+                      necesita este cartel para que deje de estar invisible acá. */}
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderRadius: 14,
+                    background: "var(--brand-light,#eafbe0)", border: "1px solid var(--brand,#4db81a)", marginBottom: 16,
+                  }}>
+                    <IconBadge icon={Link2} color="var(--brand,#4db81a)" bg="#fff" size={40} iconSize={19} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ fontSize: ".92rem", display: "block" }}>¿Publicaste algo directo en Mercado Libre?</strong>
+                      <p style={{ margin: "2px 0 0", fontSize: ".81rem", color: "var(--text-secondary)" }}>
+                        Vinculá esa publicación con un producto de tu catálogo de Ventaz para tenerla bajo control acá también.
+                      </p>
+                    </div>
+                    <button type="button" className="btn btn--primary btn--sm" style={{ flexShrink: 0, whiteSpace: "nowrap" }} onClick={() => setLinkModalOpen(true)}>
+                      <Link2 size={13} /> Vincular publicación
+                    </button>
+                  </div>
+                  <ListingsSection listings={listings} statsByItem={listingStats} onToggleStatus={toggleListingStatus} onAddVariants={setVariantsTarget} onChangeProduct={setChangeProductTarget} />
                 </div>
+              )}
+
+              {linkModalOpen && (
+                <LinkListingModal
+                  onClose={() => setLinkModalOpen(false)}
+                  onLinked={() => { setLinkModalOpen(false); loadAll(); }}
+                />
+              )}
+
+              {changeProductTarget && (
+                <LinkListingModal
+                  initialListing={{
+                    mlItemId: changeProductTarget.ml_item_id,
+                    title: changeProductTarget.product_name,
+                    thumbnail: changeProductTarget.image_url,
+                    linkedProductId: changeProductTarget.product_id,
+                    linkedProductName: changeProductTarget.product_name,
+                  }}
+                  onClose={() => setChangeProductTarget(null)}
+                  onLinked={() => { setChangeProductTarget(null); loadAll(); }}
+                />
               )}
 
               {tab === "publish" && (

@@ -183,7 +183,7 @@ function MlCatalogImage({ product }) {
 // ── Card del catálogo en modo ML — el flujo acá es "elegir qué publicar", no fijar precio
 // de tienda propia (por eso no comparte el DOM del card de "Mis productos": ese arrastra
 // bloques de precio/promo/ganancia que nunca aplican del lado ML). ──────────────────────
-function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelected, saving, onPublish, onToggleCombo, onRequestSample, onReserve, canReserve, onShowInfo }) {
+export function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelected, saving, onPublish, onToggleCombo, onRequestSample, onReserve, canReserve, onShowInfo, alwaysShowInfo }) {
   return (
     <article className={`ml-catalog-card${comboMode && isSelected ? " is-selected" : ""}`}>
       <div className="ml-catalog-card__media">
@@ -220,13 +220,17 @@ function MlCatalogCard({ product, cost, isNew, isTopSeller, comboMode, isSelecte
                 Publicar en Mercado Libre
               </button>
               <div className="ml-catalog-card__secondary-row">
-                <button type="button" className="ml-catalog-card__icon-btn" onClick={onRequestSample} title="Solicitar una muestra para vos">
-                  <ShoppingBag size={14} />
-                </button>
-                <button type="button" className="ml-catalog-card__icon-btn" onClick={onReserve} disabled={!canReserve} title={canReserve ? "Reservar stock" : "Sin stock disponible para reservar"}>
-                  <Package size={14} />
-                </button>
-                {product.admin_info && (
+                {onRequestSample && (
+                  <button type="button" className="ml-catalog-card__icon-btn" onClick={onRequestSample} title="Solicitar una muestra para vos">
+                    <ShoppingBag size={14} />
+                  </button>
+                )}
+                {onReserve && (
+                  <button type="button" className="ml-catalog-card__icon-btn" onClick={onReserve} disabled={!canReserve} title={canReserve ? "Reservar stock" : "Sin stock disponible para reservar"}>
+                    <Package size={14} />
+                  </button>
+                )}
+                {(product.admin_info || alwaysShowInfo) && (
                   <button type="button" className="ml-catalog-card__icon-btn" onClick={onShowInfo} title="Ver información del producto">
                     <Info size={14} />
                   </button>

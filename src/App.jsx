@@ -38,6 +38,7 @@ import Estadisticas  from "./pages/Estadisticas";
 import Academia      from "./pages/Academia";
 import Publicidad     from "./pages/Publicidad";
 import MercadoLibre    from "./pages/MercadoLibre";
+import Catalogo        from "./pages/Catalogo";
 import About          from "./pages/About";
 import Contact        from "./pages/Contact";
 import Legal          from "./pages/Legal";
@@ -158,6 +159,7 @@ export default function App() {
               <Route path="/academia"                      element={<Academia />} />
               <Route path="/publicidad"                    element={<PublicidadRoute />} />
               <Route path="/mercado-libre"                 element={<MercadoLibre />} />
+              <Route path="/catalogo"                      element={<Catalogo />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
               <Route path="/discounts"     element={<Navigate to="/pages" replace />} />
