@@ -77,7 +77,7 @@ export function AccountDataIncompleteNotice({ message, kycUrl }) {
     }}>
       <IconBadge icon={AlertTriangle} color="#d97706" bg="rgba(217,119,6,.16)" size={34} iconSize={16} />
       <p style={{ margin: 0, flex: 1, fontSize: ".82rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>{message}</p>
-      <a href={kycUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--sm" style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+      <a href={kycUrl} target="_blank" rel="noreferrer" className="btn btn--primary btn--sm" style={{ flexShrink: 0, whiteSpace: "nowrap", color: "#fff" }}>
         Completar datos
       </a>
     </div>
