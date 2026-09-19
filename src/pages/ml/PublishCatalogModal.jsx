@@ -26,7 +26,9 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
   const [step, setStep] = useState(0);
   const [query, setQuery] = useState(product.custom_name || product.name);
   const [results, setResults] = useState([]);
+  const [resultsTotal, setResultsTotal] = useState(0);
   const [searching, setSearching] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [picked, setPicked] = useState(null);
 
   const [price, setPrice] = useState("");
@@ -42,13 +44,23 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
   const [mlMissingAttr, setMlMissingAttr] = useState(null);
   const [mlMissingValue, setMlMissingValue] = useState("");
 
-  function searchCatalog() {
-    setSearching(true);
-    client.get("/seller/ml/catalog/search", { params: { q: query } })
-      .then(r => setResults(r.data || []))
-      .catch(() => setResults([]))
-      .finally(() => setSearching(false));
+  // ML tiene muchas más coincidencias de las que entran en una sola página (confirmado en vivo:
+  // resultados genuinamente distintos entre offset 0 y offset 10) — antes esto solo pedía la
+  // primera tanda y no había forma de seguir buscando más allá de esas, a diferencia de cómo se
+  // navega el catálogo en la propia Mercado Libre.
+  function searchCatalog(nextOffset = 0) {
+    const setLoading = nextOffset === 0 ? setSearching : setLoadingMore;
+    setLoading(true);
+    client.get("/seller/ml/catalog/search", { params: { q: query, offset: nextOffset } })
+      .then(r => {
+        setResults(prev => nextOffset === 0 ? (r.data.items || []) : [...prev, ...(r.data.items || [])]);
+        setResultsTotal(r.data.total || 0);
+      })
+      .catch(() => { if (nextOffset === 0) setResults([]); })
+      .finally(() => setLoading(false));
   }
+
+  const canLoadMore = results.length < resultsTotal;
 
   useEffect(() => {
     searchCatalog();
@@ -212,31 +224,39 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
           ) : results.length === 0 ? (
             <p style={{ fontSize: ".82rem", color: "var(--text-secondary)" }}>No se encontraron coincidencias — probá con otras palabras.</p>
           ) : (
-            <div className="ml-category-list">
-              {results.map(r => {
-                const selected = r.catalogProductId === picked?.catalogProductId;
-                return (
-                  <button key={r.catalogProductId} type="button" onClick={() => setPicked(r)}
-                    className={`ml-category-option${selected ? " is-selected" : ""}`}
-                    style={{ alignItems: "flex-start" }}>
-                    {r.pictures?.[0] && (
-                      <img src={r.pictures[0]} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", marginRight: 10, flexShrink: 0 }} />
-                    )}
-                    <div style={{ flex: 1 }}>
-                      <div className="ml-category-option__name">{r.name}</div>
-                      {r.attributes?.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
-                          {r.attributes.slice(0, 6).map(a => (
-                            <span key={a.id} className="badge badge--gray" style={{ fontSize: ".72rem" }}>{a.name}: {a.valueName}</span>
-                          ))}
-                        </div>
+            <>
+              <div className="ml-category-list">
+                {results.map(r => {
+                  const selected = r.catalogProductId === picked?.catalogProductId;
+                  return (
+                    <button key={r.catalogProductId} type="button" onClick={() => setPicked(r)}
+                      className={`ml-category-option${selected ? " is-selected" : ""}`}
+                      style={{ alignItems: "flex-start" }}>
+                      {r.pictures?.[0] && (
+                        <img src={r.pictures[0]} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", marginRight: 10, flexShrink: 0 }} />
                       )}
-                    </div>
-                    {selected && <CheckCircle2 size={17} style={{ flexShrink: 0 }} />}
-                  </button>
-                );
-              })}
-            </div>
+                      <div style={{ flex: 1 }}>
+                        <div className="ml-category-option__name">{r.name}</div>
+                        {r.attributes?.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 5 }}>
+                            {r.attributes.slice(0, 6).map(a => (
+                              <span key={a.id} className="badge badge--gray" style={{ fontSize: ".72rem" }}>{a.name}: {a.valueName}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {selected && <CheckCircle2 size={17} style={{ flexShrink: 0 }} />}
+                    </button>
+                  );
+                })}
+              </div>
+              {canLoadMore && (
+                <button type="button" className="btn btn--ghost btn--sm" style={{ marginTop: 10, width: "100%", justifyContent: "center" }}
+                  disabled={loadingMore} onClick={() => searchCatalog(results.length)}>
+                  {loadingMore ? <Loader2 size={13} className="spin" /> : "Cargar más"}
+                </button>
+              )}
+            </>
           )}
 
           <button type="button" onClick={onSwitchToOwn}

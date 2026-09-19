@@ -26,12 +26,8 @@ export function PublishSessionProvider({ children }) {
   const [session, setSession] = useState(null);
   const [justPublished, setJustPublished] = useState(null);
 
-  // TODO: "choose" (elegir entre publicación propia o por catálogo) queda deshabilitado a
-  // propósito — la publicación por catálogo todavía no tiene su migración de DB corrida ni su
-  // backend commiteado. Directo a "own" (el wizard de siempre) hasta que eso esté listo; para
-  // reactivar el selector alcanza con volver esto a mode: "choose".
   function startPublish({ product, siteId, addressStatus }) {
-    setSession({ mode: "own", product, siteId, addressStatus, minimized: false });
+    setSession({ mode: "choose", product, siteId, addressStatus, minimized: false });
   }
   function startCombo({ comboId, addressStatus }) {
     setSession({ mode: "combo", comboId, addressStatus, minimized: false });
