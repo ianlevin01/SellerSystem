@@ -824,7 +824,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
   if (listings.length === 0) {
     return (
       <p style={{ textAlign: "center", color: "var(--text-secondary)", padding: "32px 0", fontSize: ".85rem" }}>
-        Todavía no publicaste ningún producto. Andá a "Catálogo" para elegir uno de tu catálogo.
+        Todavía no publicaste ningún producto. Andá a "Publicar" para elegir uno de tu catálogo.
       </p>
     );
   }
@@ -947,6 +947,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
             </div>
             <div style={{ fontSize: ".73rem", color: "var(--text-secondary)", marginTop: 3 }}>
               SKU {l.sku || "—"} · ${Number(stats?.price ?? l.price ?? 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
+              {l.unit_cost != null && ` · Costo $${Math.round(l.unit_cost).toLocaleString("es-AR")}`}
               {showAccount && (
                 <span style={{
                   marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "1px 7px",
@@ -961,6 +962,11 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
               {stats?.health != null && ` · Calidad: ${Math.round(stats.health.pct * 100)}%`}
               {` · Actualizado ${new Date(l.updated_at).toLocaleDateString("es-AR")}`}
             </div>
+            {l.profit_total != null && Number(l.units_sold) > 0 && (
+              <div style={{ fontSize: ".73rem", fontWeight: 700, marginTop: 2, color: l.profit_total >= 0 ? "var(--success,#059669)" : "var(--danger,#ef4444)" }}>
+                Ganancia total: ${Math.round(l.profit_total).toLocaleString("es-AR")}
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {l.permalink && (
@@ -1127,7 +1133,7 @@ function SummaryTab({ summary, listings, statsByItem, onGoTo }) {
 const TABS = [
   { id: "summary",  label: "Resumen",             icon: LayoutGrid },
   { id: "listings", label: "Tus publicaciones",   icon: Megaphone },
-  { id: "publish",  label: "Catálogo",            icon: Search },
+  { id: "publish",  label: "Publicar",            icon: Search },
   { id: "wallet",   label: "Cobro",               icon: Wallet },
 ];
 
