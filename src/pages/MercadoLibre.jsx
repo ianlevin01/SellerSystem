@@ -1343,7 +1343,7 @@ export default function MercadoLibre() {
               {!wallet.hasCard && (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px",
                   background: "rgba(217,119,6,.08)", borderRadius: 9, marginBottom: 16, fontSize: ".82rem", color: "#b45309" }}>
-                  <AlertTriangle size={14} /> Guardá una tarjeta en la pestaña "Cobro" antes de publicar productos.
+                  <AlertTriangle size={14} /> Guardá una tarjeta en la pestaña "Cobro" para que podamos cobrarte automáticamente la comisión de tus ventas.
                 </div>
               )}
 
