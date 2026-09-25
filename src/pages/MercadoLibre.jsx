@@ -6,6 +6,7 @@ import {
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
   ShoppingBag, TrendingUp, CheckCircle2, Ban, ArrowRight, Eye, Pencil, SlidersHorizontal,
   Layers, ChevronDown, ChevronRight, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag, Link2,
+  RefreshCw,
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
@@ -750,7 +751,13 @@ const LISTING_SORTS = [
   { id: "stock",   label: "Mayor stock" },
 ];
 
-function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants, onChangeProduct }) {
+function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants, onChangeProduct, onRepublish, currentAccountId }) {
+  const [republishingId, setRepublishingId] = useState(null);
+  async function handleRepublish(mlItemId) {
+    setRepublishingId(mlItemId);
+    await onRepublish(mlItemId);
+    setRepublishingId(null);
+  }
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [sortBy, setSortBy] = useState("updated");
@@ -914,6 +921,10 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
     // No confirmado que ML permita sumar variantes por precio a un ítem ya linkeado a un
     // catalog_product_id — se bloquea de entrada en vez de dejar que ML lo rechace en el momento.
     const canAddVariants = !l.ml_combo_id && l.published_as_family !== false && l.status !== "closed" && !l.catalog_product_id;
+    // Publicación de una cuenta de ML que ya no es la conectada (el vendedor desconectó esa
+    // cuenta y conectó otra) — Ventaz no puede tocarla más, solo republicarla como una nueva
+    // publicación en la cuenta actual (ver mlListingService.republishOnCurrentAccount).
+    const isOtherAccount = !!(onRepublish && currentAccountId && l.ml_account_id && l.ml_account_id !== currentAccountId);
     return (
       <div key={l.ml_item_id} className={nested ? undefined : "ml-listing-card"}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
@@ -984,7 +995,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
                 {l.status === "active" ? "Pausar" : "Activar"}
               </button>
             )}
-            {(onAddVariants || onChangeProduct) && (
+            {(onAddVariants || onChangeProduct || isOtherAccount) && (
               <div ref={openMenuFor === l.ml_item_id ? menuRef : null} style={{ position: "relative" }}>
                 <button type="button" className="ml-icon-btn" title="Más opciones"
                   onClick={() => setOpenMenuFor(v => v === l.ml_item_id ? null : l.ml_item_id)}>
@@ -992,6 +1003,15 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
                 </button>
                 {openMenuFor === l.ml_item_id && (
                   <div className="ml-sort-popover" style={{ right: 0, left: "auto" }}>
+                    {isOtherAccount && (
+                      <button type="button" className="ml-sort-popover__item" disabled={republishingId === l.ml_item_id}
+                        title={`Esta publicación pertenece a "${l.ml_account_nickname || l.ml_account_id}" — crea una publicación nueva en tu cuenta conectada actualmente`}
+                        onClick={() => { setOpenMenuFor(null); handleRepublish(l.ml_item_id); }}>
+                        {republishingId === l.ml_item_id
+                          ? <><Loader2 size={13} className="spin" /> Republicando...</>
+                          : <><RefreshCw size={13} /> Republicar en esta cuenta</>}
+                      </button>
+                    )}
                     {onAddVariants && (
                       <button type="button" className="ml-sort-popover__item" disabled={!canAddVariants}
                         title={canAddVariants ? undefined : l.status === "closed"
@@ -1257,6 +1277,16 @@ export default function MercadoLibre() {
     loadAll();
   }
 
+  async function republishListing(mlItemId) {
+    setListingError("");
+    try {
+      await client.post(`/seller/ml/listings/${mlItemId}/republish`);
+    } catch (err) {
+      setListingError(err.response?.data?.message || "No se pudo republicar en la cuenta actual");
+    }
+    loadAll();
+  }
+
   return (
     <main>
       {/* Una vez conectado, el encabezado sticky de más abajo ya muestra cuenta y estado —
@@ -1397,7 +1427,7 @@ export default function MercadoLibre() {
                       <Link2 size={13} /> Vincular publicación
                     </button>
                   </div>
-                  <ListingsSection listings={listings} statsByItem={listingStats} onToggleStatus={toggleListingStatus} onAddVariants={setVariantsTarget} onChangeProduct={setChangeProductTarget} />
+                  <ListingsSection listings={listings} statsByItem={listingStats} onToggleStatus={toggleListingStatus} onAddVariants={setVariantsTarget} onChangeProduct={setChangeProductTarget} onRepublish={republishListing} currentAccountId={status?.ml_user_id} />
                 </div>
               )}
 
