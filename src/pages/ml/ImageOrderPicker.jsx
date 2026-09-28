@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Loader2, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Loader2, Plus, X, ZoomIn } from "lucide-react";
 import client from "../../api/client";
 
 // Selector + reordenador de fotos para una publicación de Mercado Libre — extraído del paso
@@ -21,6 +22,17 @@ export default function ImageOrderPicker({
 }) {
   const [dragImgIndex, setDragImgIndex] = useState(null);
   const [aiPrompt, setAiPrompt] = useState("");
+  // Las fotos en miniatura (72x72) no alcanzan para revisar detalle antes de publicar — este
+  // lightbox se abre con el ícono de lupa de cada foto, sin interferir con arrastrar para
+  // reordenar ni con sacar/agregar (esos botones cortan la propagación del click).
+  const [lightbox, setLightbox] = useState(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    function onKeyDown(e) { if (e.key === "Escape") setLightbox(null); }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [lightbox]);
 
   function toggleImage(key) {
     setImageOrder(prev => {
@@ -117,6 +129,12 @@ export default function ImageOrderPicker({
                   <div style={{ position: "absolute", inset: 0, background: "rgba(239,68,68,.15)" }} title="No se pudo subir" />
                 )}
                 <button type="button"
+                  onClick={e => { e.stopPropagation(); setLightbox(src); }}
+                  title="Ver más grande"
+                  style={{ position: "absolute", top: 2, left: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <ZoomIn size={10} color="#fff" />
+                </button>
+                <button type="button"
                   onClick={() => isExisting ? toggleImage(item.key) : removeNewPicture(item.previewUrl)}
                   style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                   <X size={10} color="#fff" />
@@ -137,13 +155,20 @@ export default function ImageOrderPicker({
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {existingImages.filter(img => !imageOrder.some(item => item.type === "existing" && item.key === img.key)).map(img => (
-              <button key={img.id || img.key} type="button" onClick={() => toggleImage(img.key)}
+              <div key={img.id || img.key} role="button" tabIndex={0} onClick={() => toggleImage(img.key)}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") toggleImage(img.key); }}
                 style={{
-                  position: "relative", width: 72, height: 72, padding: 0, borderRadius: 8, overflow: "hidden",
+                  position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden",
                   border: "2px dashed var(--border)", opacity: .45, cursor: "pointer", background: "none",
                 }}>
                 <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              </button>
+                <button type="button"
+                  onClick={e => { e.stopPropagation(); setLightbox(img.url); }}
+                  title="Ver más grande"
+                  style={{ position: "absolute", top: 2, left: 2, background: "rgba(0,0,0,.6)", border: "none", borderRadius: 99, width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <ZoomIn size={10} color="#fff" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -174,6 +199,27 @@ export default function ImageOrderPicker({
             {generatingAi ? <><Loader2 size={13} className="spin" /> Generando...</> : "Generar imagen"}
           </button>
         </div>
+      )}
+
+      {lightbox && createPortal(
+        <div
+          onClick={() => setLightbox(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9000, background: "rgba(0,0,0,.82)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+          }}>
+          <button type="button" onClick={() => setLightbox(null)} title="Cerrar"
+            style={{
+              position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.15)", border: "none",
+              borderRadius: 99, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", color: "#fff",
+            }}>
+            <X size={18} />
+          </button>
+          <img src={lightbox} alt="" onClick={e => e.stopPropagation()}
+            style={{ maxWidth: "min(90vw, 720px)", maxHeight: "88vh", objectFit: "contain", borderRadius: 8 }} />
+        </div>,
+        document.body
       )}
     </div>
   );
