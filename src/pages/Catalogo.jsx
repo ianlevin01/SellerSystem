@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, Sparkles, Loader2 } from "lucide-react";
+import { Search, ShoppingCart, Sparkles, Loader2, Flame } from "lucide-react";
 import client from "../api/client";
 import { Modal } from "./ml/mlShared";
 import { MlCatalogCard } from "./PageProducts";
@@ -42,6 +42,7 @@ export default function Catalogo() {
   const [topSellingIds, setTopSellingIds] = useState(() => new Set());
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [onlyTopSelling, setOnlyTopSelling] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -68,6 +69,7 @@ export default function Catalogo() {
     const params = { limit: PAGE_SIZE, offset };
     if (query.trim())       params.search      = query.trim();
     if (category !== "all") params.category_id = category;
+    if (onlyTopSelling)     params.top_selling_only = "true";
 
     try {
       const res  = await client.get("/seller/products", { params, signal: controller.signal });
@@ -89,7 +91,7 @@ export default function Catalogo() {
     debounceRef.current = setTimeout(() => fetchProducts(0), query.trim() ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, category]);
+  }, [query, category, onlyTopSelling]);
 
   function loadMore() {
     setLoadingMore(true);
@@ -133,6 +135,13 @@ export default function Catalogo() {
             placeholder="Buscar por nombre o código..."
           />
         </div>
+        <div className="seller-products-tabs">
+          <button type="button" className={!onlyTopSelling ? "is-active" : ""} onClick={() => setOnlyTopSelling(false)}>Todos</button>
+          <button type="button" className={onlyTopSelling ? "is-active" : ""} onClick={() => setOnlyTopSelling(true)}>
+            <Flame size={13} style={{ marginRight: 4, verticalAlign: -2 }} />
+            Top ventas
+          </button>
+        </div>
       </section>
 
       <section className="seller-products-cats seller-products-cats--ml">
@@ -161,7 +170,7 @@ export default function Catalogo() {
         <div className="seller-products-empty">
           <ShoppingCart size={34} />
           <h3>No encontramos productos</h3>
-          <p>Probá con otra búsqueda o cambiá la categoría.</p>
+          <p>Probá con otra búsqueda, otra categoría o cambiá el filtro.</p>
         </div>
       ) : (
         <>

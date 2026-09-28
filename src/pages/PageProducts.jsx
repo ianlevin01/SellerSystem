@@ -655,6 +655,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
   const [query,         setQuery]         = useState("");
   const [category,      setCategory]      = useState("all");
   const [onlyMine,      setOnlyMine]      = useState(false);
+  const [onlyTopSelling, setOnlyTopSelling] = useState(false);
   const [minStock,      setMinStock]      = useState("");
   const [loading,       setLoading]       = useState(true);
   const [loadingMore,   setLoadingMore]   = useState(false);
@@ -790,7 +791,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
     setHasMore(false); // desconecta el observer inmediatamente para evitar loadMore con filtros viejos
     debounceRef.current = setTimeout(() => fetchProducts(0), (query || minStock) ? 350 : 0);
     return () => clearTimeout(debounceRef.current);
-  }, [pageId, query, category, onlyMine, minStock, comboMode]);
+  }, [pageId, query, category, onlyMine, onlyTopSelling, minStock, comboMode]);
 
   // Infinite scroll — carga más cuando el sentinel llega al viewport
   useEffect(() => {
@@ -818,6 +819,7 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
       // el filtro de stock mínimo que carga el vendedor solo puede subir ese piso, nunca bajarlo.
       const typedMin = minStock.trim() ? Number(minStock) : 0;
       params.min_stock = Math.max(1, typedMin);
+      if (onlyTopSelling) params.top_selling_only = "true";
     }
     if (mode === "page") {
       // "en mi tienda"/"todos" es un concepto de página web — en modo ML se ve el catálogo completo
@@ -1259,16 +1261,25 @@ export default function PageProducts({ pageId, mode = "page", onPublishToMl, onC
           </div>
         )}
         {mode === "ml" && (
-          <div className="ml-stock-filter">
-            <label htmlFor="ml-min-stock">Stock mayor a</label>
-            <input
-              id="ml-min-stock"
-              type="number"
-              min="0"
-              value={minStock}
-              onChange={e => setMinStock(e.target.value)}
-              placeholder="0"
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div className="seller-products-tabs">
+              <button type="button" className={!onlyTopSelling ? "is-active" : ""} onClick={() => setOnlyTopSelling(false)}>Todos</button>
+              <button type="button" className={onlyTopSelling ? "is-active" : ""} onClick={() => setOnlyTopSelling(true)}>
+                <Flame size={13} style={{ marginRight: 4, verticalAlign: -2 }} />
+                Top ventas
+              </button>
+            </div>
+            <div className="ml-stock-filter">
+              <label htmlFor="ml-min-stock">Stock mayor a</label>
+              <input
+                id="ml-min-stock"
+                type="number"
+                min="0"
+                value={minStock}
+                onChange={e => setMinStock(e.target.value)}
+                placeholder="0"
+              />
+            </div>
           </div>
         )}
       </section>
