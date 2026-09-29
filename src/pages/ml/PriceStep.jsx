@@ -156,8 +156,8 @@ export default function PriceStep({
               {margenTier === "loss"
                 ? `Lo que recibís ($${Math.round(netFinal).toLocaleString("es-AR")}) es menor al costo del producto ($${Math.round(priceFloor).toLocaleString("es-AR")}) — perdés $${Math.round(Math.abs(ganancia)).toLocaleString("es-AR")} por unidad vendida.`
                 : margenTier === "thin"
-                  ? `Buen precio para empezar a vender o hacer ventas masivas, pero con poca ganancia por unidad: $${Math.round(ganancia).toLocaleString("es-AR")} (${gananciaPct.toFixed(1)}% del precio de venta).`
-                  : `Tenés un margen de ganancia saludable: $${Math.round(ganancia).toLocaleString("es-AR")} (${gananciaPct.toFixed(1)}% del precio de venta) por unidad vendida.`}
+                  ? `Buen precio para empezar a vender o hacer ventas masivas, pero con poca ganancia por unidad: $${Math.round(ganancia).toLocaleString("es-AR")}${gananciaPct != null ? ` (${gananciaPct.toFixed(1)}% del precio de venta)` : ""}.`
+                  : `Tenés un margen de ganancia saludable: $${Math.round(ganancia).toLocaleString("es-AR")}${gananciaPct != null ? ` (${gananciaPct.toFixed(1)}% del precio de venta)` : ""} por unidad vendida.`}
             </p>
           </div>
         </div>

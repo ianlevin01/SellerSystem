@@ -112,7 +112,12 @@ export default function PublishCatalogModal({ product, siteId, addressStatus, on
   const netFinal    = fees ? Number(fees.netAmount) - shippingCost - installmentsCost : null;
   const ganancia    = netFinal != null && priceFloor != null ? netFinal - priceFloor : null;
   const gananciaPct = ganancia != null && Number(price) > 0 ? (ganancia / Number(price)) * 100 : null;
-  const margenTier  = ganancia == null ? null : ganancia < 0 ? "loss" : gananciaPct >= 8 ? "good" : "thin";
+  // Si el precio quedó en 0/inválido (vendedor editando el campo) gananciaPct puede ser null
+  // mientras ganancia todavía arrastra el último valor calculado con fees viejos — sin este
+  // chequeo margenTier quedaba en "thin" con gananciaPct null, y PriceStep.jsx explotaba al
+  // hacer gananciaPct.toFixed(1) (confirmado: era el "Algo salió mal" al final del wizard).
+  // "loss" no depende de gananciaPct (PriceStep no lo usa en ese caso), así que se deja pasar.
+  const margenTier  = ganancia == null ? null : ganancia < 0 ? "loss" : gananciaPct == null ? null : gananciaPct >= 8 ? "good" : "thin";
 
   function goBack() { setError(""); setStep(0); }
   function goNext() {
