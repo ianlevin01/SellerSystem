@@ -143,7 +143,7 @@ function MessageExchange({ q }) {
       )}
       {q.needs_human && (
         <div className="ml-chats-bubble ml-chats-bubble--waiting">
-          {q.answer_text || "Le avisamos al comprador que le respondemos pronto."}
+          {q.answer_text || "La IA no tiene información suficiente para responder esto sola — todavía no se le contestó nada al comprador en Mercado Libre."}
           <span className="ml-chats-bubble__meta">Esperando tu respuesta</span>
         </div>
       )}
