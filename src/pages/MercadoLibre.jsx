@@ -6,7 +6,7 @@ import {
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
   ShoppingBag, TrendingUp, CheckCircle2, Ban, ArrowRight, Eye, Pencil, SlidersHorizontal,
   Layers, ChevronDown, ChevronRight, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag, Link2,
-  RefreshCw, MessageCircle,
+  RefreshCw, PiggyBank, MessageCircle,
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
@@ -16,6 +16,7 @@ import ImageOrderPicker from "./ml/ImageOrderPicker";
 import PublishVariantsModal from "./ml/PublishVariantsModal";
 import PriceStep from "./ml/PriceStep";
 import LinkListingModal from "./ml/LinkListingModal";
+import RentabilidadTab from "./ml/RentabilidadTab";
 import ChatsTab from "./ml/ChatsTab";
 import { usePublishSession } from "./ml/PublishSessionContext";
 
@@ -1152,11 +1153,12 @@ function SummaryTab({ summary, listings, statsByItem, onGoTo }) {
 // ── Página principal ──────────────────────────────────────────────
 
 const TABS = [
-  { id: "summary",  label: "Resumen",             icon: LayoutGrid },
-  { id: "listings", label: "Tus publicaciones",   icon: Megaphone },
-  { id: "publish",  label: "Publicar",            icon: Search },
-  { id: "wallet",   label: "Cobro",               icon: Wallet },
-  { id: "chats",    label: "Chats",               icon: MessageCircle },
+  { id: "summary",       label: "Resumen",             icon: LayoutGrid },
+  { id: "listings",      label: "Tus publicaciones",   icon: Megaphone },
+  { id: "publish",       label: "Publicar",            icon: Search },
+  { id: "wallet",        label: "Cobro",               icon: Wallet },
+  { id: "profitability", label: "Rentabilidad",        icon: PiggyBank },
+  { id: "chats",         label: "Chats",               icon: MessageCircle },
 ];
 
 export default function MercadoLibre() {
@@ -1465,6 +1467,8 @@ export default function MercadoLibre() {
               {tab === "wallet" && (
                 <WalletSection wallet={wallet} onChanged={loadAll} />
               )}
+
+              {tab === "profitability" && <RentabilidadTab />}
 
               {tab === "chats" && <ChatsTab />}
             </>
