@@ -22,6 +22,7 @@ export default function Dashboard() {
   const { seller } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders]           = useState([]);
+  const [orderStats, setOrderStats]   = useState({ totalGanancia: 0, totalVenta: 0, totalPedidos: 0, pendientes: 0 });
   const [productsCount, setProductsCount] = useState(0);
   const [loading, setLoading]         = useState(true);
   const [checklistShown, setChecklistShown] = useState(true);
@@ -62,11 +63,16 @@ export default function Dashboard() {
   }, [seller]);
 
   useEffect(() => {
+    // "Mis pedidos" ahora pagina (ver Orders.jsx) — acá solo necesitamos los 5 más recientes
+    // para la vista previa, y los totales reales salen aparte de /orders/stats (calculados
+    // sobre TODOS los pedidos del lado del servidor, no solo los que se traen acá).
     Promise.all([
-      client.get("/seller/store/orders"),
+      client.get("/seller/store/orders?limit=5"),
+      client.get("/seller/store/orders/stats"),
       client.get("/seller/products?only_mine=true"),
-    ]).then(([ordersRes, productsRes]) => {
-      setOrders(ordersRes.data);
+    ]).then(([ordersRes, statsRes, productsRes]) => {
+      setOrders(ordersRes.data.orders || []);
+      setOrderStats(statsRes.data);
       setProductsCount(productsRes.data.length);
     }).finally(() => setLoading(false));
   }, []);
@@ -74,14 +80,11 @@ export default function Dashboard() {
   // Pedidos sin pago confirmado — no se les muestra ganancia porque todavía no es plata real.
   const isUnpaid = order => ["pending", "consultation"].includes(order.color || "pending");
 
-  const totalGanancia = orders.filter(o => !isUnpaid(o)).reduce((sum, o) => sum + Number(o.ganancia_vendedor || 0), 0);
-  const pendingOrders = orders.filter(o => o.color === "pending").length;
-
   const stats = [
     { label: "Productos activos",  value: productsCount,              icon: Package,     color: "#5b52f0", bg: "#eeecff" },
-    { label: "Pedidos totales",    value: orders.length,              icon: ShoppingBag, color: "#2563eb", bg: "#eff6ff" },
-    { label: "Pendientes",         value: pendingOrders,              icon: Clock,       color: "#d97706", bg: "#fffbeb" },
-    { label: "Ganancia total",     value: `$${fmt(totalGanancia)}`,   icon: TrendingUp,  color: "#16a34a", bg: "#f0fdf4" },
+    { label: "Pedidos totales",    value: orderStats.totalPedidos,    icon: ShoppingBag, color: "#2563eb", bg: "#eff6ff" },
+    { label: "Pendientes",         value: orderStats.pendientes,      icon: Clock,       color: "#d97706", bg: "#fffbeb" },
+    { label: "Ganancia total",     value: `$${fmt(orderStats.totalGanancia)}`, icon: TrendingUp,  color: "#16a34a", bg: "#f0fdf4" },
   ];
 
   // Los vendedores 100% Mercado Libre cobran directo por MP de ML, no por el circuito de
