@@ -6,7 +6,7 @@ import {
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
   ShoppingBag, TrendingUp, CheckCircle2, Ban, ArrowRight, Eye, Pencil, SlidersHorizontal,
   Layers, ChevronDown, ChevronRight, ListChecks, ImageIcon, Type, Sparkles, FileText, Tag, Link2,
-  RefreshCw, PiggyBank, MessageCircle,
+  RefreshCw, Store, PiggyBank, MessageCircle,
 } from "lucide-react";
 import client from "../api/client";
 import PageProducts from "./PageProducts";
@@ -458,9 +458,10 @@ function nextChargeLabel() {
 }
 
 const TX_LABELS = {
-  topup:     "Carga de saldo",
-  sale_cost: "Costo de ventas de Mercado Libre",
-  refund:    "Reembolso por devolución",
+  topup:            "Carga de saldo",
+  sale_cost:        "Costo de ventas de Mercado Libre",
+  refund:           "Reembolso por devolución",
+  cancel_reversal:  "Reversión por venta cancelada",
 };
 
 const CHARGE_KIND_LABELS = {
@@ -775,6 +776,33 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [showSort]);
 
+  // Filtro por cuenta de ML — solo tiene sentido ofrecerlo cuando hay publicaciones de más de
+  // una cuenta (mismo criterio que showAccount, más abajo). Las opciones son las cuentas que
+  // efectivamente tienen alguna publicación acá, no todas las cuentas que el vendedor haya
+  // conectado alguna vez.
+  const [accountFilter, setAccountFilter] = useState("all");
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const accountMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!showAccountMenu) return;
+    function onClickOutside(e) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) setShowAccountMenu(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [showAccountMenu]);
+
+  const accountOptions = useMemo(() => {
+    const map = new Map();
+    for (const l of listings) {
+      if (l.ml_account_id && !map.has(l.ml_account_id)) {
+        map.set(l.ml_account_id, { id: l.ml_account_id, nickname: l.ml_account_nickname || l.ml_account_id });
+      }
+    }
+    return [...map.values()];
+  }, [listings]);
+
   // Menú "..." por fila — un solo estado compartido (qué fila está abierta) en vez de un
   // useState/effect por cada publicación, mismo criterio que showSort de arriba. menuRef se
   // reasigna solo al contenedor de la fila actualmente abierta (las demás no lo reciben).
@@ -798,8 +826,13 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
   // solo aporta cuando hay publicaciones de más de una cuenta distinta (alternó conexiones).
   const showAccount = useMemo(() => {
     const accounts = new Set(listings.map(l => l.ml_account_id).filter(Boolean));
+    // Si el vendedor reconectó a una cuenta distinta pero todavía no publicó nada ahí, todas
+    // las publicaciones guardadas pueden compartir la MISMA cuenta vieja (accounts.size === 1)
+    // aunque ya no coincida con la conectada ahora — sin esto el badge nunca aparecía en ese
+    // caso, a pesar de que sí hay más de una cuenta involucrada.
+    if (currentAccountId) accounts.add(currentAccountId);
     return accounts.size > 1;
-  }, [listings]);
+  }, [listings, currentAccountId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -807,6 +840,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
       if (filter === "active" && l.status !== "active") return false;
       if (filter === "paused" && l.status !== "paused") return false;
       if (filter === "error" && l.pause_reason !== "charge_failed") return false;
+      if (accountFilter !== "all" && l.ml_account_id !== accountFilter) return false;
       if (q && !l.product_name?.toLowerCase().includes(q) && !l.sku?.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -815,7 +849,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
     else if (sortBy === "stock") sorted.sort((a, b) => (b.available_stock ?? 0) - (a.available_stock ?? 0));
     else sorted.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     return sorted;
-  }, [listings, filter, query, sortBy]);
+  }, [listings, filter, query, sortBy, accountFilter]);
 
   // Agrupa las filas que comparten familia (variantes de un mismo producto) para mostrarlas
   // juntas — una fila sin ml_family_id (la inmensa mayoría hoy) queda como grupo de una sola,
@@ -865,6 +899,29 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
               </div>
             )}
           </div>
+          {accountOptions.length > 1 && (
+            <div ref={accountMenuRef} style={{ position: "relative" }}>
+              <button type="button" className="btn btn--ghost btn--sm" onClick={() => setShowAccountMenu(v => !v)} style={{ whiteSpace: "nowrap" }}>
+                <Store size={13} /> {accountFilter === "all" ? "Todas las cuentas" : (accountOptions.find(a => a.id === accountFilter)?.nickname || accountFilter)}
+              </button>
+              {showAccountMenu && (
+                <div className="ml-sort-popover">
+                  <button type="button"
+                    className={`ml-sort-popover__item${accountFilter === "all" ? " is-active" : ""}`}
+                    onClick={() => { setAccountFilter("all"); setShowAccountMenu(false); }}>
+                    Todas las cuentas
+                  </button>
+                  {accountOptions.map(a => (
+                    <button key={a.id} type="button"
+                      className={`ml-sort-popover__item${a.id === accountFilter ? " is-active" : ""}`}
+                      onClick={() => { setAccountFilter(a.id); setShowAccountMenu(false); }}>
+                      {a.nickname}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {LISTING_FILTERS.map(f => (
@@ -961,7 +1018,7 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
             <div style={{ fontSize: ".73rem", color: "var(--text-secondary)", marginTop: 3 }}>
               SKU {l.sku || "—"} · ${Number(stats?.price ?? l.price ?? 0).toLocaleString("es-AR")} · Stock {l.available_stock ?? "—"} · {l.units_sold ?? 0} vendidas
               {l.unit_cost != null && ` · Costo $${Math.round(l.unit_cost).toLocaleString("es-AR")}`}
-              {showAccount && (
+              {showAccount && l.ml_account_id && (
                 <span style={{
                   marginLeft: 8, fontSize: ".68rem", fontWeight: 700, padding: "1px 7px",
                   borderRadius: 99, background: "var(--surface-2,#f3f4f6)", color: "var(--text-secondary)",
@@ -975,11 +1032,19 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
               {stats?.health != null && ` · Calidad: ${Math.round(stats.health.pct * 100)}%`}
               {` · Actualizado ${new Date(l.updated_at).toLocaleDateString("es-AR")}`}
             </div>
-            {l.profit_total != null && Number(l.units_sold) > 0 && (
-              <div style={{ fontSize: ".73rem", fontWeight: 700, marginTop: 2, color: l.profit_total >= 0 ? "var(--success,#059669)" : "var(--danger,#ef4444)" }}>
-                Ganancia total: ${Math.round(l.profit_total).toLocaleString("es-AR")}
-              </div>
-            )}
+            {stats?.fees && l.unit_cost != null && (() => {
+              // Ganancia por unidad — lo mismo que el wizard de publicar muestra como "Tu
+              // ganancia" (netFinal - priceFloor): Recibís (stats.fees.netAmount, ya descuenta
+              // el cargo por vender) menos el costo del producto. Por diseño usa el precio y la
+              // comisión de HOY, igual que Costo/Recibís de este mismo box — no es un acumulado
+              // histórico de todas las ventas, es cuánto te queda por cada venta.
+              const ganancia = stats.fees.netAmount - l.unit_cost;
+              return (
+                <div style={{ fontSize: ".73rem", fontWeight: 700, marginTop: 2, color: ganancia >= 0 ? "var(--success,#059669)" : "var(--danger,#ef4444)" }}>
+                  Ganancia: ${Math.round(ganancia).toLocaleString("es-AR")}
+                </div>
+              );
+            })()}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {l.permalink && (
