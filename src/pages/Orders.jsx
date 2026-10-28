@@ -2,7 +2,7 @@
 // Pedidos premium de Ventaz
 // cambio hecho por Yolo
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import client from "../api/client";
 import "../styles/Orders.css";
 import {
@@ -11,12 +11,15 @@ import {
   CircleDollarSign,
   ClipboardList,
   Clock3,
+  Loader2,
   PackageCheck,
   Search,
   ShoppingBag,
   Sparkles,
   Truck,
   TrendingUp,
+  XCircle,
+  Undo2,
 } from "lucide-react";
 
 const FILTERS = [
@@ -56,9 +59,10 @@ function timeFmt(d) {
   });
 }
 
-// Pedidos sin pago confirmado — no se les muestra ganancia porque todavía no es plata real.
+// Pedidos sin pago confirmado, o que dejaron de ser una venta real (cancelados/reembolsados) —
+// no se les muestra ganancia en ningún caso.
 function isUnpaid(order) {
-  return ["pending", "consultation"].includes(order.color || "pending");
+  return ["pending", "consultation", "cancelled", "refunded", "rejected"].includes(order.color || "pending");
 }
 
 function getStatus(order) {
@@ -113,60 +117,92 @@ function getStatus(order) {
       icon: Truck,
       description: "El pedido fue despachado por Correo Argentino.",
     },
+    cancelled: {
+      label: "Cancelado",
+      tone: "red",
+      icon: XCircle,
+      description: "El pedido se canceló y no se concretó la venta.",
+    },
+    refunded: {
+      label: "Reembolsado",
+      tone: "red",
+      icon: Undo2,
+      description: "Se procesó una devolución para este pedido.",
+    },
+    rejected: {
+      label: "Rechazado",
+      tone: "red",
+      icon: XCircle,
+      description: "El pago fue rechazado.",
+    },
   };
 
   return map[color] || map.pending;
 }
 
+const PAGE_SIZE = 30;
+
 export default function Orders() {
   const [orders, setOrders] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [expanded, setExpanded] = useState({});
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  // Tarjetas de totales (Ganancia acumulada, Total vendido, Cantidad de pedidos, Pendientes) —
+  // sobre TODOS los pedidos del vendedor, no solo los ya cargados en pantalla (ver
+  // /seller/store/orders/stats) — independiente de la paginación y de filtro/búsqueda.
+  const [stats, setStats] = useState({ totalGanancia: 0, totalVenta: 0, totalPedidos: 0, pendientes: 0 });
+  const debounceRef = useRef(null);
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
-    client
-      .get("/seller/store/orders")
-      .then((res) => setOrders(res.data))
-      .finally(() => setLoading(false));
+    client.get("/seller/store/orders/stats").then(r => setStats(r.data)).catch(() => {});
   }, []);
 
-  const stats = useMemo(() => {
-    const totalGanancia = orders
-      .filter((order) => !isUnpaid(order))
-      .reduce((sum, order) => sum + Number(order.ganancia_vendedor || 0), 0);
+  // Antes esto traía TODOS los pedidos de una — con varios cientos, la pantalla tardaba
+  // muchísimo en cargar. Ahora trae de a PAGE_SIZE, y filter/search se resuelven en el backend
+  // (así la búsqueda encuentra un pedido aunque todavía no se haya scrolleado hasta ahí).
+  function fetchOrders(offset) {
+    const setLoadingState = offset === 0 ? setLoading : setLoadingMore;
+    setLoadingState(true);
+    const params = { limit: PAGE_SIZE, offset };
+    if (filter !== "all") params.status = filter;
+    if (search.trim()) params.search = search.trim();
+    client.get("/seller/store/orders", { params })
+      .then(res => {
+        const { orders: page, total: newTotal, hasMore: more } = res.data;
+        setOrders(prev => offset === 0 ? page : [...prev, ...page.filter(o => !prev.some(p => p.id === o.id))]);
+        setTotal(newTotal);
+        setHasMore(more);
+      })
+      .finally(() => setLoadingState(false));
+  }
 
-    const totalVenta = orders.reduce(
-      (sum, order) => sum + Number(order.total || 0),
-      0
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    setHasMore(false); // desconecta el observer mientras cambian los filtros, evita loadMore con filtros viejos
+    debounceRef.current = setTimeout(() => fetchOrders(0), search.trim() ? 350 : 0);
+    return () => clearTimeout(debounceRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, search]);
+
+  // Scroll infinito — mismo patrón que ya se usa en Catálogo/Publicar.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || loadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) fetchOrders(orders.length); },
+      { rootMargin: "300px", threshold: 0 }
     );
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loadingMore, orders.length]);
 
-    const pendientes = orders.filter((order) => ["pending", "consultation"].includes(order.color || "pending")).length;
-
-    return {
-      totalGanancia,
-      totalVenta,
-      totalPedidos: orders.length,
-      pendientes,
-    };
-  }, [orders]);
-
-  const filteredOrders = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    return orders.filter((order) => {
-      const status = order.color || "pending";
-      const matchesFilter = filter === "all" || status === filter;
-
-      const matchesSearch =
-        !query ||
-        String(order.numero || "").toLowerCase().includes(query) ||
-        String(order.customer_name || "").toLowerCase().includes(query);
-
-      return matchesFilter && matchesSearch;
-    });
-  }, [orders, filter, search]);
+  const filteredOrders = orders; // el filtro/búsqueda ya se aplicó en el backend
 
   function toggleExpand(id) {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -259,7 +295,7 @@ export default function Orders() {
           <div className="vtz-orders-list-head">
             <div>
               <span>Lista de pedidos</span>
-              <strong>{filteredOrders.length} resultados</strong>
+              <strong>{total} resultados</strong>
             </div>
           </div>
 
@@ -269,7 +305,7 @@ export default function Orders() {
                 <div key={item} className="vtz-orders-skeleton" />
               ))}
             </div>
-          ) : orders.length === 0 ? (
+          ) : total === 0 && filter === "all" && !search.trim() ? (
             <div className="vtz-orders-empty">
               <ShoppingBag size={34} />
               <h2>Aún no tenés pedidos</h2>
@@ -411,13 +447,22 @@ export default function Orders() {
                                     <strong>− {money(order.comision_ml)}</strong>
                                   </div>
                                 )}
-                                {Number(order.envio_gratis_ml) > 0 && (
+                                {order.ml_logistic_type === "self_service" ? (
                                   <div style={{ color: "var(--error, #dc2626)" }}>
                                     <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                      <Truck size={13} /> Costo de envío gratis (ML)
+                                      <Truck size={13} /> Costo de envío (Flex)
                                     </span>
-                                    <strong>− {money(order.envio_gratis_ml)}</strong>
+                                    <strong>{order.envio_gratis_ml != null ? `− ${money(order.envio_gratis_ml)}` : "-"}</strong>
                                   </div>
+                                ) : (
+                                  Number(order.envio_gratis_ml) > 0 && (
+                                    <div style={{ color: "var(--error, #dc2626)" }}>
+                                      <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                        <Truck size={13} /> Costo de envío gratis (ML)
+                                      </span>
+                                      <strong>− {money(order.envio_gratis_ml)}</strong>
+                                    </div>
+                                  )
                                 )}
                               </>
                             )}
@@ -444,6 +489,14 @@ export default function Orders() {
                   </article>
                 );
               })}
+            </div>
+          )}
+
+          {/* Sentinel de scroll infinito */}
+          <div ref={sentinelRef} style={{ height: 1 }} />
+          {loadingMore && (
+            <div style={{ display: "flex", justifyContent: "center", padding: "20px 0" }}>
+              <Loader2 size={22} className="seller-products-spin" />
             </div>
           )}
         </section>
