@@ -25,7 +25,7 @@ export default function PriceStep({
         background: "var(--surface-2,#f9fafb)", border: price && !priceValid ? "1px solid var(--danger,#ef4444)" : "1px solid transparent",
       }}>
         <span style={{ fontSize: "1.3rem", fontWeight: 700, color: "var(--text-secondary)" }}>$</span>
-        <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0"
+        <input type="number" value={price} onChange={e => setPrice(e.target.value)} onWheel={e => e.currentTarget.blur()} placeholder="0"
           style={{ border: "none", background: "none", outline: "none", fontSize: "1.7rem", fontWeight: 800, color: "var(--text)", width: "100%" }} />
       </div>
       {priceFloor != null && (

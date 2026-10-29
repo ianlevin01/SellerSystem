@@ -15,7 +15,9 @@ function monthLabel(monthKey, showYear) {
   const label = d.toLocaleDateString("es-AR", { month: "short" }).replace(".", "");
   return showYear ? `${label} '${monthKey.slice(2, 4)}` : label;
 }
-function todayISO() { return new Date().toISOString().slice(0, 10); }
+// toLocaleDateString con timeZone explícito (no toISOString, que da la fecha en UTC) — si no,
+// entre las 21:00 y las 23:59 hora Argentina esto ya devuelve el día siguiente.
+function todayISO() { return new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }); }
 // Último día real del mes (o hoy, si el mes elegido es el actual — no tiene sentido pedirle a
 // la API un rango que termina en el futuro).
 function monthEndDate(monthKey) {
@@ -192,10 +194,13 @@ export default function RentabilidadTab() {
   // ── Modo "Por rango" — alternativa al selector de mes, para un desde/hasta cualquiera ──────
   const [viewMode, setViewMode] = useState("month"); // 'month' | 'range'
   const [rangeFrom, setRangeFrom] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30);
+    // Ancla a mediodía UTC sobre el día de hoy en ART para restar días de calendario sin
+    // que la hora/zona horaria del navegador corra el resultado (mismo truco que usa el back).
+    const d = new Date(`${todayISO()}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 30);
     return d.toISOString().slice(0, 10);
   });
-  const [rangeTo, setRangeTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [rangeTo, setRangeTo] = useState(() => todayISO());
   const [rangeData, setRangeData] = useState(null);
   const [rangeLoading, setRangeLoading] = useState(false);
   const [rangeError, setRangeError] = useState("");
