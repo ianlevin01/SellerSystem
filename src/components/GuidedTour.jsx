@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { X, ChevronRight, ChevronLeft, MapPin } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import client from "../api/client";
 
 // ─── Definición de tours por ruta ─────────────────────────────────────────────
 
@@ -136,7 +137,7 @@ const TOURS = {
     {
       selector: "[data-tour='page-tabs']",
       title: "Opciones de personalización",
-      body: "Dentro de Configuración, estas pestañas te llevan a cada sección: identidad, colores, portada, productos, contacto y SEO. Explorá cada una.",
+      body: "Dentro de Configuración, estas pestañas te llevan a cada sección: identidad, tema, colores de tu marca, tipo de letra, encabezado, página de inicio, producto y SEO. Explorá cada una.",
       position: "bottom",
     },
     {
@@ -163,13 +164,15 @@ const TOURS = {
     {
       selector: ".ml-connection-banner",
       title: "Conectá tu cuenta",
-      body: "Tocá «Conectar Mercado Libre» y autorizá a Ventaz con tu cuenta real de Mercado Libre — es un solo paso.",
+      body: "Tocá «Conectar Mercado Libre» en el recuadro resaltado y autorizá a Ventaz con tu cuenta real — es un solo paso. El tutorial espera a que termines de conectarla para seguir.",
       position: "bottom",
+      waitFor: "ml-connected",
+      onlyIf: "ml-disconnected",
     },
     {
-      selector: ".ml-tabs",
-      title: "Las 3 secciones",
-      body: "«Tus publicaciones» muestra lo que ya publicaste. «Publicar producto» te deja elegir del catálogo qué vender. «Cobro» es donde guardás una tarjeta para pagar el costo de tus ventas.",
+      selector: ".ml-nav",
+      title: "Las secciones",
+      body: "«Tus publicaciones» muestra lo que ya publicaste. «Publicar» te deja elegir del catálogo qué vender, y «Cobro» es donde guardás una tarjeta para pagar el costo de tus ventas. «Rentabilidad» y «Chats» completan las pestañas.",
       position: "bottom",
     },
     {
@@ -177,6 +180,198 @@ const TOURS = {
       title: "Tus publicaciones",
       body: "Cada publicación muestra visitas, calidad y cuánto recibís después de la comisión de Mercado Libre.",
       position: "top",
+    },
+  ],
+
+  // ─── Track mercadolibre ─────────────────────────────────────────────────────────
+  // Cada pestaña de Mercado Libre es una sección del menú. El recorrido completo (?guide=full)
+  // empieza conectando la cuenta y, recién con la cuenta conectada (así cada pantalla ya tiene
+  // datos para mostrar), lleva de una sección a la siguiente — ver ML_TOUR_CHAIN. Los pasos con
+  // onlyIf solo van si todavía no hay una cuenta conectada.
+  "/mercado-libre/publicaciones": [
+    {
+      selector: null,
+      title: "¡Bienvenido a Mercado Libre!",
+      body: "Vamos a recorrer juntos cada sección. Primero conectá tu cuenta de Mercado Libre; con la cuenta conectada te llevo por cada pantalla para que veas para qué sirve.",
+      position: "center",
+      onlyIf: "ml-disconnected",
+    },
+    {
+      selector: ".ml-connection-banner",
+      title: "Conectá tu cuenta",
+      body: "Tocá «Conectar Mercado Libre» en el recuadro resaltado y autorizá a Ventaz con tu cuenta real — es un solo paso. El tutorial espera a que termines de conectarla para seguir.",
+      position: "bottom",
+      waitFor: "ml-connected",
+      onlyIf: "ml-disconnected",
+    },
+    {
+      selector: ".sidebar__nav",
+      title: "Tus secciones",
+      body: "Todo lo de Mercado Libre está en el menú de la izquierda: tus publicaciones, publicar, cobro, rentabilidad y chats, además de tus pedidos y estadísticas. Las vamos a ver una por una.",
+      position: "right",
+    },
+    {
+      selector: ".ml-listings-tab",
+      title: "Tus publicaciones",
+      body: "Acá ves todo lo que publicaste en Mercado Libre. Cada publicación muestra su estado, las visitas, la calidad y cuánto recibís después de la comisión.",
+      position: "top",
+    },
+    {
+      selector: ".ml-filter-chip",
+      title: "Filtrá y ordená",
+      body: "Filtrá por estado (activas, pausadas o con error de cobro), buscá por nombre o código y ordená por las más vendidas o las de mayor stock.",
+      position: "bottom",
+    },
+    {
+      selector: "[data-tour='ml-link-listing']",
+      title: "¿Publicaste algo directo en Mercado Libre?",
+      body: "Con «Vincular publicación» asociás esa publicación a un producto de Ventaz para tenerla controlada acá también: stock, estado y ventas.",
+      position: "bottom",
+    },
+  ],
+
+  "/mercado-libre/publicar": [
+    {
+      selector: ".ml-publish-tab",
+      title: "Publicar",
+      body: "Acá elegís qué producto del catálogo de Ventaz vender en tu cuenta de Mercado Libre.",
+      position: "top",
+    },
+    {
+      selector: ".seller-products-search",
+      title: "Buscá un producto",
+      body: "Escribí el nombre o el código del producto para encontrarlo rápido en el catálogo.",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-publish-tab .seller-products-tabs",
+      title: "Filtros del catálogo",
+      body: "Mirá todo el catálogo, solo tus favoritos o los productos con más ventas de toda la plataforma (Top ventas).",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-stock-filter",
+      title: "Stock mínimo",
+      body: "Mostrá solo productos que tengan más unidades disponibles que el número que pongas. Un producto con poco stock se pausa solo.",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-catalog-card",
+      title: "Cada producto",
+      body: "Cada tarjeta muestra el producto con su costo y las variantes de color o tamaño, si tiene.",
+      position: "right",
+    },
+    {
+      selector: ".ml-catalog-card__btn--primary",
+      title: "Publicar",
+      body: "Con este botón elegís la categoría de Mercado Libre, el precio y las imágenes. Ahí mismo ves cuánto recibís después de la comisión de Mercado Libre.",
+      position: "right",
+    },
+  ],
+
+  "/mercado-libre/cobro": [
+    {
+      selector: ".ml-wallet-tab",
+      title: "Cobro",
+      body: "Acá ves cuánto le debés a Ventaz por tus ventas de Mercado Libre (el costo del producto de cada venta) y cómo se paga.",
+      position: "top",
+    },
+    {
+      selector: "[data-tour='ml-wallet-how']",
+      title: "Cuándo se cobra",
+      body: "Todos los días a las 14:00 se junta lo que se debe por tus ventas y se cobra en un solo cargo. En los planes Pro y Max tenés un plazo de gracia antes de que la deuda se vuelva obligatoria.",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-wallet-metrics",
+      title: "Tus números",
+      body: "Tu saldo disponible, la deuda pendiente y, cuando hay ventas por cobrar, la fecha del próximo cobro.",
+      position: "bottom",
+    },
+    {
+      selector: ".ml-payment-method",
+      title: "Método de pago",
+      body: "Guardá una tarjeta para que el cobro sea automático. Si tu tarjeta no se puede guardar para el débito automático, probá con otra.",
+      position: "bottom",
+    },
+    {
+      selector: "[data-tour='ml-add-balance']",
+      title: "Agregar saldo",
+      body: "Podés cargar saldo por adelantado con tu tarjeta guardada: las ventas se descuentan primero del saldo y, si no alcanza, de la tarjeta.",
+      position: "top",
+    },
+    {
+      selector: "[data-tour='ml-wallet-history']",
+      title: "Historial de movimientos",
+      body: "Acá queda registrado cada cobro, carga de saldo y descuento por una venta.",
+      position: "top",
+    },
+  ],
+
+  "/mercado-libre/rentabilidad": [
+    {
+      selector: ".seller-products-tabs",
+      title: "Rentabilidad",
+      body: "La ganancia real de tu operación en Mercado Libre. Mirala por mes (últimos 6 o 12 meses) o elegí «Por rango» para cualquier desde/hasta.",
+      position: "bottom",
+    },
+    {
+      selector: "[data-tour='rent-kpis']",
+      title: "De la facturación a la ganancia",
+      body: "Facturación, costo de los productos, comisión de Mercado Libre y envío: con esos datos reales de tus ventas se calcula la ganancia bruta.",
+      position: "bottom",
+    },
+    {
+      selector: null,
+      title: "Ganancia neta",
+      body: "Más abajo cargás la publicidad, los Ingresos Brutos y tus gastos fijos del mes, que Mercado Libre no informa, para ver la ganancia neta. Los gráficos comparan tu facturación con la ganancia y con la publicidad.",
+      position: "center",
+    },
+  ],
+
+  "/mercado-libre/chats": [
+    {
+      selector: null,
+      title: "Chats",
+      body: "Acá ves las preguntas que te hacen los compradores en tus publicaciones, con la respuesta que se les dio.",
+      position: "center",
+    },
+    {
+      selector: "[data-tour='chats-bot']",
+      title: "Respuesta automática con IA",
+      body: "Con el interruptor activás que la IA conteste sola cuando tiene datos suficientes. En «Configurar bot» cargás las reglas de tu negocio y qué información de cada producto puede mostrar.",
+      position: "bottom",
+    },
+    {
+      selector: null,
+      title: "Cuando la IA no sabe",
+      body: "Si no puede responder, le avisa al comprador que le van a contestar a la brevedad y la pregunta queda «Esperando tu respuesta» para que la contestes vos.",
+      position: "center",
+    },
+  ],
+
+  // Cierran el recorrido de Mercado Libre (ver ML_TOUR_CHAIN).
+  "/orders": [
+    {
+      selector: null,
+      title: "Mis pedidos",
+      body: "Acá están todas tus ventas con su estado y tu ganancia. Las de Mercado Libre llevan su etiqueta y, al abrirlas, ves la comisión de Mercado Libre y los datos del envío.",
+      position: "center",
+    },
+  ],
+
+  "/estadisticas": [
+    {
+      selector: null,
+      title: "Estadísticas",
+      body: "Tus ventas de Mercado Libre en números: facturación, unidades, los productos que más facturan, de qué provincias te compran y en qué horarios, comparado con el período anterior.",
+      position: "center",
+    },
+    {
+      selector: null,
+      title: "¡Listo!",
+      body: "Ya conocés todas las secciones. Cuando quieras repasar una, el botón «¿Cómo usar?» te explica cada pantalla.",
+      position: "center",
     },
   ],
 
@@ -242,6 +437,44 @@ const TOURS = {
   ],
 };
 
+// ─── Pasos que esperan una acción real (no un simple "Siguiente") ─────────────
+// Conectar Mercado Libre navega de verdad a la web de ML (window.location.href, no un router
+// interno) y vuelve recién con el redirect de OAuth — eso reinicia por completo el estado de
+// React, así que el paso que espera esto no puede vivir solo en memoria: se guarda en
+// localStorage (mismo motivo que StartChoice.jsx usa localStorage para sobrevivir el salto de
+// la verificación de mail) y cada condición sabe reconocer, en la URL con la que se vuelve, si
+// ya se cumplió.
+const TOUR_RESUME_KEY = "ventaz_tour_resume";
+const WAIT_CONDITIONS = {
+  "ml-connected": {
+    isSatisfiedFromUrl: (params) => params.get("ml_connected") === "true",
+  },
+};
+
+// ─── Recorrido completo del track mercadolibre (?guide=full) ──────────────────
+// Cada sección es una pantalla del menú, con su propio tour en TOURS. Se recorren en este orden y
+// siempre con la cuenta ya conectada, así cada pantalla tiene datos reales para señalar.
+const ML_TOUR_CHAIN = [
+  "/mercado-libre/publicaciones",
+  "/mercado-libre/publicar",
+  "/mercado-libre/cobro",
+  "/mercado-libre/rentabilidad",
+  "/mercado-libre/chats",
+  "/orders",
+  "/estadisticas",
+];
+const ML_FIRST_PATH = ML_TOUR_CHAIN[0]; // donde está el botón de conectar la cuenta
+
+function fetchMlConnected() {
+  return client.get("/seller/ml/status").then(r => !!r.data?.connected).catch(() => false);
+}
+
+// Los pasos con onlyIf: "ml-disconnected" (bienvenida y conectar) solo van si todavía no hay
+// una cuenta de Mercado Libre conectada.
+function stepsForState(fullSteps, mlConnected) {
+  return fullSteps.filter(s => !s.onlyIf || (s.onlyIf === "ml-disconnected" && !mlConnected));
+}
+
 function resolveSteps(pathname, onboardingTrack) {
   let steps = null;
   if (TOURS[pathname]) steps = TOURS[pathname];
@@ -262,7 +495,7 @@ function resolveSteps(pathname, onboardingTrack) {
 
 // ─── Posicionar el tooltip cerca del elemento ─────────────────────────────────
 
-function getTooltipStyle(rect, position, tooltipSize = { w: 340, h: 180 }) {
+function getTooltipStyle(rect, position, tooltipSize = { w: 340, h: 250 }) {
   const MARGIN = 16;
   const { w, h } = tooltipSize;
   const vw = window.innerWidth;
@@ -310,29 +543,88 @@ export default function GuidedTour() {
   const [steps,  setSteps]        = useState([]);
   const [stepIdx, setStepIdx]     = useState(0);
   const [spotlight, setSpotlight] = useState(null); // { top, left, width, height }
+  const [chain, setChain]         = useState(false); // recorrido completo de Mercado Libre (?guide=full)
 
-  // Detectar ?guide=true y activar el tour
+  // ?guide=true muestra el tutorial de esta pantalla; ?guide=full arranca además el recorrido
+  // completo de Mercado Libre, que al terminar cada sección sigue con la siguiente (ver
+  // ML_TOUR_CHAIN). También reanuda uno que había quedado esperando una acción real (ver
+  // WAIT_CONDITIONS) si la URL con la que se volvió confirma que ya se cumplió.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get("guide") !== "true") return;
+    const pathname = location.pathname;
 
-    const tourSteps = resolveSteps(location.pathname, seller?.onboarding_track);
-    if (!tourSteps) return;
+    async function begin({ startAtStep = null, chainOn = false } = {}) {
+      const full = resolveSteps(pathname, seller?.onboarding_track);
+      if (!full) return;
+
+      const isMlSection = pathname.startsWith("/mercado-libre/");
+      let connected = true;
+      if (isMlSection || full.some(s => s.onlyIf)) {
+        connected = await fetchMlConnected();
+        // Si mientras tanto se cambió de pantalla, este tutorial ya no corresponde.
+        if (window.location.pathname !== pathname) return;
+        // Sin cuenta conectada no hay nada para mostrar en las demás secciones: se empieza por conectarla.
+        if (isMlSection && !connected && pathname !== ML_FIRST_PATH) {
+          navigate({ pathname: ML_FIRST_PATH, search: `?guide=${chainOn ? "full" : "true"}` }, { replace: true });
+          return;
+        }
+      }
+
+      const list = stepsForState(full, connected);
+      setSteps(list);
+      setStepIdx(startAtStep ? Math.max(0, list.indexOf(startAtStep)) : 0);
+      setChain(chainOn);
+      setActive(true);
+    }
+
+    try {
+      const raw = localStorage.getItem(TOUR_RESUME_KEY);
+      if (raw) {
+        const resume = JSON.parse(raw);
+        localStorage.removeItem(TOUR_RESUME_KEY); // se reanuda una sola vez; si no se cumplió, no reanuda sola
+        if (resume.pathname === pathname && WAIT_CONDITIONS[resume.waitFor]?.isSatisfiedFromUrl(params)) {
+          const full = resolveSteps(pathname, seller?.onboarding_track);
+          if (full) begin({ startAtStep: full[Math.min(resume.stepIdx + 1, full.length - 1)], chainOn: !!resume.chain });
+          return; // no evaluar además ?guide en esta misma carga
+        }
+      }
+    } catch { /* localStorage no disponible — el tour simplemente no se reanuda solo */ }
+
+    const guide = params.get("guide");
+    if (guide !== "true" && guide !== "full") return;
+    // /mercado-libre en el track mercadolibre solo redirige a la sección que corresponde (ver
+    // MercadoLibreEntry en App.jsx) y conserva ?guide — el tutorial arranca ahí, no en la redirección.
+    if (pathname === "/mercado-libre" && seller?.onboarding_track === "mercadolibre") return;
+    if (!resolveSteps(pathname, seller?.onboarding_track)) return;
 
     // Limpiar el param de la URL
     params.delete("guide");
     const newSearch = params.toString();
     navigate(
-      { pathname: location.pathname, search: newSearch ? `?${newSearch}` : "" },
+      { pathname, search: newSearch ? `?${newSearch}` : "" },
       { replace: true }
     );
 
-    setSteps(tourSteps);
-    setStepIdx(0);
-    setActive(true);
+    begin({ chainOn: guide === "full" });
   }, [location.pathname, location.search]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Actualizar spotlight cuando cambia el paso
+  // Mientras el paso activo sea de los que esperan una acción real, se deja guardada la marca
+  // de reanudación — si el usuario navega afuera (ej. a autorizar Mercado Libre) y la app de
+  // React se remonta de cero al volver, el efecto de arriba puede reconocer dónde había quedado.
+  // stepIdx es el índice en la lista completa del tour: los pasos que esperan una acción solo
+  // existen mientras la cuenta no está conectada, y en ese caso la lista no se filtra.
+  useEffect(() => {
+    if (!active || !steps.length) return;
+    const step = steps[stepIdx];
+    if (!step?.waitFor) return;
+    try {
+      localStorage.setItem(TOUR_RESUME_KEY, JSON.stringify({ pathname: location.pathname, stepIdx, waitFor: step.waitFor, chain }));
+    } catch { /* ignore */ }
+  }, [active, stepIdx, steps, chain, location.pathname]);
+
+  // Actualizar spotlight cuando cambia el paso. La pantalla puede estar todavía cargando sus
+  // datos (listas, saldo, catálogo) cuando arranca el paso, así que si el elemento no está se
+  // reintenta unos segundos antes de mostrar el cartel sin resaltar nada.
   useEffect(() => {
     if (!active || !steps.length) return;
     const step = steps[stepIdx];
@@ -341,15 +633,25 @@ export default function GuidedTour() {
       return;
     }
 
-    // Pequeño delay para que el DOM se actualice si hubo un scroll/render
-    const t = setTimeout(() => {
+    let cancelled = false;
+    let tries = 0;
+    let timer;
+    let scrollTimer;
+
+    function attempt() {
+      if (cancelled) return;
       const el = document.querySelector(step.selector);
-      if (!el) { setSpotlight(null); return; }
+      if (!el) {
+        setSpotlight(null);
+        if (++tries < 20) timer = setTimeout(attempt, 250);
+        return;
+      }
 
       el.scrollIntoView({ behavior: "smooth", block: "center" });
 
       // Esperar a que termine el scroll antes de leer el rect
-      setTimeout(() => {
+      scrollTimer = setTimeout(() => {
+        if (cancelled) return;
         const rect = el.getBoundingClientRect();
         setSpotlight({
           top:    rect.top    - 6,
@@ -358,24 +660,39 @@ export default function GuidedTour() {
           height: rect.height + 12,
         });
       }, 400);
-    }, 120);
+    }
 
-    return () => clearTimeout(t);
+    // Pequeño delay para que el DOM se actualice si hubo un scroll/render
+    timer = setTimeout(attempt, 120);
+
+    return () => { cancelled = true; clearTimeout(timer); clearTimeout(scrollTimer); };
   }, [active, stepIdx, steps]);
 
   const close = useCallback(() => {
     setActive(false);
     setSpotlight(null);
     setStepIdx(0);
+    setChain(false);
+    try { localStorage.removeItem(TOUR_RESUME_KEY); } catch { /* ignore */ }
   }, []);
 
+  // Posición de esta pantalla dentro del recorrido completo de Mercado Libre (-1 si no es parte).
+  const chainPos = chain ? ML_TOUR_CHAIN.indexOf(location.pathname) : -1;
+  const hasNextSection = chainPos >= 0 && chainPos < ML_TOUR_CHAIN.length - 1;
+
   const next = useCallback(() => {
+    if (steps[stepIdx]?.waitFor) return; // bloqueado hasta que se cumpla la condición real
     if (stepIdx < steps.length - 1) {
       setStepIdx(i => i + 1);
+    } else if (hasNextSection) {
+      // Terminó esta sección: se pasa a la siguiente, que arranca sola con su propio tutorial.
+      setActive(false);
+      setSpotlight(null);
+      navigate({ pathname: ML_TOUR_CHAIN[chainPos + 1], search: "?guide=full" });
     } else {
       close();
     }
-  }, [stepIdx, steps.length, close]);
+  }, [stepIdx, steps, close, hasNextSection, chainPos, navigate]);
 
   const prev = useCallback(() => {
     if (stepIdx > 0) setStepIdx(i => i - 1);
@@ -408,9 +725,25 @@ export default function GuidedTour() {
   const isLast  = stepIdx === steps.length - 1;
   const isFirst = stepIdx === 0;
 
+  // Paso "waitFor": el spotlight deja de ser solo decorativo — el elemento real de abajo tiene
+  // que poder tocarse (ej. el botón de conectar Mercado Libre). En vez de un solo overlay de
+  // pantalla completa, se cubre únicamente el área ALREDEDOR del spotlight con 4 franjas que sí
+  // capturan clics — el rectángulo del spotlight en sí queda como un agujero real, sin ningún
+  // div encima, así el clic llega directo al elemento de la página.
+  const interactive = !!(step.waitFor && spotlightRect);
+  const vw = typeof window !== "undefined" ? window.innerWidth  : 0;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 0;
+  const bands = interactive ? [
+    { top: 0,                     left: 0, width: vw, height: Math.max(0, spotlightRect.top) },
+    { top: spotlightRect.bottom,  left: 0, width: vw, height: Math.max(0, vh - spotlightRect.bottom) },
+    { top: spotlightRect.top,     left: 0, width: Math.max(0, spotlightRect.left), height: spotlightRect.height },
+    { top: spotlightRect.top,     left: spotlightRect.right, width: Math.max(0, vw - spotlightRect.right), height: spotlightRect.height },
+  ] : [];
+
   return createPortal(
-    // gt-root captura clics para cerrar — pointer-events: all
-    <div className="gt-root" onClick={close}>
+    // gt-root captura clics para cerrar — pointer-events: all (salvo en modo interactive, donde
+    // en vez de esto son las 4 franjas de abajo las que capturan, dejando el spotlight libre).
+    <div className={`gt-root${interactive ? " gt-root--passthrough" : ""}`} onClick={interactive ? undefined : close}>
 
       {/* Sin spotlight (paso intro): fondo oscuro plano */}
       {!spotlight && <div className="gt-blanket" />}
@@ -430,6 +763,17 @@ export default function GuidedTour() {
         />
       )}
 
+      {/* Modo interactive: las franjas alrededor del spotlight cierran el tour al tocarlas: el
+          spotlight mismo no tiene ninguna encima, así que el clic ahí llega al elemento real. */}
+      {interactive && bands.map((b, i) => (
+        <div
+          key={i}
+          className="gt-block"
+          style={{ position: "fixed", top: b.top, left: b.left, width: b.width, height: b.height }}
+          onClick={close}
+        />
+      ))}
+
       {/* Tooltip card — stopPropagation para que no cierre al hacer clic */}
       <div className="gt-tooltip" style={tooltipStyle} onClick={e => e.stopPropagation()}>
         <div className="gt-tooltip__header">
@@ -437,6 +781,7 @@ export default function GuidedTour() {
             <MapPin size={13} className="gt-tooltip__pin" />
             <span className="gt-tooltip__counter">
               {stepIdx + 1} / {steps.length}
+              {chainPos >= 0 && ` · Sección ${chainPos + 1} de ${ML_TOUR_CHAIN.length}`}
             </span>
           </div>
           <button
@@ -450,15 +795,21 @@ export default function GuidedTour() {
         </div>
 
         <div className="gt-tooltip__dots">
-          {steps.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`gt-dot${i === stepIdx ? " gt-dot--active" : ""}`}
-              onClick={() => setStepIdx(i)}
-              aria-label={`Ir al paso ${i + 1}`}
-            />
-          ))}
+          {steps.map((_, i) => {
+            // No se puede saltear a un paso posterior mientras el actual esté esperando una
+            // acción real sin cumplir todavía — sí se puede volver para atrás.
+            const locked = !!step.waitFor && i > stepIdx;
+            return (
+              <button
+                key={i}
+                type="button"
+                className={`gt-dot${i === stepIdx ? " gt-dot--active" : ""}`}
+                onClick={() => !locked && setStepIdx(i)}
+                disabled={locked}
+                aria-label={`Ir al paso ${i + 1}`}
+              />
+            );
+          })}
         </div>
 
         <div className="gt-tooltip__body">
@@ -475,13 +826,17 @@ export default function GuidedTour() {
           >
             <ChevronLeft size={15} /> Anterior
           </button>
-          <button
-            type="button"
-            className={`gt-btn ${isLast ? "gt-btn--finish" : "gt-btn--primary"}`}
-            onClick={next}
-          >
-            {isLast ? "Finalizar" : "Siguiente"} {!isLast && <ChevronRight size={15} />}
-          </button>
+          {step.waitFor ? (
+            <span className="gt-btn gt-btn--waiting">Conectá tu cuenta para seguir…</span>
+          ) : (
+            <button
+              type="button"
+              className={`gt-btn ${isLast && !hasNextSection ? "gt-btn--finish" : "gt-btn--primary"}`}
+              onClick={next}
+            >
+              {isLast ? (hasNextSection ? "Siguiente sección" : "Finalizar") : "Siguiente"} {(!isLast || hasNextSection) && <ChevronRight size={15} />}
+            </button>
+          )}
         </div>
       </div>
     </div>,
@@ -500,6 +855,21 @@ export function GuidedTourStyles() {
        */
       .gt-root {
         position: fixed; inset: 0;
+        z-index: 9990;
+        pointer-events: all;
+        cursor: default;
+      }
+
+      /*
+       * gt-root--passthrough: paso "waitFor" — el fondo deja de capturar clics él mismo
+       * (eso ahora lo hacen las franjas .gt-block, que dejan libre el hueco del spotlight
+       * para que el clic llegue al elemento real de la página).
+       */
+      .gt-root--passthrough { pointer-events: none; }
+
+      /* Franja de bloqueo alrededor del spotlight en modo interactivo — mismo comportamiento
+         que gt-root (cierra el tour al tocarla), pero deja el spotlight en sí sin cubrir. */
+      .gt-block {
         z-index: 9990;
         pointer-events: all;
         cursor: default;
@@ -653,6 +1023,12 @@ export function GuidedTourStyles() {
         margin-left: auto;
       }
       .gt-btn--finish:hover { filter: brightness(1.07); }
+      .gt-btn--waiting {
+        background: #f3f4f6;
+        color: #9ca3af;
+        cursor: default;
+        margin-left: auto;
+      }
 
       /* Móvil */
       @media (max-width: 600px) {

@@ -91,7 +91,8 @@ export default function StartChoice() {
     setSaving("ml-experience"); setError("");
     try {
       await client.patch("/seller/onboarding/sold-before", { soldBefore });
-      navigate("/mercado-libre?guide=true", { replace: true });
+      // guide=full: tutorial de Mercado Libre completo — conectar la cuenta y, ya conectada, recorrer cada sección.
+      navigate("/mercado-libre?guide=full", { replace: true });
     } catch {
       setError("No se pudo guardar tu respuesta. Probá de nuevo.");
       setSaving(null);

@@ -5,6 +5,8 @@ import { useAuth } from "../auth/AuthContext";
 import client from "../api/client";
 import { ShoppingBag, Package, TrendingUp, Clock, ExternalLink, AlertTriangle } from "lucide-react";
 import OnboardingChecklist from "../components/OnboardingChecklist";
+import { SummaryTab } from "./ml/mlSummary";
+import { ML_SECTION_PATHS } from "./ml/mlRoutes";
 
 function storeUrl(slug) {
   if (!slug) return "#";
@@ -28,6 +30,12 @@ export default function Dashboard() {
   const [checklistShown, setChecklistShown] = useState(true);
   const [mlNeedsFirstListing, setMlNeedsFirstListing] = useState(false);
   const [mlBlockedDebt, setMlBlockedDebt] = useState(0);
+  // Para el track mercadolibre el Dashboard es también el "Resumen" de Mercado Libre.
+  const [mlConnected, setMlConnected]       = useState(false);
+  const [mlSummary, setMlSummary]           = useState(null);
+  const [mlListings, setMlListings]         = useState([]);
+  const [mlListingStats, setMlListingStats] = useState({});
+  const isMlTrack = seller?.onboarding_track === "mercadolibre";
 
   // Primer acceso: todavía no eligió si quiere vender por tienda propia o por Mercado Libre.
   // OJO: no redirigir acá a "/start" cuando falta onboarding_track — este efecto corre al
@@ -42,8 +50,30 @@ export default function Dashboard() {
     // esto sacaba al vendedor del Dashboard a la fuerza — ahora se queda en el Dashboard (que
     // es lo que espera ver al entrar) con un aviso, en vez de secuestrar la navegación.
     if (seller.onboarding_track === "mercadolibre") {
+      client.get("/seller/ml/status").then(res => {
+        // Igual que con la primera tienda en ecommerce (→ /pages?new=true): mientras no haya una
+        // cuenta de Mercado Libre conectada, cada vez que entra al panel se lo lleva solo al
+        // tutorial que lo guía a conectarla. Solo si la API confirma que NO está conectada — si
+        // la consulta falla no se lo saca del Dashboard.
+        if (res.data?.connected === false) {
+          navigate(`${ML_SECTION_PATHS.listings}?guide=full`, { replace: true });
+          return;
+        }
+        setMlConnected(!!res.data?.connected);
+      }).catch(() => {});
+      client.get("/seller/ml/summary").then(res => {
+        setMlSummary(res.data);
+      }).catch(() => {});
       client.get("/seller/ml/listings").then(res => {
-        setMlNeedsFirstListing((res.data || []).length === 0);
+        const list = res.data || [];
+        setMlNeedsFirstListing(list.length === 0);
+        setMlListings(list);
+        // Visitas solo de las 6 publicaciones que muestra "Actividad reciente".
+        list.slice(0, 6).forEach(x => {
+          client.get(`/seller/ml/listings/${x.ml_item_id}/stats`, { params: { productId: x.product_id } })
+            .then(r => setMlListingStats(prev => ({ ...prev, [x.ml_item_id]: r.data })))
+            .catch(() => {});
+        });
       }).catch(() => {});
       client.get("/seller/ml/wallet").then(res => {
         setMlBlockedDebt(Number(res.data?.blockedDebt || 0));
@@ -66,26 +96,30 @@ export default function Dashboard() {
     // "Mis pedidos" ahora pagina (ver Orders.jsx) — acá solo necesitamos los 5 más recientes
     // para la vista previa, y los totales reales salen aparte de /orders/stats (calculados
     // sobre TODOS los pedidos del lado del servidor, no solo los que se traen acá).
+    // "Productos activos" cuenta productos de la tienda propia — un vendedor de Mercado Libre
+    // no lo muestra, así que no hace falta pedirlo.
     Promise.all([
       client.get("/seller/store/orders?limit=5"),
       client.get("/seller/store/orders/stats"),
-      client.get("/seller/products?only_mine=true"),
+      isMlTrack ? Promise.resolve(null) : client.get("/seller/products?only_mine=true"),
     ]).then(([ordersRes, statsRes, productsRes]) => {
       setOrders(ordersRes.data.orders || []);
       setOrderStats(statsRes.data);
-      setProductsCount(productsRes.data.length);
+      if (productsRes) setProductsCount(productsRes.data.length);
     }).finally(() => setLoading(false));
-  }, []);
+  }, [isMlTrack]);
 
   // Pedidos sin pago confirmado — no se les muestra ganancia porque todavía no es plata real.
   const isUnpaid = order => ["pending", "consultation"].includes(order.color || "pending");
 
-  const stats = [
-    { label: "Productos activos",  value: productsCount,              icon: Package,     color: "#5b52f0", bg: "#eeecff" },
+  const orderCards = [
     { label: "Pedidos totales",    value: orderStats.totalPedidos,    icon: ShoppingBag, color: "#2563eb", bg: "#eff6ff" },
     { label: "Pendientes",         value: orderStats.pendientes,      icon: Clock,       color: "#d97706", bg: "#fffbeb" },
     { label: "Ganancia total",     value: `$${fmt(orderStats.totalGanancia)}`, icon: TrendingUp,  color: "#16a34a", bg: "#f0fdf4" },
   ];
+  const stats = isMlTrack
+    ? orderCards
+    : [{ label: "Productos activos", value: productsCount, icon: Package, color: "#5b52f0", bg: "#eeecff" }, ...orderCards];
 
   // Los vendedores 100% Mercado Libre cobran directo por MP de ML, no por el circuito de
   // payouts con CVU de Ventaz (ese es solo para ventas de tienda propia) — no tiene sentido
@@ -96,7 +130,7 @@ export default function Dashboard() {
     <div>
       {mlBlockedDebt > 0 && (
         <Link
-          to="/mercado-libre"
+          to={ML_SECTION_PATHS.wallet}
           style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "#FEF2F2", border: "1px solid #FCA5A5",
@@ -115,7 +149,7 @@ export default function Dashboard() {
 
       {mlNeedsFirstListing && (
         <Link
-          to="/mercado-libre"
+          to={mlConnected ? ML_SECTION_PATHS.publish : ML_SECTION_PATHS.listings}
           style={{
             display: "flex", alignItems: "center", gap: 10,
             background: "#FFFBEA", border: "1px solid #FFE600",
@@ -126,7 +160,7 @@ export default function Dashboard() {
         >
           <ShoppingBag size={16} color="#2D3277" />
           <span><strong>Publicá tu primer producto en Mercado Libre</strong> — conectá tu cuenta y elegí qué vender.</span>
-          <span style={{ marginLeft: "auto", fontWeight: 500 }}>Ir a Mercado Libre →</span>
+          <span style={{ marginLeft: "auto", fontWeight: 500 }}>{mlConnected ? "Publicar →" : "Conectar cuenta →"}</span>
         </Link>
       )}
 
@@ -196,6 +230,19 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* Resumen de Mercado Libre — solo track mercadolibre y con la cuenta conectada (sin
+          cuenta no hay nada que resumir: el aviso de arriba lleva a conectarla). */}
+      {isMlTrack && mlConnected && (
+        <div style={{ margin: "24px 0" }}>
+          <SummaryTab
+            summary={mlSummary}
+            listings={mlListings}
+            statsByItem={mlListingStats}
+            onGoTo={tabId => navigate(ML_SECTION_PATHS[tabId])}
+          />
+        </div>
+      )}
 
       {/* Checklist + Últimos pedidos */}
       <div className="dash-bottom-grid" data-checklist={checklistShown ? "true" : "false"}>

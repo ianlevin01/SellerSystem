@@ -12,8 +12,10 @@ import MercadoLibreIcon from "./icons/MercadoLibreIcon";
 import {
   LayoutDashboard, ShoppingBag,
   Calculator, LogOut, ExternalLink, Layers, User, MessageSquare, ChevronUp, ChevronLeft, ChevronRight,
-  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2, Megaphone, Package
+  Store, Wallet, Menu, X, Puzzle, Info, Mail, FileText, GraduationCap, BarChart2, Megaphone,
+  Search, PiggyBank, MessageCircle
 } from "lucide-react";
+import { ML_SECTION_PATHS } from "../pages/ml/mlRoutes";
 
 const ACADEMY_URL = import.meta.env.VITE_ACADEMY_URL || "https://academia.ventaz.com.ar";
 const ACADEMY_TOOLTIP_KEY = "academy_new_courses_v1";
@@ -24,7 +26,6 @@ const BETA_SELLER_EMAIL = "yolodercye@gmail.com";
 const nav = [
   { to: "/dashboard",    label: "Dashboard",      icon: LayoutDashboard },
   { to: "/pages",        label: "Mis tiendas",    icon: Layers },
-  { to: "/catalogo",     label: "Catálogo",       icon: Package },
   { to: "/orders",       label: "Mis pedidos",    icon: ShoppingBag },
   { to: "/estadisticas", label: "Estadísticas",   icon: BarChart2   },
   { to: "/cobros",       label: "Cobros",         icon: Wallet },
@@ -34,6 +35,21 @@ const nav = [
   { to: "/chat",         label: "Chat",           icon: MessageSquare },
   { to: "/calculator",   label: "Calculadora",    icon: Calculator },
   { to: "/profile",      label: "Mi perfil",      icon: User },
+];
+
+// Menú del track "mercadolibre": todo gira en torno a vender en Mercado Libre, así que en vez
+// de un único ítem "Mercado Libre" con pestañas, cada pestaña es una sección del menú (ver
+// ML_SECTION_PATHS). "Resumen" es el Dashboard. Academia se agrega aparte, después del loop.
+const mlNav = [
+  { to: ML_SECTION_PATHS.summary,       label: "Resumen",           icon: LayoutDashboard },
+  { to: ML_SECTION_PATHS.listings,      label: "Tus publicaciones", icon: Megaphone },
+  { to: ML_SECTION_PATHS.publish,       label: "Publicar",          icon: Search },
+  { to: ML_SECTION_PATHS.wallet,        label: "Cobro",             icon: Wallet },
+  { to: ML_SECTION_PATHS.profitability, label: "Rentabilidad",      icon: PiggyBank },
+  { to: ML_SECTION_PATHS.chats,         label: "Chats",             icon: MessageCircle },
+  { to: "/orders",                      label: "Mis pedidos",       icon: ShoppingBag },
+  { to: "/estadisticas",                label: "Estadísticas",      icon: BarChart2 },
+  { to: "/profile",                     label: "Mi perfil",         icon: User },
 ];
 
 /**
@@ -54,29 +70,20 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [pages, setPages]               = useState([]);
-  // Cobros, Publicidad y Chat dependen de la tienda propia (ganancias que paga Ventaz,
-  // campañas de una página, mensajería con compradores de la tienda) — no tienen ningún dato
-  // para un vendedor de Mercado Libre, que cobra directo en su MP y usa la mensajería nativa
-  // de ML. Se ocultan solo para ese track; para ecommerce sigue todo igual.
+  // El track "mercadolibre" tiene su propio menú (mlNav): Cobros, Publicidad, Chat, Mis tiendas,
+  // Integraciones y Calculadora dependen de la tienda propia y no aplican a un vendedor que
+  // cobra directo en su MP de ML. Para ecommerce sigue todo igual.
   const isMlTrack = seller?.onboarding_track === "mercadolibre";
   const filteredNav = nav.filter(item => {
-    if (item.to === "/publicidad") return seller?.email === BETA_SELLER_EMAIL && !isMlTrack;
-    if (item.to === "/mercado-libre") return isMlTrack;
-    if (item.to === "/catalogo") return isMlTrack;
+    if (item.to === "/publicidad") return seller?.email === BETA_SELLER_EMAIL;
+    // Mercado Libre tiene que estar disponible siempre, sea cual sea el track del vendedor —
+    // a diferencia del resto de los ítems condicionados acá, no depende de haber elegido ese
+    // track en /start.
+    if (item.to === "/mercado-libre") return true;
     if (item.to === "/pages") return pages.length > 0;
-    if (isMlTrack && (item.to === "/cobros" || item.to === "/chat")) return false;
     return true;
   });
-  // Para el track de Mercado Libre, "Mercado Libre" pasa a ser lo primero después del
-  // Dashboard — es lo que ese vendedor vino a usar, no tiene sentido que quede escondido
-  // más abajo entre ítems de ecommerce que probablemente ni use.
-  const visibleNav = isMlTrack
-    ? [
-        filteredNav.find(i => i.to === "/dashboard"),
-        filteredNav.find(i => i.to === "/mercado-libre"),
-        ...filteredNav.filter(i => i.to !== "/dashboard" && i.to !== "/mercado-libre"),
-      ].filter(Boolean)
-    : filteredNav;
+  const visibleNav = isMlTrack ? mlNav : filteredNav;
   const [storeOpen, setStoreOpen]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [adminUnread, setAdminUnread]   = useState(0);

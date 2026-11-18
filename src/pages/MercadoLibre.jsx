@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   ExternalLink, Unlink, Loader2, CreditCard, Wallet, Plus, X,
   AlertTriangle, Search, Megaphone, MoreVertical, LayoutGrid, PauseCircle,
@@ -18,6 +18,8 @@ import PriceStep from "./ml/PriceStep";
 import LinkListingModal from "./ml/LinkListingModal";
 import RentabilidadTab from "./ml/RentabilidadTab";
 import ChatsTab from "./ml/ChatsTab";
+import { StatusLabel, SummaryTab } from "./ml/mlSummary";
+import { ML_SECTION_PATHS } from "./ml/mlRoutes";
 import { usePublishSession } from "./ml/PublishSessionContext";
 
 const ML_SITE_NAMES = {
@@ -583,7 +585,7 @@ function WalletSection({ wallet, onChanged }) {
           a la misma hora todos los días. En Inicial, esa deuda siempre es obligatoria (hay que
           pagarla en ese mismo corte). En Pro/Max, una venta recién hecha tiene un plazo antes de
           volverse obligatoria — mientras esté dentro de ese plazo, tus pedidos igual se despachan. */}
-      <div style={{ padding: "10px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, marginBottom: 14 }}>
+      <div data-tour="ml-wallet-how" style={{ padding: "10px 14px", background: "var(--surface-2,#f9fafb)", borderRadius: 9, marginBottom: 14 }}>
         <p style={{ margin: 0, fontSize: ".78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
           Todos los días a las <strong>14:00 hs</strong> se intenta cobrar lo que debés en Ventaz por tus ventas de Mercado Libre
           {hasGrace
@@ -674,13 +676,13 @@ function WalletSection({ wallet, onChanged }) {
           </button>
         )}
         {wallet.hasCard && (
-          <button type="button" className="btn btn--ghost" style={{ padding: "10px 22px" }} onClick={() => setShowAddBalance(true)}>
+          <button type="button" data-tour="ml-add-balance" className="btn btn--ghost" style={{ padding: "10px 22px" }} onClick={() => setShowAddBalance(true)}>
             <Plus size={15} /> Agregar saldo
           </button>
         )}
       </div>
 
-      <h4 style={{ margin: "0 0 4px", fontSize: ".84rem", fontWeight: 700 }}>Historial de movimientos</h4>
+      <h4 data-tour="ml-wallet-history" style={{ margin: "0 0 4px", fontSize: ".84rem", fontWeight: 700 }}>Historial de movimientos</h4>
       <WalletHistory />
 
       {showCardModal && (
@@ -697,38 +699,6 @@ function WalletSection({ wallet, onChanged }) {
         />
       )}
     </div>
-  );
-}
-
-// ── Estado de una publicación — etiqueta de texto en vez de un switch, que no aclaraba
-// si activaba, pausaba o sincronizaba. ────────────────────────────────────────────
-
-function statusMeta(status, pauseReason) {
-  if (status === "active") return { label: "Activo", color: "#059669", bg: "rgba(5,150,105,.1)" };
-  if (status === "paused" && pauseReason === "stock") return { label: "Sin stock", color: "#d97706", bg: "rgba(217,119,6,.1)" };
-  if (status === "paused" && pauseReason === "charge_failed") return { label: "Error de cobro", color: "#ef4444", bg: "rgba(239,68,68,.1)" };
-  if (status === "paused") return { label: "Pausado", color: "#6b7280", bg: "rgba(107,114,128,.12)" };
-  if (status === "closed") return { label: "Cerrada en ML", color: "#ef4444", bg: "rgba(239,68,68,.1)" };
-  return { label: status, color: "#6b7280", bg: "rgba(107,114,128,.12)" };
-}
-
-// Quién/qué pausó una publicación — para el detalle de "Actividad reciente".
-function pauseReasonText(pauseReason) {
-  if (pauseReason === "stock") return "pausado automático por falta de stock";
-  if (pauseReason === "charge_failed") return "pausado automático por cobro fallido";
-  if (pauseReason === "plan_expired") return "pausado automático por plan vencido";
-  return "pausado manualmente";
-}
-
-function StatusLabel({ status, pauseReason, compact }) {
-  const meta = statusMeta(status, pauseReason);
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", fontSize: compact ? ".68rem" : ".74rem", fontWeight: 700,
-      padding: compact ? "2px 7px" : "3px 9px", borderRadius: 99, background: meta.bg, color: meta.color, whiteSpace: "nowrap",
-    }}>
-      {meta.label}
-    </span>
   );
 }
 
@@ -1124,97 +1094,6 @@ function ListingsSection({ listings, statsByItem, onToggleStatus, onAddVariants,
   }
 }
 
-// ── Resumen — lo primero que ve el vendedor, responde "¿está todo bien?" sin
-// tener que entrar a cada publicación una por una. ──────────────────────────
-
-// size "hero" = las dos métricas que más le importan al vendedor de un vistazo (activas,
-// ventas de hoy) — número grande, título arriba. size "compact" = el resto, mismo orden
-// (título → número) pero más chico, para que el ícono no le gane protagonismo al número.
-function SummaryCard({ icon, color, label, value, onClick, size = "compact", tint }) {
-  const Icon = icon;
-  const Tag = onClick ? "button" : "div";
-  const isHero = size === "hero";
-  return (
-    <Tag type={onClick ? "button" : undefined} onClick={onClick} className="card ml-summary-card" style={{
-      padding: isHero ? "13px 16px" : "11px 14px",
-      display: "flex", flexDirection: "column", gap: isHero ? 5 : 4,
-      flex: isHero ? "2 1 260px" : "1 1 150px",
-      textAlign: "left", cursor: onClick ? "pointer" : "default", border: "1px solid var(--border)",
-      background: tint || "#fff",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: ".74rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-        <Icon size={13} color={color} />
-        {label}
-      </div>
-      <div style={{ fontSize: isHero ? "24px" : "19px", fontWeight: 800, lineHeight: 1, color: "var(--text)" }}>{value}</div>
-    </Tag>
-  );
-}
-
-function SummaryTab({ summary, listings, statsByItem, onGoTo }) {
-  const recent = useMemo(() => [...listings].slice(0, 6), [listings]);
-  const s = summary || {};
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <SummaryCard icon={CheckCircle2} color="#059669" label="Publicaciones activas" value={s.active_count ?? "—"} onClick={() => onGoTo("listings")} size="hero" />
-        <SummaryCard icon={TrendingUp} color="var(--brand-text)" label="Ventas de hoy" value={s.sales_today ?? "—"} onClick={() => onGoTo("wallet")} size="hero" tint="var(--brand-light)" />
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <SummaryCard icon={PauseCircle} color="#6b7280" label="Pausadas" value={s.paused_count ?? "—"} onClick={() => onGoTo("listings")} />
-        <SummaryCard icon={AlertTriangle} color="#ef4444" label="Con error de cobro" value={s.error_count ?? "—"} onClick={() => onGoTo("listings")} />
-        <SummaryCard icon={Ban} color="#d97706" label="Pausadas sin stock" value={s.stock_paused_count ?? "—"} onClick={() => onGoTo("listings")} />
-      </div>
-
-      {Number(s.error_count) > 0 && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px",
-          background: "rgba(239,68,68,.08)", borderRadius: 9, fontSize: ".82rem", color: "#b91c1c" }}>
-          <AlertTriangle size={14} />
-          Tenés {s.error_count} publicación{s.error_count === 1 ? "" : "es"} pausada{s.error_count === 1 ? "" : "s"} por un cobro fallido —
-          revisá la tarjeta guardada en <button type="button" onClick={() => onGoTo("wallet")} style={{ background: "none", border: "none", padding: 0, color: "#b91c1c", fontWeight: 700, textDecoration: "underline", cursor: "pointer" }}>Cobro</button>.
-        </div>
-      )}
-
-      <div className="card" style={{ padding: "16px 18px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <h3 style={{ margin: 0, fontSize: ".92rem", fontWeight: 700 }}>Actividad reciente</h3>
-          <button type="button" onClick={() => onGoTo("listings")} className="btn btn--ghost btn--sm">
-            Ver todas <ArrowRight size={13} />
-          </button>
-        </div>
-        {recent.length === 0 ? (
-          <p style={{ margin: 0, fontSize: ".84rem", color: "var(--text-secondary)" }}>Todavía no publicaste ningún producto.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {recent.map(l => {
-              const visits = statsByItem?.[l.ml_item_id]?.visits;
-              return (
-                <div key={l.ml_item_id} className="ml-activity-row" style={{ display: "flex", alignItems: "center", gap: 12, height: 72, padding: "0 8px", borderBottom: "1px solid var(--border)" }}>
-                  <div style={{ width: 56, height: 56, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "var(--surface-2,#f3f4f6)" }}>
-                    {l.image_url && <img src={l.image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: ".84rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{l.product_name}</div>
-                    <div style={{ fontSize: ".74rem", color: "var(--text-secondary)", marginTop: 2 }}>
-                      SKU {l.sku || "—"}{visits != null && <> · {visits} visitas</>}
-                      {l.status === "paused" && <> · {pauseReasonText(l.pause_reason)}</>}
-                    </div>
-                  </div>
-                  <StatusLabel status={l.status} pauseReason={l.pause_reason} compact />
-                  <span style={{ fontSize: ".74rem", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
-                    {new Date(l.updated_at).toLocaleDateString("es-AR")}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Página principal ──────────────────────────────────────────────
 
 const TABS = [
@@ -1226,7 +1105,10 @@ const TABS = [
   { id: "chats",         label: "Chats",               icon: MessageCircle },
 ];
 
-export default function MercadoLibre() {
+// fixedTab: para los vendedores del track "mercadolibre" cada pestaña es una página propia del
+// menú (ver App.jsx) — la ruta fija cuál mostrar y se oculta la barra de pestañas. Sin
+// fixedTab es la página de siempre, con todas las pestañas (track ecommerce).
+export default function MercadoLibre({ fixedTab } = {}) {
   const [status, setStatus] = useState(null);
   const [wallet, setWallet] = useState({ balance: 0, pendingDebt: 0, blockedDebt: 0, hasCard: false, lastFour: null, planId: "inicial", graceHours: 0 });
   const [summary, setSummary] = useState(null);
@@ -1240,7 +1122,8 @@ export default function MercadoLibre() {
   const [changeProductTarget, setChangeProductTarget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState(() => searchParams.get("tab") || "summary");
+  const [tabState, setTab] = useState(() => searchParams.get("tab") || "summary");
+  const tab = fixedTab || tabState;
   const [listingError, setListingError] = useState("");
   const [addressStatus, setAddressStatus] = useState(null);
   const [checkingAddress, setCheckingAddress] = useState(false);
@@ -1254,6 +1137,22 @@ export default function MercadoLibre() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Visitas/calidad/comisión por publicación: una request por cada una, y solo se ven en Resumen
+  // y Tus publicaciones — en Cobro, Rentabilidad, Chats o Publicar no se piden.
+  const needsListingStats = tab === "summary" || tab === "listings";
+  const statsRequested = useRef(false);
+
+  // Se pide para todas las publicaciones (activas o pausadas) — antes se filtraba
+  // solo "active" y por eso una publicación pausada nunca mostraba visitas/calidad/comisión.
+  function loadListingStats(list) {
+    statsRequested.current = true;
+    list.forEach(x => {
+      client.get(`/seller/ml/listings/${x.ml_item_id}/stats`, { params: { productId: x.product_id } })
+        .then(r => setListingStats(prev => ({ ...prev, [x.ml_item_id]: r.data })))
+        .catch(() => {});
+    });
+  }
+
   function loadAll() {
     Promise.all([
       client.get("/seller/ml/status"),
@@ -1266,16 +1165,16 @@ export default function MercadoLibre() {
       setSummary(sm.data);
       const allListings = l.data || [];
       setListings(allListings);
-      // Se pide para todas las publicaciones (activas o pausadas) — antes se filtraba
-      // solo "active" y por eso una publicación pausada nunca mostraba visitas/calidad/comisión.
-      allListings.forEach(x => {
-        client.get(`/seller/ml/listings/${x.ml_item_id}/stats`, { params: { productId: x.product_id } })
-          .then(r => setListingStats(prev => ({ ...prev, [x.ml_item_id]: r.data })))
-          .catch(() => {});
-      });
+      if (needsListingStats) loadListingStats(allListings);
       if (s.data?.connected) refreshAddressStatus();
     }).catch(() => {}).finally(() => setLoading(false));
   }
+
+  // Si se llega a una sección que no las pedía (ej. entrar por Chats y pasar a Tus
+  // publicaciones sin recargar la página), se piden recién cuando hacen falta.
+  useEffect(() => {
+    if (needsListingStats && !statsRequested.current && listings.length > 0) loadListingStats(listings);
+  }, [needsListingStats, listings]);
 
   // Chequeo pasivo — se corre solo al abrir el panel, nunca marca nada como "reconocido".
   function refreshAddressStatus() {
@@ -1391,7 +1290,7 @@ export default function MercadoLibre() {
           <div className={status?.connected ? "ml-header" : undefined}>
             <MercadoLibreConnection status={status} summary={summary} scrolled={scrolled} onConnected={loadAll} onDisconnected={loadAll} />
 
-            {status?.connected && (
+            {status?.connected && !fixedTab && (
               <div className="ml-nav">
                 {TABS.map(t => {
                   const TabIcon = t.icon;
@@ -1442,7 +1341,14 @@ export default function MercadoLibre() {
               {!wallet.hasCard && (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 14px",
                   background: "rgba(217,119,6,.08)", borderRadius: 9, marginBottom: 16, fontSize: ".82rem", color: "#b45309" }}>
-                  <AlertTriangle size={14} /> Guardá una tarjeta en la pestaña "Cobro" para que podamos cobrarte automáticamente la comisión de tus ventas.
+                  <AlertTriangle size={14} />
+                  {fixedTab === "wallet" ? (
+                    <>Guardá una tarjeta acá abajo para que podamos cobrarte automáticamente la comisión de tus ventas.</>
+                  ) : fixedTab ? (
+                    <span>Guardá una tarjeta en <Link to={ML_SECTION_PATHS.wallet} style={{ color: "inherit", fontWeight: 700 }}>Cobro</Link> para que podamos cobrarte automáticamente la comisión de tus ventas.</span>
+                  ) : (
+                    <>Guardá una tarjeta en la pestaña "Cobro" para que podamos cobrarte automáticamente la comisión de tus ventas.</>
+                  )}
                 </div>
               )}
 
@@ -1481,7 +1387,7 @@ export default function MercadoLibre() {
                       renderiza nada más si todavía no hay ninguna publicación registrada en
                       Ventaz — justo el caso de quien publicó todo directo en Mercado Libre y
                       necesita este cartel para que deje de estar invisible acá. */}
-                  <div style={{
+                  <div data-tour="ml-link-listing" style={{
                     display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderRadius: 14,
                     background: "var(--brand-light,#eafbe0)", border: "1px solid var(--brand,#4db81a)", marginBottom: 16,
                   }}>

@@ -5,6 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { HelpCircle, X, ChevronDown, ChevronUp } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
 
 // ─── Contenido por ruta ────────────────────────────────────────────────────────
 
@@ -131,6 +132,100 @@ const PAGE_HELP = {
     ],
   },
 
+  // Track mercadolibre: cada pestaña de /mercado-libre es una página propia del menú.
+  "/mercado-libre/publicaciones": {
+    title: "Tus publicaciones",
+    sections: [
+      {
+        heading: "Conectar tu cuenta",
+        body: "Hacé clic en «Conectar Mercado Libre» y autorizá a Ventaz con tu cuenta real de Mercado Libre. Es un solo paso, se hace una vez.",
+      },
+      {
+        heading: "Tus publicaciones",
+        body: "Cada publicación muestra su estado, visitas, calidad y la comisión — y un acceso directo para verla o editarla en Mercado Libre.",
+      },
+    ],
+  },
+
+  "/mercado-libre/publicar": {
+    title: "Publicar",
+    sections: [
+      {
+        heading: "Publicar producto",
+        body: "Elegís un producto del catálogo, la categoría de Mercado Libre, el precio y las imágenes. Ahí mismo vas a ver cuánto recibís después de la comisión de Mercado Libre.",
+      },
+    ],
+  },
+
+  "/mercado-libre/cobro": {
+    title: "Cobro",
+    sections: [
+      {
+        heading: "Cobro",
+        body: "Guardá una tarjeta antes de publicar. El costo de cada venta se cobra una vez al día en un solo cargo: primero de tu saldo prepago si tenés cargado, y si no alcanza, de la tarjeta guardada.",
+      },
+    ],
+  },
+
+  "/mercado-libre/rentabilidad": {
+    title: "Rentabilidad",
+    sections: [
+      {
+        heading: "¿Qué ves acá?",
+        body: "La ganancia real de tu operación en Mercado Libre, mes a mes: facturación, costo de los productos, comisión de Mercado Libre y envío. Con eso se calcula la ganancia bruta y, restando publicidad, Ingresos Brutos y gastos fijos, la ganancia neta.",
+      },
+      {
+        heading: "Por mes o por rango",
+        body: "Elegí un mes, o pasá a «Por rango» para ver cualquier desde/hasta. En un rango que no cubre meses completos, Ingresos Brutos y gastos fijos se prorratean por día y se marcan como aproximados.",
+      },
+      {
+        heading: "Lo que cargás vos",
+        body: "Ingresos Brutos y gastos fijos los cargás a mano cada mes, porque Mercado Libre no los informa. La publicidad se trae sola si tu cuenta tiene Product Ads; si no, también se carga a mano.",
+      },
+    ],
+  },
+
+  "/mercado-libre/chats": {
+    title: "Chats",
+    sections: [
+      {
+        heading: "¿Qué ves acá?",
+        body: "Las preguntas que te hacen los compradores en tus publicaciones de Mercado Libre, con la respuesta que se les dio.",
+      },
+      {
+        heading: "Respuesta automática con IA",
+        body: "Con el interruptor «Bot» activás que la IA conteste sola cuando tiene datos suficientes del producto. Desde la configuración podés cargar las reglas de tu negocio y qué información de producto mostrar.",
+      },
+      {
+        heading: "Cuando la IA no sabe",
+        body: "Si no puede responder, le avisa al comprador que le van a contestar a la brevedad y la pregunta queda marcada como «Esperando tu respuesta» para que la contestes vos.",
+      },
+    ],
+  },
+
+  // Dashboard del track mercadolibre: es también el "Resumen" de Mercado Libre.
+  "/dashboard:ml": {
+    title: "Resumen",
+    sections: [
+      {
+        heading: "¿Qué ves acá?",
+        body: "Tu pantalla de inicio: total de pedidos, pendientes y ganancia acumulada, y — con tu cuenta de Mercado Libre conectada — el resumen de tus publicaciones (activas, pausadas, con error de cobro o sin stock) y la actividad reciente.",
+      },
+      {
+        heading: "Avisos arriba",
+        body: "Si tenés deuda sin cobrar o todavía no publicaste tu primer producto, vas a ver un aviso que te lleva directo a «Cobro» o a «Publicar».",
+      },
+      {
+        heading: "Últimos pedidos",
+        body: "La tabla muestra los pedidos más recientes con su estado y tu ganancia. «Ver todos →» abre la página completa de pedidos.",
+      },
+      {
+        heading: "Checklist de inicio",
+        body: "Si es tu primera vez, vas a ver una lista de tareas para dejar tu cuenta lista para vender. Podés cerrarla cuando ya no la necesites.",
+      },
+    ],
+  },
+
   "/integrations": {
     title: "Integraciones",
     sections: [
@@ -248,7 +343,11 @@ const PAGE_HELP = {
 
 // ─── Resolver la ruta actual a un key de PAGE_HELP ────────────────────────────
 
-function resolveHelpKey(pathname) {
+function resolveHelpKey(pathname, onboardingTrack) {
+  // El Dashboard del track mercadolibre es el "Resumen" de Mercado Libre — no tiene tiendas ni
+  // productos activos, así que la ayuda de ecommerce no le sirve.
+  if (pathname === "/dashboard" && onboardingTrack === "mercadolibre") return "/dashboard:ml";
+
   // Rutas exactas primero
   if (PAGE_HELP[pathname]) return pathname;
 
@@ -264,6 +363,7 @@ const HIDDEN_KEY = "ventaz_howtouse_hidden";
 
 export default function HowToUse() {
   const location = useLocation();
+  const { seller } = useAuth();
   const [open, setOpen] = useState(false);
   const [expandedIdx, setExpandedIdx] = useState(null);
   const [hidden, setHidden] = useState(() => localStorage.getItem(HIDDEN_KEY) === "1");
@@ -276,7 +376,7 @@ export default function HowToUse() {
     setOpen(false);
   }
 
-  const helpKey = resolveHelpKey(location.pathname);
+  const helpKey = resolveHelpKey(location.pathname, seller?.onboarding_track);
   const help = PAGE_HELP[helpKey] || PAGE_HELP.default;
 
   // Cerrar al cambiar de página

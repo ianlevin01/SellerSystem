@@ -243,7 +243,7 @@ export default function ChatsTab() {
             Preguntas de compradores sobre tus publicaciones.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <div data-tour="chats-bot" style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: ".8rem", fontWeight: 600, color: enabled ? "var(--brand,#4db81a)" : "var(--text-secondary)" }}>
               Bot {enabled === null ? "" : enabled ? "activo" : "apagado"}

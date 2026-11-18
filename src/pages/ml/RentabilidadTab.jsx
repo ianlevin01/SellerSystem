@@ -340,8 +340,8 @@ export default function RentabilidadTab() {
 
       {data && (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
-            <Kpi icon={TrendingUp} label="Facturación"       value={fmtMoney(data.revenue)}      tone="gray" />
+          <div data-tour="rent-kpis" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+            <Kpi icon={TrendingUp} label="Facturación"      value={fmtMoney(data.revenue)}      tone="gray" />
             <Kpi icon={Package}    label="Costo de productos" value={fmtMoney(data.productCost)}  tone="gray" />
             <Kpi icon={Percent}    label="Comisión Mercado Libre" value={fmtMoney(data.mlCommission)} tone="gray" />
             <Kpi icon={Truck}      label="Envío"              value={fmtMoney(data.shippingCost)} tone="gray" />

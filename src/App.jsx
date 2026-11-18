@@ -46,6 +46,7 @@ import ForgotPassword  from "./pages/ForgotPassword";
 import ResetPassword   from "./pages/ResetPassword";
 import Impersonate     from "./pages/Impersonate";
 import StartChoice     from "./pages/StartChoice";
+import { ML_SECTION_PATHS } from "./pages/ml/mlRoutes";
 
 function HomeRoute() {
   const { isLoggedIn } = useAuth();
@@ -87,6 +88,28 @@ function MyProductsRedirect() {
 function ProductsRedirect() {
   const location = useLocation();
   return <Navigate to={`/pages${location.search}`} replace />;
+}
+
+// /mercado-libre sigue existiendo para todos los links viejos (mails, guías, vuelta del OAuth de
+// ML). Track ecommerce: la página de siempre, con pestañas. Track mercadolibre: cada pestaña es
+// una página propia del menú, así que se redirige a la que corresponda, conservando el resto de
+// los parámetros (ej. ?ml_connected=true al volver de autorizar la cuenta). Sin ?tab= va a
+// Tus publicaciones, que es donde está el botón de conectar la cuenta.
+function MercadoLibreEntry() {
+  const { seller } = useAuth();
+  const location = useLocation();
+  if (seller?.onboarding_track !== "mercadolibre") return <MercadoLibre />;
+
+  const params = new URLSearchParams(location.search);
+  const tab = params.get("tab");
+  params.delete("tab");
+  const search = params.toString();
+  return (
+    <Navigate
+      to={{ pathname: ML_SECTION_PATHS[tab] || ML_SECTION_PATHS.listings, search: search ? `?${search}` : "" }}
+      replace
+    />
+  );
 }
 
 // Publicidad todavía no pasó la revisión de Meta — visible solo para la cuenta de prueba.
@@ -158,7 +181,12 @@ export default function App() {
               <Route path="/subscription"                  element={<Subscription />} />
               <Route path="/academia"                      element={<Academia />} />
               <Route path="/publicidad"                    element={<PublicidadRoute />} />
-              <Route path="/mercado-libre"                 element={<MercadoLibre />} />
+              <Route path="/mercado-libre"                 element={<MercadoLibreEntry />} />
+              <Route path={ML_SECTION_PATHS.listings}      element={<MercadoLibre fixedTab="listings" />} />
+              <Route path={ML_SECTION_PATHS.publish}       element={<MercadoLibre fixedTab="publish" />} />
+              <Route path={ML_SECTION_PATHS.wallet}        element={<MercadoLibre fixedTab="wallet" />} />
+              <Route path={ML_SECTION_PATHS.profitability} element={<MercadoLibre fixedTab="profitability" />} />
+              <Route path={ML_SECTION_PATHS.chats}         element={<MercadoLibre fixedTab="chats" />} />
               <Route path="/catalogo"                      element={<Catalogo />} />
               {/* Redirecciones de rutas antiguas */}
               <Route path="/store-config"  element={<Navigate to="/pages" replace />} />
